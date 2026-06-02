@@ -1,0 +1,18 @@
+{
+  "type": "object",
+  "properties": {
+    "id": {"type": "string", "format": "uuid"},
+    "name": {"type": "string"},
+    "generation": {"type": "integer"},
+    "role": {"type": "string"},
+    "base_stats": {
+      "type": "object",
+      "properties": {
+        "attack": {"type": "number"},
+        "defense": {"type": "number"},
+        "health": {"type": "number"},
+        "lethality": {"type": "number"}
+      }
+    }
+  }
+}
