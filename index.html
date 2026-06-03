@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WOS Battle Predictor</title>
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+<header><h1>WOS Battle Predictor</h1></header>
+<div class="container">
+<nav>
+<button data-tab="predictor">Predictor</button>
+<button data-tab="logs">Battle Logs</button>
+<button data-tab="calibration">Calibration</button>
+<button data-tab="settings">Settings</button>
+</nav>
+
+<section id="predictor" class="tab active">
+<h2>Battle Predictor</h2>
+<div class="grid">
+<div>
+<h3>Attacker</h3>
+<input id="a_attack" placeholder="Attack">
+<input id="a_defense" placeholder="Defense">
+<input id="a_health" placeholder="Health">
+<input id="a_lethality" placeholder="Lethality">
+</div>
+<div>
+<h3>Defender</h3>
+<input id="d_attack" placeholder="Attack">
+<input id="d_defense" placeholder="Defense">
+<input id="d_health" placeholder="Health">
+<input id="d_lethality" placeholder="Lethality">
+</div>
+</div>
+<select id="battleType">
+<option>PvP</option>
+<option>Rally</option>
+<option>Defense</option>
+</select>
+<button id="predictBtn">Predict Battle</button>
+<div id="result"></div>
+</section>
+
+<section id="logs" class="tab"><h2>Battle Logs</h2><div id="logsTable"></div></section>
+
+<section id="calibration" class="tab">
+<h2>Calibration Dashboard</h2>
+<canvas id="accuracyChart"></canvas>
+<div id="calibrationStats"></div>
+</section>
+
+<section id="settings" class="tab">
+<h2>Settings</h2>
+<input id="apiUrl" placeholder="Railway API URL">
+<button id="saveSettings">Save</button>
+</section>
+</div>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
