@@ -1,5 +1,5 @@
-// Base configuration parameters setup fallback mechanism
-const BACKEND_URL = window.API_BASE_URL || 'https://wospredv3-production.up.railway.app';
+// Hardcoded to your live production Railway backend to prevent config.js conflicts
+const BACKEND_URL = 'https://wospredv3-production.up.railway.app';
 
 document.addEventListener('DOMContentLoaded', () => {
     fetchModelAccuracy();
@@ -7,6 +7,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const simulateBtn = document.getElementById('simulate-btn');
     if (simulateBtn) {
         simulateBtn.addEventListener('click', runBattleSimulation);
+    } else {
+        console.error("CRITICAL: Could not find the simulate-btn in the HTML.");
     }
 });
 
@@ -83,9 +85,10 @@ async function runBattleSimulation() {
         console.error('Simulation exception:', error);
         document.getElementById('outcome-title').innerText = "ERROR";
         document.getElementById('outcome-title').style.color = "#ef4444";
-        logContainer.innerHTML += `<p class="log-entry fail-msg">[CRITICAL] Tactical transmission failure. Check console for CORS or backend logging details.</p>`;
+        logContainer.innerHTML += `<p class="log-entry fail-msg">[CRITICAL] Tactical transmission failure. Ensure your backend is running.</p>`;
     } finally {
-        simulateBtn.innerHTML = "IGNITE FURNACE<br><span class="sub-btn">RUN SIMULATION</span>";
+        // FIXED: Using backticks here to prevent quote escaping errors
+        simulateBtn.innerHTML = `IGNITE FURNACE<br><span class="sub-btn">RUN SIMULATION</span>`;
         simulateBtn.disabled = false;
     }
 }
@@ -119,6 +122,8 @@ function displayResults(data) {
 // Circular layout update logic engine parameters tracking metric
 function updateProgressRing(percent) {
     const circle = document.getElementById('win-rate-ring');
+    if (!circle) return;
+    
     const radius = circle.r.baseVal.value;
     const circumference = radius * 2 * Math.PI;
     
