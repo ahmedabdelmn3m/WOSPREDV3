@@ -9,8 +9,8 @@ app.add_middleware(
         "https://wospredv3.vercel.app/"
     ],
     allow_credentials=True,
-    allow_methods=["https://wospredv3.vercel.app/"],
-    allow_headers=["https://wospredv3.vercel.app/"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 from pydantic import BaseModel
 from typing import List, Optional
