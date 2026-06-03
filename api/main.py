@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title="WoS Battle Predictor")
 
- allowed_origins = [
+allowed_origins = [
     "https://wospredv-3.vercel.app",      
     "http://localhost:3000",             
     "http://127.0.0.1:3000",
