@@ -5,7 +5,7 @@ app = FastAPI(title="WoS Battle Predictor API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # Or your specific Vercel URL
+    allow_origins=["https://wospredv3.vercel.app/"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
