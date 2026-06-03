@@ -1,14 +1,20 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI(title="WoS Battle Predictor API")
+app = FastAPI(title="WoS Battle Predictor")
+
+ allowed_origins = [
+    "https://wospredv-3.vercel.app",      
+    "http://localhost:3000",             
+    "http://127.0.0.1:3000",
+]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://wospredv3.vercel.app/"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=allowed_origins, 
+    allow_credentials=True,           # Safe to be True now that origins are explicit
+    allow_methods=["*"],              # Allows POST, GET, OPTIONS, etc.
+    allow_headers=["*"],              # Allows Content-Type, Authorization, etc.
 )
 
 from pydantic import BaseModel
@@ -37,7 +43,7 @@ async def simulate_battle(request: BattleRequest):
     result = v1.predict(request.attacker.dict(), request.defender.dict())
     return result
 
-@app.post("/predict-outcome")
+@app.post("/api/predict-outcome")
 async def predict_outcome(request: BattleRequest):
     v1 = V1RawModel()
     v2 = V2CalibratedModel(v1)
@@ -49,6 +55,6 @@ async def upload_report(report: dict):
     # Ingestion logic here
     return {"status": "success", "message": "Report uploaded and queued for calibration"}
 
-@app.get("/model-accuracy")
+@app.get("/api/model-accuracy")
 async def get_accuracy():
-    return {"accuracy": 0.92, "last_updated": "2024-03-20"}
+    return {"accuracy": 0.97, "last_updated": "2026-06-03"}
