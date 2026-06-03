@@ -1,4 +1,17 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "https://wos-battle-predictor.vercel.app"
+    ],
+    allow_credentials=True,
+    allow_methods=["https://wospredv3.vercel.app/"],
+    allow_headers=["https://wospredv3.vercel.app/"],
+)
 from pydantic import BaseModel
 from typing import List, Optional
 from mechanics.v1_raw_model import V1RawModel
