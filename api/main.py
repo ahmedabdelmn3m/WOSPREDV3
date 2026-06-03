@@ -6,7 +6,7 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "http://localhost:5173",
-        "https://wos-battle-predictor.vercel.app"
+        "https://wospredv3.vercel.app/"
     ],
     allow_credentials=True,
     allow_methods=["https://wospredv3.vercel.app/"],
