@@ -1,64 +1,123 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WOS Battle Predictor</title>
-<link rel="stylesheet" href="styles.css">
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WOS Alliance Battle Predictor</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-<header><h1>WOS Battle Predictor</h1></header>
-<div class="container">
-<nav>
-<button data-tab="predictor">Predictor</button>
-<button data-tab="logs">Battle Logs</button>
-<button data-tab="calibration">Calibration</button>
-<button data-tab="settings">Settings</button>
-</nav>
+    <div class="blizzard-overlay"></div>
+    
+    <div class="command-container">
+        <header class="tactical-header">
+            <div class="alliance-branding">
+                <span class="status-dot pulsing"></span>
+                <h1>FROST VALLEY BATTLE SIMULATOR</h1>
+            </div>
+            <div class="engine-accuracy" id="accuracy-badge">
+                ENGINE STATUS: <span class="loading-text">CALIBRATING...</span>
+            </div>
+        </header>
 
-<section id="predictor" class="tab active">
-<h2>Battle Predictor</h2>
-<div class="grid">
-<div>
-<h3>Attacker</h3>
-<input id="a_attack" placeholder="Attack">
-<input id="a_defense" placeholder="Defense">
-<input id="a_health" placeholder="Health">
-<input id="a_lethality" placeholder="Lethality">
-</div>
-<div>
-<h3>Defender</h3>
-<input id="d_attack" placeholder="Attack">
-<input id="d_defense" placeholder="Defense">
-<input id="d_health" placeholder="Health">
-<input id="d_lethality" placeholder="Lethality">
-</div>
-</div>
-<select id="battleType">
-<option>PvP</option>
-<option>Rally</option>
-<option>Defense</option>
-</select>
-<button id="predictBtn">Predict Battle</button>
-<div id="result"></div>
-</section>
+        <main class="war-room-grid">
+            <section class="tactical-card attacker-panel">
+                <div class="panel-header">
+                    <h2>ATTACKING FORCE</h2>
+                    <span class="faction-tag">ALLIANCE</span>
+                </div>
+                <div class="panel-body">
+                    <div class="hero-selection">
+                        <h3>Hero Formations</h3>
+                        <div class="input-group">
+                            <label>Primary Hero</label>
+                            <input type="text" id="atk-hero1" placeholder="e.g., Flint (S3)" class="wos-input">
+                        </div>
+                        <div class="input-group">
+                            <label>Secondary Hero</label>
+                            <input type="text" id="atk-hero2" placeholder="e.g., Alina (S3)" class="wos-input">
+                        </div>
+                    </div>
+                    
+                    <div class="troop-allocation">
+                        <h3>Troop Count</h3>
+                        <div class="input-group infantry">
+                            <label>🛡️ Infantry (Shields)</label>
+                            <input type="number" id="atk-infantry" value="100000" class="wos-input">
+                        </div>
+                        <div class="input-group lancer">
+                            <label>⚡ Lancers (Spears)</label>
+                            <input type="number" id="atk-lancers" value="80000" class="wos-input">
+                        </div>
+                        <div class="input-group marksman">
+                            <label>🎯 Marksmen (Bows)</label>
+                            <input type="number" id="atk-marksmen" value="120000" class="wos-input">
+                        </div>
+                    </div>
+                </div>
+            </section>
 
-<section id="logs" class="tab"><h2>Battle Logs</h2><div id="logsTable"></div></section>
+            <section class="center-forge">
+                <div class="furnace-core">
+                    <div class="furnace-glow"></div>
+                    <button id="simulate-btn" class="forge-trigger-btn">IGNITE FURNACE<br><span class="sub-btn">RUN SIMULATION</span></button>
+                </div>
 
-<section id="calibration" class="tab">
-<h2>Calibration Dashboard</h2>
-<canvas id="accuracyChart"></canvas>
-<div id="calibrationStats"></div>
-</section>
+                <div class="results-display hidden" id="results-board">
+                    <div class="result-status-header" id="outcome-title">VICTORY</div>
+                    <div class="win-chance-wrapper">
+                        <svg class="progress-ring" width="120" height="120">
+                            <circle class="progress-ring__circle-bg" stroke="rgba(255,255,255,0.05)" stroke-width="8" fill="transparent" r="52" cx="60" cy="60"/>
+                            <circle id="win-rate-ring" class="progress-ring__circle" stroke="#ff6b00" stroke-width="8" fill="transparent" r="52" cx="60" cy="60"/>
+                        </svg>
+                        <div class="win-pct" id="victory-percentage">0%</div>
+                    </div>
+                    <div class="tactical-log" id="battle-log">
+                        <p class="log-entry system-msg">[SYSTEM] Waiting for tactical coordination coordinates...</p>
+                    </div>
+                </div>
+            </section>
 
-<section id="settings" class="tab">
-<h2>Settings</h2>
-<input id="apiUrl" placeholder="Railway API URL">
-<button id="saveSettings">Save</button>
-</section>
-</div>
-<script src="config.js"></script>
-<script src="app.js"></script>
+            <section class="tactical-card defender-panel">
+                <div class="panel-header">
+                    <h2>DEFENDING FORCE</h2>
+                    <span class="faction-tag rival">TARGET</span>
+                </div>
+                <div class="panel-body">
+                    <div class="hero-selection">
+                        <h3>Hero Formations</h3>
+                        <div class="input-group">
+                            <label>Primary Hero</label>
+                            <input type="text" id="def-hero1" placeholder="e.g., Greg (S3)" class="wos-input">
+                        </div>
+                        <div class="input-group">
+                            <label>Secondary Hero</label>
+                            <input type="text" id="def-hero2" placeholder="e.g., Jera (S3)" class="wos-input">
+                        </div>
+                    </div>
+                    
+                    <div class="troop-allocation">
+                        <h3>Troop Count</h3>
+                        <div class="input-group infantry">
+                            <label>🛡️ Infantry (Shields)</label>
+                            <input type="number" id="def-infantry" value="100000" class="wos-input">
+                        </div>
+                        <div class="input-group lancer">
+                            <label>⚡ Lancers (Spears)</label>
+                            <input type="number" id="def-lancers" value="80000" class="wos-input">
+                        </div>
+                        <div class="input-group marksman">
+                            <label>🎯 Marksmen (Bows)</label>
+                            <input type="number" id="def-marksmen" value="120000" class="wos-input">
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="config.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>
