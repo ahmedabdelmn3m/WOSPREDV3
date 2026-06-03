@@ -43,7 +43,7 @@ async def simulate_battle(request: BattleRequest):
     result = v1.predict(request.attacker.dict(), request.defender.dict())
     return result
 
-@app.post("/api/predict-outcome")
+@app.post("/predict-outcome")
 async def predict_outcome(request: BattleRequest):
     v1 = V1RawModel()
     v2 = V2CalibratedModel(v1)
@@ -55,6 +55,6 @@ async def upload_report(report: dict):
     # Ingestion logic here
     return {"status": "success", "message": "Report uploaded and queued for calibration"}
 
-@app.get("/api/model-accuracy")
+@app.get("/model-accuracy")
 async def get_accuracy():
     return {"accuracy": 0.97, "last_updated": "2026-06-03"}
