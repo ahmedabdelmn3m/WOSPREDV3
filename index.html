@@ -1,123 +1,201 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WOS Alliance Battle Predictor</title>
-    <link rel="stylesheet" href="styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WOS Battle Predictor</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="blizzard-overlay"></div>
-    
-    <div class="command-container">
-        <header class="tactical-header">
-            <div class="alliance-branding">
-                <span class="status-dot pulsing"></span>
-                <h1>SLD BATTLE SIMULATOR</h1>
-            </div>
-            <div class="engine-accuracy" id="accuracy-badge">
-                ENGINE STATUS: <span class="loading-text">CALIBRATING...</span>
-            </div>
-        </header>
 
-        <main class="war-room-grid">
-            <section class="tactical-card attacker-panel">
-                <div class="panel-header">
-                    <h2>ATTACKING FORCE</h2>
-                    <span class="faction-tag">ALLIANCE</span>
-                </div>
-                <div class="panel-body">
-                    <div class="hero-selection">
-                        <h3>Hero Formations</h3>
-                        <div class="input-group">
-                            <label>Primary Hero</label>
-                            <input type="text" id="atk-hero1" placeholder="e.g., Flint (S3)" class="wos-input">
-                        </div>
-                        <div class="input-group">
-                            <label>Secondary Hero</label>
-                            <input type="text" id="atk-hero2" placeholder="e.g., Mia (S3)" class="wos-input">
-                        </div>
-                    </div>
-                    
-                    <div class="troop-allocation">
-                        <h3>Troop Count</h3>
-                        <div class="input-group infantry">
-                            <label>🛡️ Infantry (Shields)</label>
-                            <input type="number" id="atk-infantry" value="100000" class="wos-input">
-                        </div>
-                        <div class="input-group lancer">
-                            <label>⚡ Lancers (Spears)</label>
-                            <input type="number" id="atk-lancers" value="80000" class="wos-input">
-                        </div>
-                        <div class="input-group marksman">
-                            <label>🎯 Marksmen (Bows)</label>
-                            <input type="number" id="atk-marksmen" value="120000" class="wos-input">
-                        </div>
-                    </div>
-                </div>
-            </section>
+<div class="frost-bg"></div>
 
-            <section class="center-forge">
-                <div class="furnace-core">
-                    <div class="furnace-glow"></div>
-                    <button id="simulate-btn" class="forge-trigger-btn">Predict<br><span class="sub-btn">RUN SIMULATION</span></button>
-                </div>
+<div class="app">
 
-                <div class="results-display hidden" id="results-board">
-                    <div class="result-status-header" id="outcome-title">VICTORY</div>
-                    <div class="win-chance-wrapper">
-                        <svg class="progress-ring" width="120" height="120">
-                            <circle class="progress-ring__circle-bg" stroke="rgba(255,255,255,0.05)" stroke-width="8" fill="transparent" r="52" cx="60" cy="60"/>
-                            <circle id="win-rate-ring" class="progress-ring__circle" stroke="#ff6b00" stroke-width="8" fill="transparent" r="52" cx="60" cy="60"/>
-                        </svg>
-                        <div class="win-pct" id="victory-percentage">0%</div>
-                    </div>
-                    <div class="tactical-log" id="battle-log">
-                        <p class="log-entry system-msg">[SYSTEM] Waiting for tactical coordination coordinates...</p>
-                    </div>
-                </div>
-            </section>
-
-            <section class="tactical-card defender-panel">
-                <div class="panel-header">
-                    <h2>DEFENDING FORCE</h2>
-                    <span class="faction-tag rival">TARGET</span>
-                </div>
-                <div class="panel-body">
-                    <div class="hero-selection">
-                        <h3>Hero Formations</h3>
-                        <div class="input-group">
-                            <label>Primary Hero</label>
-                            <input type="text" id="def-hero1" placeholder="e.g., Greg (S3)" class="wos-input">
-                        </div>
-                        <div class="input-group">
-                            <label>Secondary Hero</label>
-                            <input type="text" id="def-hero2" placeholder="e.g., Jera (S3)" class="wos-input">
-                        </div>
-                    </div>
-                    
-                    <div class="troop-allocation">
-                        <h3>Troop Count</h3>
-                        <div class="input-group infantry">
-                            <label>🛡️ Infantry (Shields)</label>
-                            <input type="number" id="def-infantry" value="100000" class="wos-input">
-                        </div>
-                        <div class="input-group lancer">
-                            <label>⚡ Lancers (Spears)</label>
-                            <input type="number" id="def-lancers" value="80000" class="wos-input">
-                        </div>
-                        <div class="input-group marksman">
-                            <label>🎯 Marksmen (Bows)</label>
-                            <input type="number" id="def-marksmen" value="120000" class="wos-input">
-                        </div>
-                    </div>
-                </div>
-            </section>
-        </main>
+  <!-- ── Header ────────────────────────────── -->
+  <header class="app-header">
+    <div class="hdr-brand">
+      <div class="status-dot" id="status-dot"></div>
+      <h1>WOS BATTLE PREDICTOR</h1>
     </div>
+    <div class="accuracy-badge">
+      MODEL ACCURACY: <span id="accuracy-value">LOADING…</span>
+    </div>
+  </header>
 
-    <script src="config.js"></script>
-    <script src="app.js"></script>
+  <!-- ── Battle grid ───────────────────────── -->
+  <div class="battle-grid">
+
+    <!-- ── ATTACKER ──────────────────────── -->
+    <section class="panel atk-panel">
+      <div class="panel-hdr">
+        <h2>⚔ ATTACKING FORCE</h2>
+        <span class="role-tag atk">ATTACKER</span>
+      </div>
+
+      <div class="stat-group">
+        <div class="group-label">Identity</div>
+        <div class="field full">
+          <label>Player / Alliance Tag</label>
+          <input type="text" id="atk-name" class="wos-input" placeholder="e.g. [SLD] Ahmed">
+        </div>
+      </div>
+
+      <div class="stat-group">
+        <div class="group-label">Base Combat Stats</div>
+        <div class="stat-cols">
+          <div class="field">
+            <label>Attack</label>
+            <input type="number" id="atk-attack" class="wos-input" value="50000">
+          </div>
+          <div class="field">
+            <label>Defense</label>
+            <input type="number" id="atk-defense" class="wos-input" value="40000">
+          </div>
+          <div class="field">
+            <label>Health</label>
+            <input type="number" id="atk-health" class="wos-input" value="80000">
+          </div>
+          <div class="field">
+            <label>Lethality</label>
+            <input type="number" id="atk-lethality" class="wos-input" value="30000">
+          </div>
+          <div class="field full">
+            <label>HP (Troop Count)</label>
+            <input type="number" id="atk-hp" class="wos-input" value="1000">
+          </div>
+        </div>
+      </div>
+
+      <div class="stat-group">
+        <div class="group-label">Research &amp; Gear Bonus %</div>
+        <div class="stat-cols">
+          <div class="field">
+            <label>Atk Bonus %</label>
+            <input type="number" id="atk-attack-pct" class="wos-input pct" value="50">
+          </div>
+          <div class="field">
+            <label>Def Bonus %</label>
+            <input type="number" id="atk-defense-pct" class="wos-input pct" value="30">
+          </div>
+          <div class="field">
+            <label>HP Bonus %</label>
+            <input type="number" id="atk-health-pct" class="wos-input pct" value="40">
+          </div>
+          <div class="field">
+            <label>Leth Bonus %</label>
+            <input type="number" id="atk-lethality-pct" class="wos-input pct" value="20">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── CENTER ────────────────────────── -->
+    <section class="battle-center">
+      <div class="vs-ring"><span>VS</span></div>
+
+      <div class="action-btns">
+        <button class="wos-btn btn-v2" id="predict-btn">
+          <span class="b-main">PREDICT</span>
+          <span class="b-sub">V2 · AI MODEL</span>
+        </button>
+        <button class="wos-btn btn-v1" id="simulate-btn">
+          <span class="b-main">SIMULATE</span>
+          <span class="b-sub">V1 · FORMULA</span>
+        </button>
+      </div>
+
+      <!-- Results -->
+      <div id="results-panel" class="hidden">
+        <div class="res-title" id="result-title">CALCULATING…</div>
+
+        <div id="prob-wrap">
+          <svg viewBox="0 0 108 108">
+            <circle class="ring-bg"   cx="54" cy="54" r="48" stroke-width="8" fill="none"/>
+            <circle class="ring-fill" cx="54" cy="54" r="48" stroke-width="8" fill="none" id="prob-ring"/>
+          </svg>
+          <div class="prob-label">
+            <span id="prob-text">0%</span>
+            <span class="prob-sub">WIN PROB</span>
+          </div>
+        </div>
+
+        <div class="result-details" id="result-details"></div>
+        <div id="battle-log"></div>
+      </div>
+    </section>
+
+    <!-- ── DEFENDER ──────────────────────── -->
+    <section class="panel def-panel">
+      <div class="panel-hdr">
+        <h2>🛡 DEFENDING FORCE</h2>
+        <span class="role-tag def">DEFENDER</span>
+      </div>
+
+      <div class="stat-group">
+        <div class="group-label">Identity</div>
+        <div class="field full">
+          <label>Player / Alliance Tag</label>
+          <input type="text" id="def-name" class="wos-input" placeholder="e.g. [ELT] Rival">
+        </div>
+      </div>
+
+      <div class="stat-group">
+        <div class="group-label">Base Combat Stats</div>
+        <div class="stat-cols">
+          <div class="field">
+            <label>Attack</label>
+            <input type="number" id="def-attack" class="wos-input" value="45000">
+          </div>
+          <div class="field">
+            <label>Defense</label>
+            <input type="number" id="def-defense" class="wos-input" value="42000">
+          </div>
+          <div class="field">
+            <label>Health</label>
+            <input type="number" id="def-health" class="wos-input" value="75000">
+          </div>
+          <div class="field">
+            <label>Lethality</label>
+            <input type="number" id="def-lethality" class="wos-input" value="28000">
+          </div>
+          <div class="field full">
+            <label>HP (Troop Count)</label>
+            <input type="number" id="def-hp" class="wos-input" value="1000">
+          </div>
+        </div>
+      </div>
+
+      <div class="stat-group">
+        <div class="group-label">Research &amp; Gear Bonus %</div>
+        <div class="stat-cols">
+          <div class="field">
+            <label>Atk Bonus %</label>
+            <input type="number" id="def-attack-pct" class="wos-input pct" value="45">
+          </div>
+          <div class="field">
+            <label>Def Bonus %</label>
+            <input type="number" id="def-defense-pct" class="wos-input pct" value="35">
+          </div>
+          <div class="field">
+            <label>HP Bonus %</label>
+            <input type="number" id="def-health-pct" class="wos-input pct" value="38">
+          </div>
+          <div class="field">
+            <label>Leth Bonus %</label>
+            <input type="number" id="def-lethality-pct" class="wos-input pct" value="18">
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div><!-- /battle-grid -->
+
+</div><!-- /app -->
+
+<script src="config.js"></script>
+<script src="app.js"></script>
 </body>
 </html>

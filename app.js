@@ -1,133 +1,181 @@
-// Hardcoded to your live production Railway backend to prevent config.js conflicts
-const BACKEND_URL = 'https://wospredv3-production.up.railway.app';
+// ─────────────────────────────────────────────
+//  WOS Battle Predictor – App Logic
+// ─────────────────────────────────────────────
 
-document.addEventListener('DOMContentLoaded', () => {
-    fetchModelAccuracy();
-    
-    const simulateBtn = document.getElementById('simulate-btn');
-    if (simulateBtn) {
-        simulateBtn.addEventListener('click', runBattleSimulation);
-    } else {
-        console.error("CRITICAL: Could not find the simulate-btn in the HTML.");
-    }
+// ── On load: fetch model accuracy ────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  const badge = document.getElementById('accuracy-value');
+  try {
+    const res = await fetch(`${CONFIG.API_URL}/model-accuracy`);
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    const pct = data.accuracy !== undefined
+      ? `${(data.accuracy * 100).toFixed(1)}%`
+      : 'ONLINE';
+    badge.textContent = pct;
+    badge.className = 'live';
+    document.getElementById('status-dot').className = 'status-dot online';
+  } catch {
+    badge.textContent = 'OFFLINE';
+    badge.className = 'error';
+    document.getElementById('status-dot').className = 'status-dot offline';
+  }
 });
 
-// Fetch system accuracy calculation dynamically
-async function fetchModelAccuracy() {
-    const accuracyBadge = document.getElementById('accuracy-badge');
-    try {
-        const response = await fetch(`${BACKEND_URL}/api/model-accuracy`);
-        if (!response.ok) throw new Error('Network context error fallback');
-        const data = await response.json();
-        
-        // Dynamically updates status badge with live analytics response
-        accuracyBadge.innerHTML = `ENGINE ACCURACY: <span style="color: #4ade80;">${data.accuracy || '95.4%'}</span>`;
-    } catch (error) {
-        console.error('Accuracy engine retrieval status failure:', error);
-        accuracyBadge.innerHTML = `ENGINE STATUS: <span style="color: #f87171;">OFFLINE MODE</span>`;
-    }
+// ── Read one side's inputs ────────────────────
+function readSide(s) {
+  const g = id => parseFloat(document.getElementById(`${s}-${id}`).value) || 0;
+  return {
+    id: document.getElementById(`${s}-name`).value.trim() || `${s}-player`,
+    stats: {
+      attack:               g('attack'),
+      defense:              g('defense'),
+      health:               g('health'),
+      lethality:            g('lethality'),
+      attack_stats_sum:     g('attack-pct')   / 100,
+      defense_stats_sum:    g('defense-pct')  / 100,
+      health_stats_sum:     g('health-pct')   / 100,
+      lethality_stats_sum:  g('lethality-pct') / 100,
+    },
+    hp: parseFloat(document.getElementById(`${s}-hp`).value) || 1000
+  };
 }
 
-// Map parameters and trigger core calculation
-async function runBattleSimulation() {
-    const resultsBoard = document.getElementById('results-board');
-    const logContainer = document.getElementById('battle-log');
-    const simulateBtn = document.getElementById('simulate-btn');
-    
-    // UI Visual feedback changes processing stage
-    resultsBoard.classList.remove('hidden');
-    simulateBtn.innerText = "FORGING...";
-    simulateBtn.disabled = true;
-    
-    logContainer.innerHTML = `<p class="log-entry">[CORE] Gathering troop march lines and hero parameters...</p>`;
+// ── Simulate (V1) ────────────────────────────
+document.getElementById('simulate-btn').addEventListener('click', () =>
+  runBattle('/simulate-battle', 'v1')
+);
 
-    // Build the payload mapping exactly what your FastAPI expects
-    const battlePayload = {
-        attacker: {
-            heroes: [
-                document.getElementById('atk-hero1').value || 'None',
-                document.getElementById('atk-hero2').value || 'None'
-            ],
-            infantry: parseInt(document.getElementById('atk-infantry').value) || 0,
-            lancers: parseInt(document.getElementById('atk-lancers').value) || 0,
-            marksmen: parseInt(document.getElementById('atk-marksmen').value) || 0
-        },
-        defender: {
-            heroes: [
-                document.getElementById('def-hero1').value || 'None',
-                document.getElementById('def-hero2').value || 'None'
-            ],
-            infantry: parseInt(document.getElementById('def-infantry').value) || 0,
-            lancers: parseInt(document.getElementById('def-lancers').value) || 0,
-            marksmen: parseInt(document.getElementById('def-marksmen').value) || 0
-        }
-    };
+// ── Predict (V2) ────────────────────────────
+document.getElementById('predict-btn').addEventListener('click', () =>
+  runBattle('/predict-outcome', 'v2')
+);
 
-    try {
-        logContainer.innerHTML += `<p class="log-entry">[FURNACE] Routing data to simulation core models...</p>`;
-        
-        const response = await fetch(`${BACKEND_URL}/api/predict-outcome`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(battlePayload)
-        });
+async function runBattle(endpoint, mode) {
+  const btn = document.getElementById(mode === 'v1' ? 'simulate-btn' : 'predict-btn');
+  setLoading(btn, true);
+  hideResults();
 
-        if (!response.ok) throw new Error(`Server returned error code: ${response.status}`);
-        
-        const resultData = await response.json();
-        
-        // Render outputs 
-        displayResults(resultData);
+  const payload = {
+    attacker: readSide('atk'),
+    defender: readSide('def')
+  };
 
-    } catch (error) {
-        console.error('Simulation exception:', error);
-        document.getElementById('outcome-title').innerText = "ERROR";
-        document.getElementById('outcome-title').style.color = "#ef4444";
-        logContainer.innerHTML += `<p class="log-entry fail-msg">[CRITICAL] Tactical transmission failure. Ensure your backend is running.</p>`;
-    } finally {
-        // FIXED: Using backticks here to prevent quote escaping errors
-        simulateBtn.innerHTML = `IGNITE FURNACE<br><span class="sub-btn">RUN SIMULATION</span>`;
-        simulateBtn.disabled = false;
+  try {
+    const res = await fetch(`${CONFIG.API_URL}${endpoint}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || `HTTP ${res.status}`);
     }
+    const data = await res.json();
+    showResults(data, mode, payload);
+  } catch (e) {
+    showError(e.message);
+  } finally {
+    setLoading(btn, false);
+  }
 }
 
-// Display tactical simulation outcome outputs with calculations
-function displayResults(data) {
-    const title = document.getElementById('outcome-title');
-    const pctText = document.getElementById('victory-percentage');
-    const log = document.getElementById('battle-log');
-    
-    // Parse response fields gracefully depending on backend design structure
-    const status = data.status === 'success' ? (data.result || 'VICTORY') : 'DETERMINED';
-    title.innerText = status;
-    
-    // Handle coloring parameters depending on output state
-    if (status.toLowerCase().includes('victory')) {
-        title.style.color = '#4ade80';
-    } else {
-        title.style.color = '#ef4444';
-    }
+// ── Display results ───────────────────────────
+function showResults(data, mode, payload) {
+  const panel     = document.getElementById('results-panel');
+  const title     = document.getElementById('result-title');
+  const probWrap  = document.getElementById('prob-wrap');
+  const probText  = document.getElementById('prob-text');
+  const ring      = document.getElementById('prob-ring');
+  const details   = document.getElementById('result-details');
+  const logEl     = document.getElementById('battle-log');
 
-    // Dynamic generation math for matching circular stroke meter framework
-    const finalWinRate = data.win_rate !== undefined ? data.win_rate : (status === 'VICTORY' ? 88 : 12);
-    pctText.innerText = `${finalWinRate}%`;
-    updateProgressRing(finalWinRate);
+  panel.classList.remove('hidden', 'attacker', 'defender', 'draw', 'error');
 
-    // Final log completion diagnostic text
-    log.innerHTML += `<p class="log-entry">[COMPLETE] Simulation finished cleanly. Estimated Alliance outcome: ${status}.</p>`;
+  let winner, prob, v1;
+  if (mode === 'v2') {
+    winner = data.predicted_winner || 'unknown';
+    prob   = data.win_probability  || 0;
+    v1     = data.v1_result        || {};
+  } else {
+    winner = data.winner || 'unknown';
+    prob   = winner === 'attacker' ? 0.82 : winner === 'defender' ? 0.18 : 0.5;
+    v1     = data;
+  }
+
+  panel.classList.add(winner);
+
+  // Title
+  const atkName = payload.attacker.id;
+  const defName = payload.defender.id;
+  const icons   = { attacker: '⚔️', defender: '🛡️', draw: '⚖️' };
+  const labels  = {
+    attacker: `${icons.attacker} ${atkName.toUpperCase()} WINS`,
+    defender: `${icons.defender} ${defName.toUpperCase()} HOLDS`,
+    draw: '⚖️ DRAW'
+  };
+  title.textContent = labels[winner] || '❓ UNKNOWN';
+
+  // Probability ring
+  const pct = Math.round(prob * 100);
+  const circumference = 2 * Math.PI * 48;
+  probText.textContent = `${pct}%`;
+  ring.style.strokeDasharray  = `${circumference}`;
+  ring.style.strokeDashoffset = `${circumference * (1 - prob)}`;
+  probWrap.style.display = 'block';
+
+  // Details table
+  const rows = [
+    ['Model',         mode === 'v2' ? 'V2 AI Calibrated' : 'V1 Deterministic'],
+    ['Rounds Fought', v1.rounds_played ?? v1.history?.length ?? '—'],
+    ['Win Probability', `${pct}%`],
+    ['V1 Result',     v1.winner ?? winner],
+  ];
+  details.innerHTML = rows.map(([k, v]) =>
+    `<div class="d-row"><span>${k}</span><span class="d-val">${v}</span></div>`
+  ).join('');
+
+  // Battle log
+  const history = v1.history || [];
+  if (history.length) {
+    const entries = history.slice(0, 8).map((r, i) => {
+      const rnd  = r.result?.round  ?? i + 1;
+      const dmg  = r.result?.damage_dealt?.toFixed(4) ?? '—';
+      const hp   = r.result?.defender_remaining_hp?.toFixed(1) ?? '—';
+      const side = (r.side || '').toUpperCase();
+      return `<div class="log-line">[R${rnd}] ${side} › DMG ${dmg} · HP left ${hp}</div>`;
+    });
+    logEl.innerHTML = entries.join('');
+    logEl.style.display = 'block';
+  } else {
+    logEl.style.display = 'none';
+  }
+
+  panel.classList.remove('hidden');
+  panel.style.animation = 'none';
+  panel.offsetHeight;
+  panel.style.animation = '';
 }
 
-// Circular layout update logic engine parameters tracking metric
-function updateProgressRing(percent) {
-    const circle = document.getElementById('win-rate-ring');
-    if (!circle) return;
-    
-    const radius = circle.r.baseVal.value;
-    const circumference = radius * 2 * Math.PI;
-    
-    circle.style.strokeDasharray = `${circumference} ${circumference}`;
-    const offset = circumference - (percent / 100 * circumference);
-    circle.style.strokeDashoffset = offset;
+function showError(msg) {
+  const panel = document.getElementById('results-panel');
+  panel.classList.remove('hidden', 'attacker', 'defender', 'draw');
+  panel.classList.add('error');
+  document.getElementById('result-title').textContent  = '⚠ CONNECTION FAILED';
+  document.getElementById('prob-wrap').style.display   = 'none';
+  document.getElementById('result-details').innerHTML  =
+    `<div class="err-msg">Could not reach the API.<br>
+     Check <code>config.js</code> has your Railway URL and CORS is enabled.<br>
+     <small>${msg}</small></div>`;
+  document.getElementById('battle-log').style.display  = 'none';
+}
+
+function hideResults() {
+  const panel = document.getElementById('results-panel');
+  panel.classList.add('hidden');
+}
+
+function setLoading(btn, on) {
+  btn.disabled = on;
+  btn.dataset.loading = on ? '1' : '';
 }
