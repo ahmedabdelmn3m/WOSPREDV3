@@ -1,22 +1,35 @@
-version: '3.8'
-
+version: "3.9"
 services:
   api:
     build: .
     ports:
-      - "8000:8000"
+      - "8080:8080"
     environment:
-      - DATABASE_URL=postgresql://user:password@db:5432/wos_db
+      PORT: "8080"
+      DATABASE_URL: "postgresql://wos:wospass@db:5432/wosdb"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+    volumes:
+      - .:/app
+    restart: unless-stopped
 
   db:
-    image: postgres:15
+    image: postgres:15-alpine
     environment:
-      - POSTGRES_USER=user
-      - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=wos_db
+      POSTGRES_USER:     wos
+      POSTGRES_PASSWORD: wospass
+      POSTGRES_DB:       wosdb
     ports:
       - "5432:5432"
     volumes:
-      - ./database/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+      - pg_data:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wos -d wosdb"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pg_data:

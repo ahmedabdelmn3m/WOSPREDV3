@@ -1,15 +1,20 @@
-class SkillEngine:
-    def __init__(self):
-        self.active_modifiers = {"attacker": {"damage": 1.0, "defense": 1.0}, "defender": {"damage": 1.0, "defense": 1.0}}
+"""
+SkillEngine — stub for hero skill effects.
 
-    def trigger(self, event_type, attacker, defender, context):
-        """
-        Event-driven skill triggers: on_battle_start, on_round_start, etc.
-        """
-        # Logic to iterate through hero skills and apply effects based on event_type
-        # For brevity in this generation, we provide the structure
+Currently a no-op. Hero skill integration is planned for V2.
+When implemented, this will:
+  - Fire on_round_start events per hero
+  - Return damage/defense multipliers based on active skills
+  - Handle cooldowns and durations
+"""
+
+
+class SkillEngine:
+
+    def trigger(self, event: str, attacker, defender, round_num: int) -> None:
+        """Fire a combat event. No-op in V1."""
         pass
 
-    def get_modifiers(self, entity, stat_type):
-        side = entity.get('side', 'attacker')
-        return self.active_modifiers.get(side, {}).get(stat_type, 1.0)
+    def get_modifiers(self, army, stat: str) -> float:
+        """Return stat multiplier from active skills. Always 1.0 in V1."""
+        return 1.0

@@ -1,12 +1,51 @@
+"""
+Verified Damage Formula (Source: WOS community research + screenshot confirmation):
+
+    damage = (attack × (1 + Σ attack stats) × lethality × (1 + Σ lethality stats)) / 100
+
+The / 100 keeps numbers manageable after multiplicative stacking.
+Previous repo version had this INVERTED as 100 / (...) — now corrected.
+"""
+
+
 class DamageModel:
+    """
+    Calculates damage power for one troop type.
+
+    Parameters
+    ----------
+    attack          : Base attack value. Use 1.0 when only % bonuses are
+                      known (e.g. from a scout screenshot).
+    attack_bonus    : Σ attack bonuses in DECIMAL form.
+                      150 % → 1.50   |   200 % → 2.00
+    lethality       : Base lethality value (same rule as attack).
+    lethality_bonus : Σ lethality bonuses in decimal form.
+    """
+
     @staticmethod
-    def calculate_damage(attack, attack_stats_sum, lethality, lethality_stats_sum):
+    def calculate(
+        attack: float,
+        attack_bonus: float,
+        lethality: float,
+        lethality_bonus: float,
+    ) -> float:
         """
-        Damage = 100 / (Attack * (1 + ΣAttackStats) * Lethality * (1 + ΣLethalityStats))
-        Wait, the formula in the prompt seems to be for a 'damage factor' or something similar 
-        since it has 100 / (...). Let's implement as specified.
+        damage = (attack × (1 + attack_bonus) × lethality × (1 + lethality_bonus)) / 100
         """
-        denominator = (attack * (1 + attack_stats_sum) * lethality * (1 + lethality_stats_sum))
-        if denominator == 0:
-            return 0
-        return 100 / denominator
+        return (
+            attack    * (1.0 + attack_bonus) *
+            lethality * (1.0 + lethality_bonus)
+        ) / 100.0
+
+    # ── Legacy alias — keeps old call-sites working ─────────────────────
+    @staticmethod
+    def calculate_damage(
+        attack: float,
+        attack_stats_sum: float,
+        lethality: float,
+        lethality_stats_sum: float,
+    ) -> float:
+        return DamageModel.calculate(
+            attack, attack_stats_sum,
+            lethality, lethality_stats_sum,
+        )
