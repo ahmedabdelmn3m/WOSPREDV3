@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WOS Rally Timing — Odin #3435</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <style>
+    /* ── Tokens ──────────────────────────────────────────────── */
+    :root {
+      --bg:        #07090f;
+      --surface:   #0d1421;
+      --card:      #111c2e;
+      --input-bg:  #0a1220;
+      --border:    #1e3a5f;
+      --border-hi: #2a4a6f;
+      --ice:       #00c8ff;
+      --ice-dim:   #007fa8;
+      --fire:      #ff6b35;
+      --win:       #2ecc71;
+      --loss:      #e74c3c;
+      --warn:      #f39c12;
+      --txt:       #d4e8f0;
+      --txt-dim:   #7a99b8;
+      --txt-hi:    #ffffff;
+      --radius:    8px;
+      --shadow:    0 8px 32px rgba(0,0,0,.6);
+    }
+
+    [data-theme="light"] {
+      --bg:       #e8f0f8;
+      --surface:  #ffffff;
+      --card:     #f0f6ff;
+      --input-bg: #ffffff;
+      --border:   #b0c8e0;
+      --border-hi:#80a8c8;
+      --txt:      #1a2a3a;
+      --txt-dim:  #4a6a8a;
+      --txt-hi:   #000000;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--txt);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      font-size: 14px;
+      min-height: 100vh;
+      padding: 16px;
+    }
+
+    /* ── Header ──────────────────────────────────────────────── */
+    .app-header {
+      display: flex; align-items: center; justify-content: space-between;
+      background: linear-gradient(90deg, #060c18, #0d1a30);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 20px;
+      margin-bottom: 14px;
+    }
+    [data-theme="light"] .app-header { background: linear-gradient(90deg, #c8e0f8, #e0eeff); }
+    .header-left { display: flex; align-items: center; gap: 10px; }
+    .logo-icon   { font-size: 24px; }
+    .logo-text   { display: flex; flex-direction: column; }
+    .logo-title  { font-size: 17px; font-weight: 700; color: var(--ice); letter-spacing: 2px; }
+    .logo-sub    { font-size: 10px; color: var(--txt-dim); letter-spacing: 1px; }
+    .utc-pill {
+      font-size: 13px; font-weight: 700; font-family: monospace;
+      padding: 5px 14px; border-radius: 20px;
+      background: rgba(0,200,255,.1); color: var(--ice);
+      border: 1px solid rgba(0,200,255,.3);
+    }
+    .dark-toggle {
+      background: none; border: 1px solid var(--border-hi);
+      color: var(--txt-dim); padding: 6px 12px;
+      border-radius: var(--radius); cursor: pointer; font-size: 13px;
+      transition: all .2s;
+    }
+    .dark-toggle:hover { color: var(--ice); border-color: var(--ice); }
+
+    /* ── Tabs ────────────────────────────────────────────────── */
+    .tab-nav {
+      display: flex; gap: 4px; padding: 0;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 14px;
+    }
+    .tab-btn {
+      padding: 9px 18px; border: none;
+      border-bottom: 2px solid transparent;
+      background: transparent; color: var(--txt-dim);
+      font-size: 13px; font-weight: 600; cursor: pointer;
+      transition: all .2s;
+    }
+    .tab-btn:hover  { color: var(--ice); }
+    .tab-btn.active { color: var(--ice); border-bottom-color: var(--ice); }
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
+
+    /* ── Cards & rows ────────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+    .leader-row {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      margin-bottom: 10px;
+      position: relative;
+      transition: transform .2s, box-shadow .2s;
+    }
+    .leader-row:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+
+    .leader-icon {
+      position: absolute; top: 14px; left: 14px;
+      font-size: 1.1em; color: var(--ice);
+    }
+    .remove-leader {
+      position: absolute; top: 14px; right: 14px;
+      cursor: pointer; font-size: 1.1em; color: var(--txt-dim);
+      transition: color .2s;
+    }
+    .remove-leader:hover { color: var(--loss); }
+    .leader-fields { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 28px; }
+    @media (max-width: 640px) { .leader-fields { grid-template-columns: 1fr; } }
+
+    /* ── Form controls ───────────────────────────────────────── */
+    .form-group { display: flex; flex-direction: column; gap: 4px; }
+    label { font-size: 11px; color: var(--txt-dim); text-transform: uppercase; letter-spacing: .5px; }
+    input[type="text"], input[type="number"], select {
+      padding: 8px 12px;
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--txt-hi);
+      font-size: 14px;
+      width: 100%;
+      transition: border-color .2s;
+    }
+    input:focus, select:focus { outline: none; border-color: var(--ice); }
+    input[type="range"] { width: 100%; accent-color: var(--ice); }
+
+    /* ── Buttons ─────────────────────────────────────────────── */
+    .btn { padding: 9px 18px; border-radius: var(--radius); font-size: 13px; font-weight: 700; cursor: pointer; border: none; transition: all .2s; }
+    .btn-ice    { background: rgba(0,200,255,.15); color: var(--ice); border: 1px solid rgba(0,200,255,.35); }
+    .btn-ice:hover    { background: rgba(0,200,255,.25); }
+    .btn-green  { background: rgba(46,204,113,.15); color: var(--win); border: 1px solid rgba(46,204,113,.35); }
+    .btn-green:hover  { background: rgba(46,204,113,.25); }
+    .btn-fire   { background: rgba(255,107,53,.15); color: var(--fire); border: 1px solid rgba(255,107,53,.35); }
+    .btn-fire:hover   { background: rgba(255,107,53,.25); }
+    .btn-ghost  { background: transparent; color: var(--txt-dim); border: 1px solid var(--border); }
+    .btn-ghost:hover  { color: var(--txt); border-color: var(--border-hi); }
+    .btn-row    { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
+
+    /* ── Impact time settings ────────────────────────────────── */
+    .time-inputs { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: end; }
+    @media (max-width: 640px) { .time-inputs { grid-template-columns: 1fr; } }
+
+    /* ── Results ─────────────────────────────────────────────── */
+    .results-area { margin-top: 14px; }
+    .results-title { font-size: 11px; color: var(--txt-dim); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+    .result-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 14px;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); margin-bottom: 6px;
+      transition: transform .2s, box-shadow .2s;
+    }
+    .result-item:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+    .result-item.suicide { background: rgba(255,99,71,.12); border-color: rgba(255,99,71,.4); }
+    .result-item.earliest { border-color: var(--warn); }
+    .ri-icon  { width: 20px; text-align: center; color: var(--ice); font-size: 1.1em; }
+    .ri-name  { width: 120px; font-weight: 700; color: var(--txt-hi); }
+    .ri-times { flex: 1; display: flex; align-items: center; gap: 6px; font-size: 13px; }
+    .ri-launch { font-family: monospace; font-weight: 700; color: var(--warn); font-size: 14px; }
+    .ri-arrow  { color: var(--txt-dim); }
+    .ri-impact { font-family: monospace; font-weight: 700; color: var(--ice); font-size: 14px; }
+    .ri-detail { font-size: 11px; color: var(--txt-dim); }
+    .ri-tag {
+      font-size: 10px; font-weight: 700; padding: 2px 6px;
+      border-radius: 3px; background: rgba(255,99,71,.4); color: #fff;
+    }
+
+    /* ── Troop Calculator ────────────────────────────────────── */
+    .troop-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 12px; }
+    @media (max-width: 640px) { .troop-grid { grid-template-columns: 1fr; } }
+    .troop-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 14px; text-align: center;
+    }
+    .troop-card-title { font-size: 11px; color: var(--txt-dim); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; }
+    .troop-card-value { font-size: 22px; font-weight: 800; color: var(--ice); }
+    .troop-slider-block { margin-bottom: 12px; }
+    .slider-header { display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 12px; color: var(--txt-dim); }
+    .slider-val { color: var(--ice); font-weight: 700; }
+
+    /* ── Copy toast ──────────────────────────────────────────── */
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      padding: 10px 24px; background: var(--win); color: #000;
+      font-weight: 700; border-radius: 20px; font-size: 13px;
+      z-index: 9999; display: none; box-shadow: var(--shadow);
+    }
+
+    /* ── Footer ──────────────────────────────────────────────── */
+    .app-footer {
+      text-align: center; margin-top: 20px;
+      font-size: 11px; color: var(--txt-dim);
+      padding: 10px;
+    }
+    .credit { color: var(--ice); font-weight: 700; }
+
+    /* ── Section titles ──────────────────────────────────────── */
+    .section-title { font-size: 12px; font-weight: 700; color: var(--txt-dim); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ─────────────────────────────────────────────── -->
+<header class="app-header">
+  <div class="header-left">
+    <span class="logo-icon">🎯</span>
+    <div class="logo-text">
+      <span class="logo-title">WOS RALLY TIMING</span>
+      <span class="logo-sub">Sync calculator · Odin #3435</span>
+    </div>
+  </div>
+  <div style="display:flex;gap:10px;align-items:center">
+    <span class="utc-pill" id="utc-clock">00:00:00 UTC</span>
+    <button class="dark-toggle" id="theme-toggle">☀ Light</button>
+  </div>
+</header>
+
+<!-- ── Tabs ───────────────────────────────────────────────── -->
+<nav class="tab-nav">
+  <button class="tab-btn active" data-tab="main">⚔️ Rally Sync</button>
+  <button class="tab-btn" data-tab="troops">🛡 Troop Calculator</button>
+  <button class="tab-btn" data-tab="settings">⚙ Settings</button>
+  <button class="tab-btn" data-tab="info">ℹ Info</button>
+</nav>
+
+<!-- ════════════════════ MAIN TAB ════════════════════════════ -->
+<div class="tab-pane active" id="tab-main">
+
+  <!-- Impact time setup -->
+  <div class="card">
+    <div class="section-title">RALLY IMPACT TIME (UTC) — when you want everyone to hit</div>
+    <div class="time-inputs">
+      <div class="form-group">
+        <label>Impact Time (hh:mm:ss)</label>
+        <input type="text" id="impactTime" placeholder="e.g. 14:30:00" />
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px;padding-top:18px">
+        <button class="btn btn-ghost" onclick="adjustTime(-5)">−5 min</button>
+        <button class="btn btn-ghost" onclick="adjustTime(5)">+5 min</button>
+      </div>
+      <div style="padding-top:18px">
+        <button class="btn btn-ice" onclick="setNextRoundTime()">⏱ Next Round</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leaders -->
+  <div class="card">
+    <div class="section-title">RALLY LEADERS</div>
+    <div id="leader-container"></div>
+    <div class="btn-row">
+      <button class="btn btn-ice" onclick="addLeader()"><i class="fas fa-plus"></i> Add Leader</button>
+      <button class="btn btn-green" onclick="calculateTimings()"><i class="fas fa-calculator"></i> Calculate</button>
+      <button class="btn btn-ghost" onclick="clearAll()"><i class="fas fa-trash"></i> Clear All</button>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div class="card results-area" id="results-area" style="display:none">
+    <div class="section-title" style="display:flex;justify-content:space-between;align-items:center">
+      <span>TIMETABLE — send these times in chat</span>
+      <button class="btn btn-ice" onclick="copyAll()" style="padding:4px 12px;font-size:11px">📋 Copy All</button>
+    </div>
+    <div id="results"></div>
+    <div id="copy-template" style="display:none;margin-top:12px">
+      <div class="section-title">CHAT MESSAGE (tap to copy)</div>
+      <div id="chat-msg" onclick="copyMsg(this)" style="
+        background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+        padding:12px;font-family:monospace;font-size:12px;cursor:pointer;
+        white-space:pre-wrap;line-height:1.6;">
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ TROOP CALCULATOR TAB ═══════════════════════ -->
+<div class="tab-pane" id="tab-troops">
+  <div class="card">
+    <div class="section-title">TROOP FORMATION CALCULATOR</div>
+    <div class="form-group" style="max-width:240px;margin-bottom:18px">
+      <label>Total Troops</label>
+      <input type="number" id="totalTroops" value="500000" oninput="calcTroops()" />
+    </div>
+
+    <div class="troop-slider-block">
+      <div class="slider-header"><span>🛡 Infantry</span><span class="slider-val"><span id="infVal">50</span>%</span></div>
+      <input type="range" id="inf" min="0" max="100" value="50" oninput="onSlider(this)">
+    </div>
+    <div class="troop-slider-block">
+      <div class="slider-header"><span>🗡 Lancer</span><span class="slider-val"><span id="lanVal">20</span>%</span></div>
+      <input type="range" id="lan" min="0" max="100" value="20" oninput="onSlider(this)">
+    </div>
+    <div class="troop-slider-block">
+      <div class="slider-header"><span>🎯 Marksman</span><span class="slider-val"><span id="mrkVal">30</span>%</span></div>
+      <input type="range" id="mrk" min="0" max="100" value="30" oninput="onSlider(this)">
+    </div>
+
+    <div class="troop-grid">
+      <div class="troop-card"><div class="troop-card-title">🛡 Infantry</div><div class="troop-card-value" id="infResult">250,000</div></div>
+      <div class="troop-card"><div class="troop-card-title">🗡 Lancer</div><div class="troop-card-value" id="lanResult">100,000</div></div>
+      <div class="troop-card"><div class="troop-card-title">🎯 Marksman</div><div class="troop-card-value" id="mrkResult">150,000</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════ SETTINGS TAB ════════════════════════════ -->
+<div class="tab-pane" id="tab-settings">
+  <div class="card">
+    <div class="section-title">CLOCK ADJUSTMENT</div>
+    <p style="font-size:12px;color:var(--txt-dim);margin-bottom:14px">
+      If your device clock is slightly off from the game server, adjust here.
+    </p>
+    <div class="form-group" style="max-width:300px;margin-bottom:10px">
+      <label>Time Offset (milliseconds)</label>
+      <div style="display:flex;gap:6px;align-items:center">
+        <button class="btn btn-ghost" onclick="adjustOffset(-250)">−250ms</button>
+        <input type="number" id="timeOffset" value="0" style="text-align:center" oninput="saveOffset()" />
+        <button class="btn btn-ghost" onclick="adjustOffset(250)">+250ms</button>
+      </div>
+    </div>
+    <button class="btn btn-ghost" onclick="resetOffset()">Reset to 0</button>
+  </div>
+
+  <div class="card">
+    <div class="section-title">DELAY BETWEEN LEADERS</div>
+    <p style="font-size:12px;color:var(--txt-dim);margin-bottom:14px">
+      Seconds between each leader's impact time. 1s is recommended.
+      &gt;5s is not recommended.
+    </p>
+    <div style="display:flex;align-items:center;gap:10px">
+      <input type="range" id="delaySlider" min="0" max="10" value="1" oninput="updateDelay(this)" style="flex:1">
+      <span id="delayVal" style="font-size:18px;font-weight:800;color:var(--ice);width:30px">1</span>
+      <span style="font-size:11px;color:var(--txt-dim)">sec</span>
+    </div>
+    <div id="delayWarn" style="display:none;color:var(--loss);font-size:12px;margin-top:6px">
+      ⚠ More than 5 seconds between hits is not recommended.
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ INFO TAB ══════════════════════════════════ -->
+<div class="tab-pane" id="tab-info">
+  <div class="card">
+    <div class="section-title">HOW TO USE</div>
+    <p style="font-size:13px;line-height:1.7;color:var(--txt)">
+      <strong style="color:var(--ice)">1. Set the Impact Time</strong> — this is when you want all rallies to hit the target castle simultaneously. Use UTC.<br><br>
+      <strong style="color:var(--ice)">2. Add Leaders</strong> — enter each rally leader's name, their march time (how long their march takes), and their rally fill time (1 or 5 minutes).<br><br>
+      <strong style="color:var(--ice)">3. Order matters</strong> — the LAST leader in the list is the <strong style="color:var(--loss)">suicide</strong> (arrives 1st). Leaders above it sync behind it.<br><br>
+      <strong style="color:var(--ice)">4. Click Calculate</strong> — the timetable shows exactly when each leader should launch their rally.<br><br>
+      <strong style="color:var(--ice)">5. Copy All</strong> — paste directly into your alliance Discord or in-game chat.
+    </p>
+  </div>
+  <div class="card">
+    <div class="section-title">EXAMPLE</div>
+    <p style="font-size:12px;color:var(--txt-dim);line-height:1.7">
+      Leader Alpha — march 1:15 — sends at <strong style="color:var(--warn)">14:28:45</strong> → hits at 14:35:00<br>
+      Leader Bravo — march 3:08 — sends at <strong style="color:var(--warn)">14:26:52</strong> → hits at 14:35:00<br>
+      Suicide (1st) — march 0:45 — sends at <strong style="color:var(--warn)">14:29:15</strong> → hits at 14:34:59<br>
+    </p>
+  </div>
+  <div class="card">
+    <div class="section-title">ABOUT</div>
+    <p style="font-size:13px;color:var(--txt)">
+      Rally timing calculator for Whiteout Survival.<br>
+      Helps R4/R5 leaders coordinate simultaneous attacks on enemy castles.<br><br>
+      Part of <strong style="color:var(--ice)">WOSPREDV3</strong> — Battle Intelligence Platform.
+    </p>
+    <p style="margin-top:14px;font-size:13px;color:var(--txt-dim)">
+      Made by <span class="credit">Odin #3435</span>
+    </p>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Footer -->
+<footer class="app-footer">
+  WOS Rally Timing Calculator · Made by <span class="credit">Odin #3435</span> · Part of WOSPREDV3
+</footer>
+
+<script>
+'use strict';
+
+// ── Storage ──────────────────────────────────────────────────
+const ls = {
+  get: (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
+  set: (k, v) => localStorage.setItem(k, JSON.stringify(v)),
+};
+
+// ── UTC Clock ────────────────────────────────────────────────
+function updateClock() {
+  const offset = ls.get('timeOffset') || 0;
+  const now    = new Date(Date.now() + offset);
+  const hh     = now.getUTCHours().toString().padStart(2,'0');
+  const mm     = now.getUTCMinutes().toString().padStart(2,'0');
+  const ss     = now.getUTCSeconds().toString().padStart(2,'0');
+  document.getElementById('utc-clock').textContent = `${hh}:${mm}:${ss} UTC`;
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ── Theme toggle ─────────────────────────────────────────────
+const themeBtn = document.getElementById('theme-toggle');
+function applyTheme(dark) {
+  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  themeBtn.textContent = dark ? '☀ Light' : '🌙 Dark';
+  ls.set('darkMode', dark);
+}
+themeBtn.addEventListener('click', () => {
+  applyTheme(document.documentElement.getAttribute('data-theme') !== 'light');
+});
+applyTheme(ls.get('darkMode') !== false);
+
+// ── Tabs ──────────────────────────────────────────────────────
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+// ── Utility ───────────────────────────────────────────────────
+function parseTime(s) {
+  if (!s || !/^\d{1,2}:\d{2}$/.test(s.trim())) return null;
+  const [m, sec] = s.split(':').map(Number);
+  return m * 60 + sec;
+}
+
+function secsToHMS(totalSecs) {
+  totalSecs = ((totalSecs % 86400) + 86400) % 86400;
+  const h = Math.floor(totalSecs / 3600);
+  const m = Math.floor((totalSecs % 3600) / 60);
+  const s = totalSecs % 60;
+  return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+}
+
+function hmsToSecs(hms) {
+  const [h,m,s] = hms.split(':').map(Number);
+  return h*3600 + m*60 + (s||0);
+}
+
+function fmt(n) { return Math.round(n).toLocaleString(); }
+
+// ── Impact time buttons ───────────────────────────────────────
+function adjustTime(mins) {
+  const inp = document.getElementById('impactTime');
+  if (!inp.value) return;
+  const secs = hmsToSecs(inp.value) + mins * 60;
+  inp.value = secsToHMS(secs);
+  ls.set('impactTime', inp.value);
+}
+
+function setNextRoundTime() {
+  const now  = new Date(Date.now() + (ls.get('timeOffset') || 0));
+  let m = now.getUTCMinutes();
+  let h = now.getUTCHours();
+  m = Math.ceil((m + 10) / 10) * 10;
+  if (m >= 60) { m = 0; h = (h + 1) % 24; }
+  const t = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:00`;
+  document.getElementById('impactTime').value = t;
+  ls.set('impactTime', t);
+}
+
+// ── Leaders ───────────────────────────────────────────────────
+let leaderIdx = 0;
+
+function addLeader(name='', march='', rallyTime='5') {
+  leaderIdx++;
+  const idx  = leaderIdx;
+  const div  = document.createElement('div');
+  div.className = 'leader-row';
+  div.dataset.idx = idx;
+  div.innerHTML = `
+    <div class="leader-icon" id="icon-${idx}"><i class="fas fa-user"></i></div>
+    <div class="remove-leader" onclick="this.closest('.leader-row').remove(); saveLeaders(); updateIcons()">
+      <i class="fas fa-times"></i>
+    </div>
+    <div class="leader-fields">
+      <div class="form-group">
+        <label>Leader Name</label>
+        <input type="text" id="name-${idx}" placeholder="e.g. Alpha" value="${name}" oninput="saveLeaders()">
+      </div>
+      <div class="form-group">
+        <label>March Time (m:ss)</label>
+        <input type="text" id="march-${idx}" placeholder="e.g. 1:15" value="${march}" oninput="saveLeaders()">
+      </div>
+      <div class="form-group">
+        <label>Rally Fill Time</label>
+        <select id="rally-${idx}" onchange="saveLeaders()">
+          <option value="1" ${rallyTime==='1'?'selected':''}>1 minute</option>
+          <option value="5" ${rallyTime==='5'?'selected':''}>5 minutes</option>
+        </select>
+      </div>
+    </div>
+  `;
+  document.getElementById('leader-container').appendChild(div);
+  updateIcons();
+}
+
+function updateIcons() {
+  const rows = document.querySelectorAll('.leader-row');
+  const icons = ['fa-crown','fa-star','fa-user','fa-user','fa-user','fa-skull-crossbones'];
+  rows.forEach((row, i) => {
+    const iconEl = row.querySelector('[id^="icon-"] i');
+    if (!iconEl) return;
+    if (i === 0)                 iconEl.className = 'fas fa-crown';
+    else if (i === 1)            iconEl.className = 'fas fa-star';
+    else if (i === rows.length-1) iconEl.className = 'fas fa-skull-crossbones';
+    else                         iconEl.className = 'fas fa-user';
+  });
+}
+
+function saveLeaders() {
+  const rows = document.querySelectorAll('.leader-row');
+  const data = Array.from(rows).map(r => {
+    const idx = r.dataset.idx;
+    return {
+      name:      document.getElementById(`name-${idx}`)?.value  || '',
+      march:     document.getElementById(`march-${idx}`)?.value || '',
+      rallyTime: document.getElementById(`rally-${idx}`)?.value || '5',
+    };
+  });
+  ls.set('leaders', data);
+}
+
+function loadLeaders() {
+  const saved = ls.get('leaders') || [
+    { name: 'Alpha', march: '1:15', rallyTime: '5' },
+    { name: 'Bravo', march: '3:08', rallyTime: '5' },
+  ];
+  saved.forEach(l => addLeader(l.name, l.march, l.rallyTime));
+}
+
+function clearAll() {
+  document.getElementById('leader-container').innerHTML = '';
+  document.getElementById('results-area').style.display = 'none';
+  leaderIdx = 0;
+  ls.set('leaders', []);
+}
+
+// ── Calculate ────────────────────────────────────────────────
+function calculateTimings() {
+  const impactStr = document.getElementById('impactTime').value.trim();
+  if (!impactStr || !/^\d{2}:\d{2}:\d{2}$/.test(impactStr)) {
+    toast('Enter a valid impact time: hh:mm:ss', true);
+    return;
+  }
+  ls.set('impactTime', impactStr);
+
+  const delay = parseInt(document.getElementById('delaySlider').value) || 1;
+
+  const rows   = document.querySelectorAll('.leader-row');
+  const leaders = Array.from(rows).map(r => {
+    const idx = r.dataset.idx;
+    return {
+      name:      document.getElementById(`name-${idx}`)?.value || '?',
+      march:     document.getElementById(`march-${idx}`)?.value || '0:00',
+      rallyTime: parseInt(document.getElementById(`rally-${idx}`)?.value || '5'),
+    };
+  });
+
+  if (!leaders.length) { toast('Add at least one leader', true); return; }
+
+  const impactBase = hmsToSecs(impactStr);
+
+  // Each leader hits at impactBase - (index * delay) seconds
+  // So leader 0 hits last (impactBase), leader N-1 hits first (suicide)
+  const results = leaders.map((l, i) => {
+    const marchSecs  = parseTime(l.march) ?? 0;
+    const rallySecs  = l.rallyTime * 60;
+    const myImpact   = impactBase - i * delay;
+    const myLaunch   = myImpact - marchSecs - rallySecs;
+    return {
+      name:      l.name,
+      rallyTime: l.rallyTime,
+      marchStr:  l.march,
+      launchStr: secsToHMS(myLaunch),
+      impactStr: secsToHMS(myImpact),
+      isSuicide: i === leaders.length - 1,
+      isFirst:   i === 0,
+    };
+  });
+
+  renderResults(results);
+}
+
+function renderResults(results) {
+  const container = document.getElementById('results');
+  container.innerHTML = '';
+
+  // Earliest launch = who needs to send first
+  const launchSecs = results.map(r => hmsToSecs(r.launchStr));
+  const earliest   = Math.min(...launchSecs);
+
+  results.forEach((r, i) => {
+    const isEarliest = hmsToSecs(r.launchStr) === earliest;
+    const div = document.createElement('div');
+    div.className = `result-item${r.isSuicide ? ' suicide' : ''}${isEarliest ? ' earliest' : ''}`;
+
+    let icon = 'fa-user';
+    if (r.isFirst)    icon = 'fa-crown';
+    else if (i === 1) icon = 'fa-star';
+    else if (r.isSuicide) icon = 'fa-skull-crossbones';
+
+    div.innerHTML = `
+      <div class="ri-icon"><i class="fas ${icon}"></i></div>
+      <div class="ri-name">${r.name}</div>
+      <div class="ri-times">
+        <span class="ri-launch">${r.launchStr}</span>
+        <span class="ri-arrow">→</span>
+        💥
+        <span class="ri-impact">${r.impactStr}</span>
+      </div>
+      <div class="ri-detail">${r.rallyTime}m rally</div>
+      ${r.isSuicide ? '<span class="ri-tag">1ST HIT</span>' : ''}
+      ${isEarliest && !r.isSuicide ? '<span class="ri-tag" style="background:rgba(243,156,18,.5)">SEND FIRST</span>' : ''}
+    `;
+    container.appendChild(div);
+  });
+
+  // Build copyable chat message
+  const lines = results.map(r =>
+    `${r.isSuicide ? '💀' : '⚔️'} ${r.name} → send at ${r.launchStr} UTC (${r.rallyTime}m rally · hits ${r.impactStr})`
+  );
+  lines.push(`📡 Generated by WOSPREDV3 · Odin #3435`);
+  const chatMsg = document.getElementById('chat-msg');
+  chatMsg.textContent = lines.join('\n');
+  document.getElementById('copy-template').style.display = 'block';
+  document.getElementById('results-area').style.display  = 'block';
+}
+
+function copyAll() {
+  const txt = document.getElementById('chat-msg').textContent;
+  navigator.clipboard.writeText(txt).then(() => toast('✓ Copied to clipboard!'));
+}
+
+function copyMsg(el) {
+  navigator.clipboard.writeText(el.textContent).then(() => toast('✓ Copied!'));
+}
+
+// ── Troop calculator ──────────────────────────────────────────
+function onSlider(el) {
+  const types  = ['inf','lan','mrk'];
+  const others = types.filter(t => t !== el.id);
+  let otherSum = others.reduce((s,t) => s + parseInt(document.getElementById(t).value), 0);
+  let max      = 100 - otherSum;
+  if (parseInt(el.value) > max) el.value = max;
+  document.getElementById(el.id + 'Val').textContent = el.value;
+  calcTroops();
+  saveTroops();
+}
+
+function calcTroops() {
+  const total = parseInt(document.getElementById('totalTroops').value) || 0;
+  ['inf','lan','mrk'].forEach(t => {
+    const pct = parseInt(document.getElementById(t).value);
+    document.getElementById(t + 'Val').textContent = pct;
+    document.getElementById(t + 'Result').textContent = fmt(Math.round(total * pct / 100));
+  });
+}
+
+function saveTroops() {
+  ls.set('troops', {
+    total: document.getElementById('totalTroops').value,
+    inf:   document.getElementById('inf').value,
+    lan:   document.getElementById('lan').value,
+    mrk:   document.getElementById('mrk').value,
+  });
+}
+
+function loadTroops() {
+  const d = ls.get('troops') || { total:500000, inf:50, lan:20, mrk:30 };
+  document.getElementById('totalTroops').value = d.total;
+  document.getElementById('inf').value = d.inf;
+  document.getElementById('lan').value = d.lan;
+  document.getElementById('mrk').value = d.mrk;
+  calcTroops();
+}
+
+// ── Settings ──────────────────────────────────────────────────
+function adjustOffset(ms) {
+  const inp = document.getElementById('timeOffset');
+  inp.value = (parseInt(inp.value) || 0) + ms;
+  saveOffset();
+}
+function saveOffset() {
+  ls.set('timeOffset', parseInt(document.getElementById('timeOffset').value) || 0);
+}
+function resetOffset() {
+  document.getElementById('timeOffset').value = 0;
+  saveOffset();
+}
+
+function updateDelay(el) {
+  document.getElementById('delayVal').textContent = el.value;
+  document.getElementById('delayWarn').style.display = parseInt(el.value) > 5 ? 'block' : 'none';
+  ls.set('delay', el.value);
+}
+
+// ── Toast ─────────────────────────────────────────────────────
+function toast(msg, isErr) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = isErr ? 'var(--loss)' : 'var(--win)';
+  t.style.color = '#fff';
+  t.style.display = 'block';
+  setTimeout(() => t.style.display = 'none', 2500);
+}
+
+// ── Init ──────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  loadLeaders();
+  loadTroops();
+
+  // Restore settings
+  const delay  = ls.get('delay') || 1;
+  const offset = ls.get('timeOffset') || 0;
+  document.getElementById('delaySlider').value   = delay;
+  document.getElementById('delayVal').textContent = delay;
+  document.getElementById('timeOffset').value    = offset;
+  if (parseInt(delay) > 5) document.getElementById('delayWarn').style.display = 'block';
+
+  // Restore impact time
+  const saved = ls.get('impactTime');
+  if (saved) document.getElementById('impactTime').value = saved;
+  else setNextRoundTime();
+});
+</script>
+</body>
+</html>
