@@ -144,27 +144,14 @@
 
     <!-- Hero selection -->
     <div class="hero-block">
-      <div class="section-label">MARCH HEROES</div>
+      <div class="section-label">MARCH HEROES (5 SLOTS)</div>
       <div id="atk-heroes">
-        <div class="hero-slot">
-          <div><div class="hero-slot-label">Hero</div>
-            <select class="si-input" id="atk-hero-0" style="font-size:12px">
-              <option value="">── Select Hero ──</option>
-              <optgroup label="Popular">
-                <option>Flint</option><option>Mia</option><option>Alonso</option>
-                <option>Jeronimo</option><option>Bahiti</option><option>Zinman</option>
-                <option>Smith</option><option>Natalia</option><option>Eugene</option>
-                <option>Philly</option><option>Seo-yoon</option><option>Gina</option>
-              </optgroup>
-            </select>
-          </div>
-          <div><div class="hero-slot-label">⭐ Stars</div>
-            <input type="number" id="atk-star-0" class="si-input" min="1" max="5" value="5" style="font-size:12px;text-align:center">
-          </div>
-          <div><div class="hero-slot-label">🔧 Widget</div>
-            <input type="number" id="atk-wid-0" class="si-input" min="1" max="5" value="5" style="font-size:12px;text-align:center">
-          </div>
-        </div>
+        <!-- JS will inject 5 slots here -->
+      </div>
+      
+      <div class="section-label" style="margin-top:10px">RALLY FLAG HEROES (4 SLOTS)</div>
+      <div id="atk-flags">
+        <!-- JS will inject 4 slots here -->
       </div>
       <div class="hero-coming">⚡ Hero skill effects apply in V2</div>
     </div>
@@ -265,6 +252,20 @@
     <div class="troops-block">
       <div class="section-label">TROOP COUNT</div>
       <input type="number" id="def-troops" class="troops-input" min="1" max="10000000" value="400000" />
+    </div>
+
+    <!-- Hero selection -->
+    <div class="hero-block">
+      <div class="section-label">ENEMY HEROES (5 SLOTS)</div>
+      <div id="def-heroes">
+        <!-- JS will inject 5 slots here -->
+      </div>
+      
+      <div class="section-label" style="margin-top:10px">ENEMY FLAG HEROES (4 SLOTS)</div>
+      <div id="def-flags">
+        <!-- JS will inject 4 slots here -->
+      </div>
+      <div class="hero-coming">⚡ Hero skills reduce your win probability</div>
     </div>
   </section>
 

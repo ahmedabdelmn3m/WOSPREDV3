@@ -71,19 +71,22 @@ function readArmy(side) {
       marksman:  val(`${s}-form-mrk`) / 100,
     },
     troop_count: parseInt(id(`${s === 'atk' ? 'atk' : 'def'}-troops`)?.value || '500000'),
-    heroes: readHeroes(side),
+    heroes: readHeroes(side, 'hero'),
+    flag_heroes: readHeroes(side, 'flag'),
   };
 }
 
-function readHeroes(side) {
+function readHeroes(side, type = 'hero') {
   const heroes = [];
-  for (let i = 0; i < 3; i++) {
-    const name = id(`${side}-hero-${i}`)?.value;
+  const count = type === 'hero' ? 5 : 4;
+  const prefix = type === 'hero' ? 'hero' : 'flag';
+  for (let i = 0; i < count; i++) {
+    const name = id(`${side}-${prefix}-${i}`)?.value;
     if (name) {
       heroes.push({
         name,
-        stars:  val(`${side}-star-${i}`) || 5,
-        widget: val(`${side}-wid-${i}`)  || 5,
+        stars:  val(`${side}-${prefix}-star-${i}`) || 5,
+        widget: val(`${side}-${prefix}-wid-${i}`)  || 5,
       });
     }
   }
@@ -430,7 +433,43 @@ function saveApiUrl() {
 }
 
 // ── Wire events ───────────────────────────────────────────────
+function createHeroSlots(containerId, side, type, count) {
+  const container = id(containerId);
+  if (!container) return;
+  const prefix = type === 'hero' ? 'hero' : 'flag';
+  let html = '';
+  for (let i = 0; i < count; i++) {
+    html += `
+      <div class="hero-slot">
+        <div>
+          <select class="si-input" id="${side}-${prefix}-${i}" style="font-size:12px">
+            <option value="">── ${type === 'hero' ? 'Select Hero' : 'Flag Hero'} ──</option>
+            <optgroup label="Popular">
+              <option>Flint</option><option>Mia</option><option>Alonso</option>
+              <option>Jeronimo</option><option>Bahiti</option><option>Zinman</option>
+              <option>Smith</option><option>Natalia</option><option>Eugene</option>
+              <option>Philly</option><option>Seo-yoon</option><option>Gina</option>
+            </optgroup>
+          </select>
+        </div>
+        <div>
+          <input type="number" id="${side}-${prefix}-star-${i}" class="si-input" min="1" max="5" value="5" style="font-size:12px;text-align:center">
+        </div>
+        <div>
+          <input type="number" id="${side}-${prefix}-wid-${i}" class="si-input" min="1" max="5" value="5" style="font-size:12px;text-align:center">
+        </div>
+      </div>`;
+  }
+  container.innerHTML = html;
+}
+
 function init() {
+  // Create hero slots
+  createHeroSlots('atk-heroes', 'atk', 'hero', 5);
+  createHeroSlots('atk-flags',  'atk', 'flag', 4);
+  createHeroSlots('def-heroes', 'def', 'hero', 5);
+  createHeroSlots('def-flags',  'def', 'flag', 4);
+  
   // Mode buttons
   document.querySelectorAll('.mode-btn').forEach(b => {
     b.addEventListener('click', () => switchMode(b.dataset.mode));

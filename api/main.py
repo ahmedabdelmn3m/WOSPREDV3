@@ -102,6 +102,16 @@ class FormationInput(BaseModel):
         return self
 
 
+from core_engine.troop_stats import ArmyStats, Formation, TroopTypeStats, Hero
+
+class HeroInput(BaseModel):
+    name: str = ""
+    stars: int = 5
+    widget: int = 5
+
+    def to_hero(self) -> Hero:
+        return Hero(name=self.name, stars=self.stars, widget=self.widget)
+
 class ArmyInput(BaseModel):
     name:        str             = "Unknown"
     infantry:    TroopStatsInput = TroopStatsInput()
@@ -109,6 +119,8 @@ class ArmyInput(BaseModel):
     marksman:    TroopStatsInput = TroopStatsInput()
     formation:   FormationInput  = FormationInput()
     troop_count: int             = 500_000
+    heroes:      list[HeroInput] = []
+    flag_heroes: list[HeroInput] = []
 
     def to_army_stats(self) -> ArmyStats:
         return ArmyStats(
@@ -122,6 +134,8 @@ class ArmyInput(BaseModel):
                 marksman=self.formation.marksman,
             ),
             troop_count=self.troop_count,
+            heroes=[h.to_hero() for h in self.heroes],
+            flag_heroes=[h.to_hero() for h in self.flag_heroes],
         )
 
 

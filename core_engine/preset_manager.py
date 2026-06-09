@@ -68,6 +68,8 @@ class PresetManager:
                 "health_pct":    round(t.health_bonus    * 100, 2),
                 "lethality_pct": round(t.lethality_bonus * 100, 2),
             }
+        def _hero(h) -> dict:
+            return {"name": h.name, "stars": h.stars, "widget": h.widget}
         return {
             "name":        name,
             "troop_count": army.troop_count,
@@ -79,11 +81,14 @@ class PresetManager:
             "infantry":  _troop(army.infantry),
             "lancer":    _troop(army.lancer),
             "marksman":  _troop(army.marksman),
+            "heroes":      [_hero(h) for h in army.heroes],
+            "flag_heroes": [_hero(h) for h in army.flag_heroes],
         }
 
     @staticmethod
     def _deserialise(data: dict) -> ArmyStats:
-        return ArmyStats.from_scout(
+        from .troop_stats import Hero
+        army = ArmyStats.from_scout(
             name=data.get("name", "Preset"),
             infantry=data["infantry"],
             lancer=data["lancer"],
@@ -91,3 +96,6 @@ class PresetManager:
             formation=data["formation"],
             troop_count=data.get("troop_count", 500_000),
         )
+        army.heroes = [Hero(**h) for h in data.get("heroes", [])]
+        army.flag_heroes = [Hero(**h) for h in data.get("flag_heroes", [])]
+        return army

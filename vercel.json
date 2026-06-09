@@ -1,24 +1,7 @@
 {
   "version": 2,
   "name": "wospredv3",
-  "builds": [
-    {
-      "src": "frontend/**",
-      "use": "@vercel/static"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "/frontend/$1"
-    }
-  ],
-  "headers": [
-    {
-      "source": "/frontend/(.*)",
-      "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=3600" }
-      ]
-    }
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "https://wospredv3.up.railway.app/$1" }
   ]
 }

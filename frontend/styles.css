@@ -192,8 +192,8 @@ body {
 /* ── Hero selection ─────────────────────────────────────── */
 .hero-block { margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px; }
 .hero-slot {
-  display: grid; grid-template-columns: 1fr 50px 50px;
-  gap: 5px; align-items: end; margin-bottom: 6px;
+  display: grid; grid-template-columns: 1fr 45px 45px;
+  gap: 4px; align-items: end; margin-bottom: 4px;
 }
 .hero-slot select,
 .hero-slot input { font-size: 12px; }

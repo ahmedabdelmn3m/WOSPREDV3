@@ -13,7 +13,16 @@
  */
 (function () {
   const stored = localStorage.getItem('wos_api_url');
-  window.WOS_API_URL = stored && stored.trim()
-    ? stored.trim()
-    : 'https://wospredv3-production.up.railway.app'; // Fallback to production URL
+  
+  if (stored && stored.trim()) {
+    window.WOS_API_URL = stored.trim();
+  } else if (window.location.hostname.includes('vercel.app')) {
+    // Use the proxy defined in vercel.json
+    window.WOS_API_URL = window.location.origin + "/api";
+  } else {
+    // Localhost or other fallback
+    window.WOS_API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? 'http://localhost:8080'
+      : 'https://wospredv3.up.railway.app';
+  }
 })();

@@ -174,6 +174,12 @@ class Formation:
 # ─────────────────────────────────────────────────────────────────────────────
 
 @dataclass
+class Hero:
+    name: str = ""
+    stars: int = 5
+    widget: int = 5
+
+@dataclass
 class ArmyStats:
     """
     Complete army definition used by the combat engine.
@@ -181,6 +187,8 @@ class ArmyStats:
         3 × TroopTypeStats  (Infantry, Lancer, Marksman)
         +  Formation         (how troops are split)
         +  troop_count       (total troops)
+        +  heroes            (up to 5 march heroes)
+        +  flag_heroes       (up to 4 rally flag heroes)
 
     Army-wide effective values are formation-weighted averages
     of the per-type effective stats.
@@ -194,6 +202,8 @@ class ArmyStats:
 
     formation:   Formation      = field(default_factory=Formation)
     troop_count: int             = 500_000
+    heroes:      list[Hero]      = field(default_factory=list)
+    flag_heroes: list[Hero]      = field(default_factory=list)
 
     # ── Army-wide effective stats ────────────────────────────────────────
 
