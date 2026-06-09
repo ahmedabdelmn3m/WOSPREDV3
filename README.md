@@ -136,11 +136,11 @@ To enable full persistence:
 
 ### 3c. Environment variables
 
-In Railway → your service → **Variables** tab, set:
+In Railway → your service → **Variables** tab, the `PORT` is automatically handled by the `Dockerfile` and `Procfile` using `${PORT:-8080}`. You can optionally set:
 
 | Variable | Value |
 |----------|-------|
-| `PORT`   | `8080` |
+| `PORT`   | `8080` | (optional, Railway sets this automatically)
 
 `DATABASE_URL` is set automatically if you added a Railway PostgreSQL service.
 

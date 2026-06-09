@@ -15,5 +15,5 @@
   const stored = localStorage.getItem('wos_api_url');
   window.WOS_API_URL = stored && stored.trim()
     ? stored.trim()
-    : 'http://localhost:8080';
+    : 'https://wospredv3-production.up.railway.app'; // Fallback to production URL
 })();

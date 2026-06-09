@@ -71,7 +71,23 @@ function readArmy(side) {
       marksman:  val(`${s}-form-mrk`) / 100,
     },
     troop_count: parseInt(id(`${s === 'atk' ? 'atk' : 'def'}-troops`)?.value || '500000'),
+    heroes: readHeroes(side),
   };
+}
+
+function readHeroes(side) {
+  const heroes = [];
+  for (let i = 0; i < 3; i++) {
+    const name = id(`${side}-hero-${i}`)?.value;
+    if (name) {
+      heroes.push({
+        name,
+        stars:  val(`${side}-star-${i}`) || 5,
+        widget: val(`${side}-wid-${i}`)  || 5,
+      });
+    }
+  }
+  return heroes;
 }
 
 function writeArmy(side, d) {
@@ -441,6 +457,16 @@ function init() {
     });
   });
 
+  // Drag & Drop
+  ['atk','def'].forEach(side => {
+    const area = id(side + '-upload-area');
+    if (area) {
+      area.addEventListener('dragover', e => { e.preventDefault(); area.classList.add('dragover'); });
+      area.addEventListener('dragleave', () => area.classList.remove('dragover'));
+      area.addEventListener('drop', e => handleDrop(e, side));
+    }
+  });
+
   // Settings
   id('btn-settings').addEventListener('click', openSettings);
   id('btn-close-settings').addEventListener('click', closeSettings);
@@ -458,6 +484,33 @@ function init() {
   // Check API
   checkApi();
   setInterval(checkApi, 30000);
+}
+
+/* ── Scout image upload ───────────────────────────────────── */
+function handleFile(input, side) {
+  const file = input.files[0];
+  if (!file) return;
+  showScout(side, URL.createObjectURL(file));
+}
+
+function handleDrop(e, side) {
+  e.preventDefault();
+  id(side + '-upload-area').classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) {
+    showScout(side, URL.createObjectURL(file));
+  }
+}
+
+function showScout(side, url) {
+  const img  = id(side + '-preview');
+  const area = id(side + '-upload-area');
+  if (!img || !area) return;
+  img.src = url;
+  img.style.display = 'block';
+  area.querySelector('.upload-icon').textContent = '🔄';
+  area.querySelector('.upload-label').innerHTML  =
+    'Replace image · <small>Drag &amp; drop or click</small>';
 }
 
 document.addEventListener('DOMContentLoaded', init);
