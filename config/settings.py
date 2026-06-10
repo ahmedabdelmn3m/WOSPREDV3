@@ -6,7 +6,7 @@ class Settings:
     API_V1_STR = "/api/v1"
     
     # Database settings
-    DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:mgCfiNtyFueebETswIPkOUONmoaIHTns@postgres.railway.internal:5432/railway")
+    DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://user:password@localhost:5432/wos_db")
     
     # Simulation settings
     DEFAULT_ROUNDS = 20
