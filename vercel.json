@@ -1,8 +1,11 @@
 {
   "version": 2,
   "name": "wospredv3",
-  "rewrites": [
-    { "source": "/api/(.*)", "destination": "https://wospredv3.up.railway.app/$1" },
-    { "source": "/", "destination": "/frontend/index.html" }
+  "routes": [
+    { "src": "/api/(.*)", "dest": "https://wospredv3-production.up.railway.app/$1" },
+    { "src": "/rally.html", "dest": "/frontend/rally.html" },
+    { "src": "/(.+\\.js)", "dest": "/frontend/$1" },
+    { "src": "/(.+\\.css)", "dest": "/frontend/$1" },
+    { "src": "/(.*)", "dest": "/frontend/index.html" }
   ]
 }

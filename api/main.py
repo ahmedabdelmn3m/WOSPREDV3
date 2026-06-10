@@ -30,6 +30,7 @@ from core_engine.prediction_engine  import PredictionEngine
 from core_engine.reverse_optimizer  import ReverseOptimizer
 from core_engine.formation_optimizer import FormationOptimizer
 from core_engine.preset_manager     import PresetManager
+from heroes.hero_loader             import HeroLoader
 from mechanics.v1_raw_model         import V1RawModel
 from mechanics.v2_calibrated_model  import V2CalibratedModel
 
@@ -39,6 +40,7 @@ _prediction_engine = PredictionEngine(_combat_engine)
 _reverse_optimizer = ReverseOptimizer(_combat_engine)
 _formation_optimizer = FormationOptimizer(_combat_engine)
 _preset_manager    = PresetManager()
+_hero_loader       = HeroLoader()
 _v1                = V1RawModel()
 _v2                = V2CalibratedModel(_v1)
 
@@ -120,7 +122,6 @@ class ArmyInput(BaseModel):
     formation:   FormationInput  = FormationInput()
     troop_count: int             = 500_000
     heroes:      list[HeroInput] = []
-    flag_heroes: list[HeroInput] = []
 
     def to_army_stats(self) -> ArmyStats:
         return ArmyStats(
@@ -134,8 +135,7 @@ class ArmyInput(BaseModel):
                 marksman=self.formation.marksman,
             ),
             troop_count=self.troop_count,
-            heroes=[h.to_hero() for h in self.heroes],
-            flag_heroes=[h.to_hero() for h in self.flag_heroes],
+            heroes=[h.to_hero() for h in self.heroes[:3]],
         )
 
 
@@ -350,3 +350,9 @@ async def model_accuracy():
         "reports_used": 0,
         "note":         "Submit battle reports via POST /upload-battle-report to improve V2.",
     }
+
+
+@app.get("/api/heroes")
+async def list_heroes():
+    """Returns the list of heroes for the frontend dropdown."""
+    return {"heroes": _hero_loader.get_all_heroes()}

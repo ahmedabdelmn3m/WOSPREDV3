@@ -168,6 +168,10 @@ class Formation:
             "marksman_pct":  round(self.marksman  * 100, 1),
         }
 
+    def get_weight(self, troop_type: str) -> float:
+        """Get weight for a given troop type."""
+        return getattr(self, troop_type, 0.0)
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  ArmyStats
@@ -187,8 +191,7 @@ class ArmyStats:
         3 × TroopTypeStats  (Infantry, Lancer, Marksman)
         +  Formation         (how troops are split)
         +  troop_count       (total troops)
-        +  heroes            (up to 5 march heroes)
-        +  flag_heroes       (up to 4 rally flag heroes)
+        +  heroes            (up to 3 march heroes)
 
     Army-wide effective values are formation-weighted averages
     of the per-type effective stats.
@@ -203,7 +206,6 @@ class ArmyStats:
     formation:   Formation      = field(default_factory=Formation)
     troop_count: int             = 500_000
     heroes:      list[Hero]      = field(default_factory=list)
-    flag_heroes: list[Hero]      = field(default_factory=list)
 
     # ── Army-wide effective stats ────────────────────────────────────────
 

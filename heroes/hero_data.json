@@ -1,0 +1,39 @@
+[
+  {
+    "hero_id": "flint",
+    "name": "Flint",
+    "specialty": "infantry",
+    "rarity": "epic",
+    "skills": [
+      {
+        "skill_number": 1,
+        "name": "Iron Will",
+        "trigger": "battle_start",
+        "type": "passive_buff",
+        "target": "all_troops",
+        "effects": [
+          {
+            "stat": "attack_bonus",
+            "base_value": 0.25,
+            "verified": true,
+            "confidence": "VERIFIED",
+            "source": "community research"
+          }
+        ],
+        "star_scaling": { "1": 0.10, "2": 0.15, "3": 0.20, "4": 0.22, "5": 0.25 },
+        "widget_scaling": { "1": 0.25, "2": 0.27, "3": 0.29, "4": 0.31, "5": 0.33 }
+      }
+    ]
+  },
+  { "hero_id": "mia", "name": "Mia", "specialty": "all", "rarity": "epic", "skills": [] },
+  { "hero_id": "alonso", "name": "Alonso", "specialty": "infantry", "rarity": "epic", "skills": [] },
+  { "hero_id": "jeronimo", "name": "Jeronimo", "specialty": "lancer", "rarity": "epic", "skills": [] },
+  { "hero_id": "bahiti", "name": "Bahiti", "specialty": "marksman", "rarity": "rare", "skills": [] },
+  { "hero_id": "zinman", "name": "Zinman", "specialty": "infantry", "rarity": "epic", "skills": [] },
+  { "hero_id": "smith", "name": "Smith", "specialty": "general", "rarity": "epic", "skills": [] },
+  { "hero_id": "natalia", "name": "Natalia", "specialty": "marksman", "rarity": "epic", "skills": [] },
+  { "hero_id": "eugene", "name": "Eugene", "specialty": "lancer", "rarity": "epic", "skills": [] },
+  { "hero_id": "philly", "name": "Philly", "specialty": "infantry", "rarity": "epic", "skills": [] },
+  { "hero_id": "seo-yoon", "name": "Seo-yoon", "specialty": "all", "rarity": "epic", "skills": [] },
+  { "hero_id": "gina", "name": "Gina", "specialty": "general", "rarity": "epic", "skills": [] }
+]

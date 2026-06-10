@@ -23,16 +23,21 @@
   </div>
 </header>
 
+<!-- ─── Page nav ─────────────────────────────────────────────────────────── -->
+<div class="page-nav" style="display: flex; gap: 6px; padding: 6px 12px; background: var(--bg-panel); border-bottom: 1px solid var(--border); align-items: center;">
+  <a href="index.html" class="nav-link-btn current" style="padding: 4px 12px; border-radius: var(--radius); font-size: 11px; font-weight: 600; border: 1px solid var(--ice); background: rgba(0,200,255,.1); color: var(--ice); cursor: pointer; text-decoration: none; transition: all .2s;">⚔️ Battle Predictor</a>
+  <a href="rally.html" class="nav-link-btn" style="padding: 4px 12px; border-radius: var(--radius); font-size: 11px; font-weight: 600; border: 1px solid var(--border); background: transparent; color: var(--txt-dim); cursor: pointer; text-decoration: none; transition: all .2s;">🎯 Rally Timing</a>
+</div>
+
 <!-- ─── Settings Modal ──────────────────────────────────────────────────── -->
 <div class="modal-overlay" id="settings-modal" style="display:none">
   <div class="modal-box">
     <div class="modal-title">⚙ API Settings</div>
     <label class="modal-label">Railway Backend URL</label>
-    <input type="text" id="api-url-input" class="modal-input"
-           placeholder="https://your-app.up.railway.app" />
-    <div class="modal-hint">After Railway deployment, paste your URL here. It is saved locally.</div>
+    <input type="text" id="api-url-input" class="modal-input" placeholder="https://your-app.up.railway.app" />
+    <div class="modal-hint">After Railway deployment, paste your URL here. Saved locally.</div>
     <div class="modal-actions">
-      <button class="btn-ice" id="btn-save-api-url">Save & Reconnect</button>
+      <button class="btn-ice" id="btn-save-api-url">Save &amp; Reconnect</button>
       <button class="btn-ghost" id="btn-close-settings">Cancel</button>
     </div>
   </div>
@@ -45,14 +50,9 @@
   <button class="mode-btn"        id="mode-formation" data-mode="formation">📊 Best Formation</button>
 </nav>
 
-<!-- ─── Error bar ────────────────────────────────────────────────────────── -->
 <div class="error-bar" id="error-bar" style="display:none"></div>
+<div class="toast"     id="toast"></div>
 
-<!-- ─── Toast ───────────────────────────────────────────────────────────── -->
-<div class="toast" id="toast"></div>
-
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-<!--  Main 3-column grid                                                    -->
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
 <main class="battle-grid">
 
@@ -78,15 +78,13 @@
     <!-- Preset Row -->
     <div class="preset-block">
       <div class="preset-row">
-        <select id="preset-select" class="preset-select">
-          <option value="">── Saved Presets ──</option>
-        </select>
-        <button class="btn-xs btn-ice"    id="btn-load-preset"   title="Load preset">↓ Load</button>
-        <button class="btn-xs btn-danger" id="btn-delete-preset" title="Delete preset">✕</button>
+        <select id="preset-select" class="preset-select"><option value="">── Saved Presets ──</option></select>
+        <button class="btn-xs btn-ice"    id="btn-load-preset">↓ Load</button>
+        <button class="btn-xs btn-danger" id="btn-delete-preset">✕</button>
       </div>
       <div class="preset-row">
         <input type="text" id="preset-name" class="preset-name-input" placeholder="Name this preset…" />
-        <button class="btn-xs btn-ice" id="btn-save-preset" title="Save preset">↑ Save</button>
+        <button class="btn-xs btn-ice" id="btn-save-preset">↑ Save</button>
       </div>
     </div>
 
@@ -97,31 +95,28 @@
       <button class="troop-tab atk-tab"        id="atk-tab-marksman">🎯 Marksman</button>
     </div>
 
-    <!-- Infantry stats -->
     <div class="troop-panel atk-panel" id="atk-panel-infantry">
       <div class="stats-grid">
         <div class="si"><label>Attack %</label>   <input type="number" id="atk-inf-atk" class="si-input" min="0" max="9999" placeholder="0"></div>
         <div class="si"><label>Defense %</label>  <input type="number" id="atk-inf-def" class="si-input" min="0" max="9999" placeholder="0"></div>
-        <div class="si"><label>Health %</label>   <input type="number" id="atk-inf-hp"  class="si-input" min="0" max="9999" placeholder="0"></div>
         <div class="si"><label>Lethality %</label><input type="number" id="atk-inf-lth" class="si-input" min="0" max="9999" placeholder="0"></div>
+        <div class="si"><label>Health %</label>   <input type="number" id="atk-inf-hp"  class="si-input" min="0" max="9999" placeholder="0"></div>
       </div>
     </div>
-    <!-- Lancer stats -->
     <div class="troop-panel atk-panel" id="atk-panel-lancer" style="display:none">
       <div class="stats-grid">
         <div class="si"><label>Attack %</label>   <input type="number" id="atk-lan-atk" class="si-input" min="0" max="9999" placeholder="0"></div>
         <div class="si"><label>Defense %</label>  <input type="number" id="atk-lan-def" class="si-input" min="0" max="9999" placeholder="0"></div>
-        <div class="si"><label>Health %</label>   <input type="number" id="atk-lan-hp"  class="si-input" min="0" max="9999" placeholder="0"></div>
         <div class="si"><label>Lethality %</label><input type="number" id="atk-lan-lth" class="si-input" min="0" max="9999" placeholder="0"></div>
+        <div class="si"><label>Health %</label>   <input type="number" id="atk-lan-hp"  class="si-input" min="0" max="9999" placeholder="0"></div>
       </div>
     </div>
-    <!-- Marksman stats -->
     <div class="troop-panel atk-panel" id="atk-panel-marksman" style="display:none">
       <div class="stats-grid">
         <div class="si"><label>Attack %</label>   <input type="number" id="atk-mrk-atk" class="si-input" min="0" max="9999" placeholder="0"></div>
         <div class="si"><label>Defense %</label>  <input type="number" id="atk-mrk-def" class="si-input" min="0" max="9999" placeholder="0"></div>
-        <div class="si"><label>Health %</label>   <input type="number" id="atk-mrk-hp"  class="si-input" min="0" max="9999" placeholder="0"></div>
         <div class="si"><label>Lethality %</label><input type="number" id="atk-mrk-lth" class="si-input" min="0" max="9999" placeholder="0"></div>
+        <div class="si"><label>Health %</label>   <input type="number" id="atk-mrk-hp"  class="si-input" min="0" max="9999" placeholder="0"></div>
       </div>
     </div>
 
@@ -144,14 +139,35 @@
 
     <!-- Hero selection -->
     <div class="hero-block">
-      <div class="section-label">MARCH HEROES (5 SLOTS)</div>
+      <div class="section-label">MARCH HEROES</div>
       <div id="atk-heroes">
-        <!-- JS will inject 5 slots here -->
-      </div>
-      
-      <div class="section-label" style="margin-top:10px">RALLY FLAG HEROES (4 SLOTS)</div>
-      <div id="atk-flags">
-        <!-- JS will inject 4 slots here -->
+        <div class="hero-slot">
+          <div><div class="hero-slot-label">Hero</div>
+            <select class="si-input hero-select" id="atk-hero-0" style="font-size:12px">
+              <option value="">── Select Hero ──</option>
+            </select>
+          </div>
+          <div><div class="hero-slot-label">⭐ Stars</div>
+            <input type="number" id="atk-hero-star-0" class="si-input" min="1" max="5" value="5" style="font-size:12px;text-align:center">
+          </div>
+          <div><div class="hero-slot-label">🔧 Widget</div>
+            <input type="number" id="atk-hero-wid-0" class="si-input" min="1" max="5" value="5" style="font-size:12px;text-align:center">
+          </div>
+        </div>
+        <div class="hero-slot">
+          <div><select class="si-input hero-select" id="atk-hero-1" style="font-size:12px">
+            <option value="">── Select Hero ──</option>
+          </select></div>
+          <div><input type="number" id="atk-hero-star-1" class="si-input" min="1" max="5" value="5" style="font-size:12px;text-align:center"></div>
+          <div><input type="number" id="atk-hero-wid-1"  class="si-input" min="1" max="5" value="5" style="font-size:12px;text-align:center"></div>
+        </div>
+        <div class="hero-slot">
+          <div><select class="si-input hero-select" id="atk-hero-2" style="font-size:12px">
+            <option value="">── Select Hero ──</option>
+          </select></div>
+          <div><input type="number" id="atk-hero-star-2" class="si-input" min="1" max="5" value="5" style="font-size:12px;text-align:center"></div>
+          <div><input type="number" id="atk-hero-wid-2"  class="si-input" min="1" max="5" value="5" style="font-size:12px;text-align:center"></div>
+        </div>
       </div>
       <div class="hero-coming">⚡ Hero skill effects apply in V2</div>
     </div>
@@ -159,7 +175,6 @@
 
   <!-- ══ CENTER: Controls + Results ══════════════════════════════════════ -->
   <section class="center-panel">
-    <!-- Mode-specific options -->
     <div class="center-options">
       <div id="reverse-options" style="display:none" class="reverse-opts">
         <label class="opt-label">WIN TARGET</label>
@@ -170,10 +185,7 @@
         </select>
       </div>
     </div>
-
     <button class="btn-main" id="action-btn">⚔️ SIMULATE BATTLE</button>
-
-    <!-- Results area -->
     <div class="results-panel" id="results-panel">
       <div class="placeholder">
         <div class="ph-icon">⚔️</div>
@@ -209,31 +221,28 @@
       <button class="troop-tab def-tab"        id="def-tab-marksman">🎯 Marksman</button>
     </div>
 
-    <!-- Infantry stats -->
     <div class="troop-panel def-panel" id="def-panel-infantry">
       <div class="stats-grid">
         <div class="si"><label>Attack %</label>   <input type="number" id="def-inf-atk" class="si-input" min="0" max="9999" placeholder="0"></div>
         <div class="si"><label>Defense %</label>  <input type="number" id="def-inf-def" class="si-input" min="0" max="9999" placeholder="0"></div>
-        <div class="si"><label>Health %</label>   <input type="number" id="def-inf-hp"  class="si-input" min="0" max="9999" placeholder="0"></div>
         <div class="si"><label>Lethality %</label><input type="number" id="def-inf-lth" class="si-input" min="0" max="9999" placeholder="0"></div>
+        <div class="si"><label>Health %</label>   <input type="number" id="def-inf-hp"  class="si-input" min="0" max="9999" placeholder="0"></div>
       </div>
     </div>
-    <!-- Lancer stats -->
     <div class="troop-panel def-panel" id="def-panel-lancer" style="display:none">
       <div class="stats-grid">
         <div class="si"><label>Attack %</label>   <input type="number" id="def-lan-atk" class="si-input" min="0" max="9999" placeholder="0"></div>
         <div class="si"><label>Defense %</label>  <input type="number" id="def-lan-def" class="si-input" min="0" max="9999" placeholder="0"></div>
-        <div class="si"><label>Health %</label>   <input type="number" id="def-lan-hp"  class="si-input" min="0" max="9999" placeholder="0"></div>
         <div class="si"><label>Lethality %</label><input type="number" id="def-lan-lth" class="si-input" min="0" max="9999" placeholder="0"></div>
+        <div class="si"><label>Health %</label>   <input type="number" id="def-lan-hp"  class="si-input" min="0" max="9999" placeholder="0"></div>
       </div>
     </div>
-    <!-- Marksman stats -->
     <div class="troop-panel def-panel" id="def-panel-marksman" style="display:none">
       <div class="stats-grid">
         <div class="si"><label>Attack %</label>   <input type="number" id="def-mrk-atk" class="si-input" min="0" max="9999" placeholder="0"></div>
         <div class="si"><label>Defense %</label>  <input type="number" id="def-mrk-def" class="si-input" min="0" max="9999" placeholder="0"></div>
-        <div class="si"><label>Health %</label>   <input type="number" id="def-mrk-hp"  class="si-input" min="0" max="9999" placeholder="0"></div>
         <div class="si"><label>Lethality %</label><input type="number" id="def-mrk-lth" class="si-input" min="0" max="9999" placeholder="0"></div>
+        <div class="si"><label>Health %</label>   <input type="number" id="def-mrk-hp"  class="si-input" min="0" max="9999" placeholder="0"></div>
       </div>
     </div>
 
@@ -256,14 +265,35 @@
 
     <!-- Hero selection -->
     <div class="hero-block">
-      <div class="section-label">ENEMY HEROES (5 SLOTS)</div>
+      <div class="section-label">MARCH HEROES</div>
       <div id="def-heroes">
-        <!-- JS will inject 5 slots here -->
-      </div>
-      
-      <div class="section-label" style="margin-top:10px">ENEMY FLAG HEROES (4 SLOTS)</div>
-      <div id="def-flags">
-        <!-- JS will inject 4 slots here -->
+        <div class="hero-slot">
+          <div><div class="hero-slot-label">Hero</div>
+            <select class="si-input hero-select" id="def-hero-0" style="font-size:12px">
+              <option value="">── Select Hero ──</option>
+            </select>
+          </div>
+          <div><div class="hero-slot-label">⭐ Stars</div>
+            <input type="number" id="def-hero-star-0" class="si-input" min="1" max="5" value="5" style="font-size:12px;text-align:center">
+          </div>
+          <div><div class="hero-slot-label">🔧 Widget</div>
+            <input type="number" id="def-hero-wid-0" class="si-input" min="1" max="5" value="5" style="font-size:12px;text-align:center">
+          </div>
+        </div>
+        <div class="hero-slot">
+          <div><select class="si-input hero-select" id="def-hero-1" style="font-size:12px">
+            <option value="">── Select Hero ──</option>
+          </select></div>
+          <div><input type="number" id="def-hero-star-1" class="si-input" min="1" max="5" value="5" style="font-size:12px;text-align:center"></div>
+          <div><input type="number" id="def-hero-wid-1"  class="si-input" min="1" max="5" value="5" style="font-size:12px;text-align:center"></div>
+        </div>
+        <div class="hero-slot">
+          <div><select class="si-input hero-select" id="def-hero-2" style="font-size:12px">
+            <option value="">── Select Hero ──</option>
+          </select></div>
+          <div><input type="number" id="def-hero-star-2" class="si-input" min="1" max="5" value="5" style="font-size:12px;text-align:center"></div>
+          <div><input type="number" id="def-hero-wid-2"  class="si-input" min="1" max="5" value="5" style="font-size:12px;text-align:center"></div>
+        </div>
       </div>
       <div class="hero-coming">⚡ Hero skills reduce your win probability</div>
     </div>
@@ -271,8 +301,8 @@
 
 </main>
 
-<footer class="app-footer">
-  Formulas verified from WOS community research · WOSPREDV3 v2.0 · <a href="/rally.html" style="color:var(--ice)">Rally Timing →</a>
+<footer class="app-footer" style="padding: 12px; text-align: center; font-size: 11px; color: var(--txt-dim); border-top: 1px solid var(--border); background: var(--bg-panel);">
+  Formulas verified from WOS community research · WOSPREDV3 v2.0 · Made by Odin #3435 · <a href="rally.html" style="color:var(--ice)">Rally Timing →</a>
 </footer>
 
 <script src="config.js"></script>

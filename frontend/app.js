@@ -8,11 +8,13 @@ const S = {
   mode: 'compare',   // 'compare' | 'reverse' | 'formation'
   atkTab: 'infantry',
   defTab: 'infantry',
+  heroes: [],
 };
 
 // ── API ───────────────────────────────────────────────────────
 async function api(path, body) {
-  const res = await fetch(window.WOS_API_URL + path, {
+  const url = (window.WOS_API_URL || '') + path;
+  const res = await fetch(url, {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
     body:    JSON.stringify(body),
@@ -23,7 +25,8 @@ async function api(path, body) {
 }
 
 async function apiGet(path) {
-  const res = await fetch(window.WOS_API_URL + path);
+  const url = (window.WOS_API_URL || '') + path;
+  const res = await fetch(url);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }
@@ -39,6 +42,7 @@ async function checkApi() {
 
 function setPill(online) {
   const p = id('api-pill');
+  if (!p) return;
   p.textContent = online ? '⬤ Online' : '⬤ Offline';
   p.className = 'api-pill' + (online ? ' online' : '');
 }
@@ -70,23 +74,20 @@ function readArmy(side) {
       lancer:    val(`${s}-form-lan`) / 100,
       marksman:  val(`${s}-form-mrk`) / 100,
     },
-    troop_count: parseInt(id(`${s === 'atk' ? 'atk' : 'def'}-troops`)?.value || '500000'),
-    heroes: readHeroes(side, 'hero'),
-    flag_heroes: readHeroes(side, 'flag'),
+    troop_count: parseInt(id(`${s}-troops`)?.value || '500000'),
+    heroes: readHeroes(side),
   };
 }
 
-function readHeroes(side, type = 'hero') {
+function readHeroes(side) {
   const heroes = [];
-  const count = type === 'hero' ? 5 : 4;
-  const prefix = type === 'hero' ? 'hero' : 'flag';
-  for (let i = 0; i < count; i++) {
-    const name = id(`${side}-${prefix}-${i}`)?.value;
+  for (let i = 0; i < 3; i++) {
+    const name = id(`${side}-hero-${i}`)?.value;
     if (name) {
       heroes.push({
         name,
-        stars:  val(`${side}-${prefix}-star-${i}`) || 5,
-        widget: val(`${side}-${prefix}-wid-${i}`)  || 5,
+        stars:  val(`${side}-hero-star-${i}`) || 5,
+        widget: val(`${side}-hero-wid-${i}`)  || 5,
       });
     }
   }
@@ -113,8 +114,18 @@ function writeArmy(side, d) {
   setV(`${s}-form-lan`, Math.round((f.lancer    || 0.2)  * 100));
   setV(`${s}-form-mrk`, Math.round((f.marksman  || 0.3)  * 100));
 
-  const troopsId = s === 'atk' ? 'atk-troops' : 'def-troops';
-  setV(troopsId, d.troop_count || 500000);
+  setV(`${s}-troops`, d.troop_count || 500000);
+  
+  if (d.heroes) {
+    d.heroes.forEach((h, i) => {
+      if (i < 3) {
+        setV(`${s}-hero-${i}`, h.name);
+        setV(`${s}-hero-star-${i}`, h.stars);
+        setV(`${s}-hero-wid-${i}`, h.widget);
+      }
+    });
+  }
+  
   validateForm(side);
 }
 
@@ -141,6 +152,7 @@ function loadPreset(n)        { return getPresets()[n] || null; }
 
 function refreshDrop() {
   const sel  = id('preset-select');
+  if (!sel) return;
   const keys = Object.keys(getPresets());
   sel.innerHTML = '<option value="">── Saved Presets ──</option>' +
     keys.map(k => `<option value="${k}">${k}</option>`).join('');
@@ -226,6 +238,47 @@ async function runAction() {
   } finally {
     setLoading(false);
   }
+}
+
+// ── Render Helpers ────────────────────────────────────────────
+function setLoading(loading) {
+  const btn = id('action-btn');
+  if (!btn) return;
+  btn.disabled = loading;
+  if (loading) btn.dataset.oldText = btn.textContent;
+  btn.textContent = loading ? '⏳ CALCULATING...' : (btn.dataset.oldText || btn.textContent);
+}
+
+function clearResults() {
+  const res = id('results-panel');
+  if (!res) return;
+  res.innerHTML = `
+    <div class="placeholder">
+      <div class="ph-icon">⚔️</div>
+      <div class="ph-title">Enter stats &amp; run</div>
+      <div class="ph-sub">Compare armies · Find what you need · Optimise formation</div>
+    </div>`;
+}
+
+function showErr(msg) {
+  const bar = id('error-bar');
+  if (!bar) return;
+  bar.textContent = msg;
+  bar.style.display = 'block';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function clearErr() {
+  const bar = id('error-bar');
+  if (bar) bar.style.display = 'none';
+}
+
+function toast(msg) {
+  const t = id('toast');
+  if (!t) return;
+  t.textContent = msg;
+  t.style.display = 'block';
+  setTimeout(() => { t.style.display = 'none'; }, 3000);
 }
 
 // ── Render: Compare ───────────────────────────────────────────
@@ -339,206 +392,103 @@ function renderReverse(data) {
             <span class="rc-impact i-${(r.impact_label||'low').toLowerCase()}">${r.impact_label}</span>
           </div>`).join('')}
       </div>`;
-
-    if (data.win_paths && Object.keys(data.win_paths).length) {
-      html += `<div class="paths-block"><div class="paths-title">WIN PATHS</div>`;
-      for (const [key, steps] of Object.entries(data.win_paths)) {
-        const label = key.replace('pct', '') + '% WIN';
-        if (steps?.already_met) {
-          html += `<div class="path-card"><div class="path-label">${label}</div><div class="path-step" style="color:var(--win)">✓ Already met</div></div>`;
-        } else if (Array.isArray(steps)) {
-          html += `<div class="path-card"><div class="path-label">${label}</div>
-            ${steps.map(s => `<div class="path-step">${s.troop_type?.toUpperCase()} ${s.stat} +${s.increase_pct}%</div>`).join('')}
-          </div>`;
-        }
-      }
-      html += '</div>';
-    }
   }
-
   id('results-panel').innerHTML = html;
 }
 
-// ── Render: Formation Optimize ────────────────────────────────
+// ── Render: Formation ─────────────────────────────────────────
 function renderFormation(data) {
-  const best = data.best_formation;
-  const all  = data.all_results || [];
-  const wins = data.winning_count || 0;
-
+  const ranks = data.ranks || [];
   let html = `
-    <div class="result-header ${wins > 0 ? 'win' : 'loss'}">
-      📊 FORMATION ANALYSIS — ${wins} / ${all.length} WIN
+    <div class="result-header win">📊 FORMATION RANKING</div>
+    <div class="recs-block">
+      ${ranks.slice(0, 5).map((r, i) => `
+        <div class="rec-card ${i === 0 ? 'best' : ''}">
+          <span class="rc-rank">#${i+1}</span>
+          <span class="rc-troop">${r.name}</span>
+          <span class="rc-delta">${pct(r.win_probability)} win</span>
+          <button class="btn-xs btn-ice" onclick="applyFormation(${r.infantry*100}, ${r.lancer*100}, ${r.marksman*100})">Apply</button>
+        </div>`).join('')}
     </div>`;
-
-  if (best) {
-    html += `
-      <div class="best-form-card">
-        <div class="bf-label">BEST FORMATION</div>
-        <div class="form-badges">
-          <span class="f-badge f-inf">${best.infantry_pct}% INF</span>
-          <span class="f-badge f-lan">${best.lancer_pct}% LAN</span>
-          <span class="f-badge f-mrk">${best.marksman_pct}% MRK</span>
-        </div>
-        <div class="wp-bar"><div class="wp-fill win" style="width:${Math.round((data.best_win_probability||0)*100)}%"></div></div>
-        <div style="text-align:center;font-weight:800;color:var(--win);margin-top:4px">
-          ${Math.round((data.best_win_probability||0)*100)}%
-        </div>
-      </div>`;
-  }
-
-  html += '<div style="font-size:10px;color:var(--txt-dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">ALL FORMATIONS RANKED</div>';
-  html += all.slice(0, 10).map((r, i) => `
-    <div class="form-row">
-      <span class="fr-rank">#${i+1}</span>
-      <span class="fr-form">${r.label}</span>
-      <span class="fr-out ${r.winner === 'attacker' ? 'win' : 'loss'}">${r.winner === 'attacker' ? '✓ WIN' : '✗ LOSS'}</span>
-      <span class="fr-prob">${Math.round((r.win_probability||0)*100)}%</span>
-      <span class="fr-surv">${fmt(r.attacker_survivors)} left</span>
-    </div>`).join('');
-
   id('results-panel').innerHTML = html;
 }
 
-// ── UI helpers ────────────────────────────────────────────────
-function showErr(msg)  { const e = id('error-bar'); e.textContent = msg; e.style.display = 'block'; }
-function clearErr()    { const e = id('error-bar'); e.textContent = '';  e.style.display = 'none'; }
-function clearResults(){ id('results-panel').innerHTML = `<div class="placeholder"><div class="ph-icon">⚔️</div><div class="ph-title">Enter stats &amp; run</div><div class="ph-sub">Compare · How to Win · Best Formation</div></div>`; }
-function setLoading(b) {
-  const btn = id('action-btn');
-  btn.disabled = b;
-  if (b) btn.textContent = '⏳ CALCULATING…';
-  else   switchMode(S.mode);   // restores label
-}
-function toast(msg) {
-  const t = id('toast'); t.textContent = msg; t.style.display = 'block';
-  setTimeout(() => t.style.display = 'none', 2500);
-}
+window.applyFormation = (i, l, m) => {
+  setV('atk-form-inf', i); setV('atk-form-lan', l); setV('atk-form-mrk', m);
+  validateForm('atk');
+  toast('✓ Formation applied');
+};
 
-// ── Settings modal ────────────────────────────────────────────
-function openSettings() {
-  id('api-url-input').value = window.WOS_API_URL;
-  id('settings-modal').style.display = 'flex';
-}
-function closeSettings() {
-  id('settings-modal').style.display = 'none';
-}
+// ── Settings ──────────────────────────────────────────────────
+function openSettings() { id('settings-modal').style.display = 'flex'; setV('api-url-input', window.WOS_API_URL || ''); }
+function closeSettings() { id('settings-modal').style.display = 'none'; }
 function saveApiUrl() {
-  const url = sval('api-url-input');
-  if (!url) return;
+  const url = sval('api-url-input').replace(/\/$/, '');
   localStorage.setItem('wos_api_url', url);
   window.WOS_API_URL = url;
   closeSettings();
-  toast('✓ API URL saved — reconnecting…');
-  setTimeout(checkApi, 300);
+  checkApi();
+  toast('✓ API URL saved');
 }
 
-// ── Wire events ───────────────────────────────────────────────
-function createHeroSlots(containerId, side, type, count) {
-  const container = id(containerId);
-  if (!container) return;
-  const prefix = type === 'hero' ? 'hero' : 'flag';
-  let html = '';
-  for (let i = 0; i < count; i++) {
-    html += `
-      <div class="hero-slot">
-        <div>
-          <select class="si-input" id="${side}-${prefix}-${i}" style="font-size:12px">
-            <option value="">── ${type === 'hero' ? 'Select Hero' : 'Flag Hero'} ──</option>
-            <optgroup label="Popular">
-              <option>Flint</option><option>Mia</option><option>Alonso</option>
-              <option>Jeronimo</option><option>Bahiti</option><option>Zinman</option>
-              <option>Smith</option><option>Natalia</option><option>Eugene</option>
-              <option>Philly</option><option>Seo-yoon</option><option>Gina</option>
-            </optgroup>
-          </select>
-        </div>
-        <div>
-          <input type="number" id="${side}-${prefix}-star-${i}" class="si-input" min="1" max="5" value="5" style="font-size:12px;text-align:center">
-        </div>
-        <div>
-          <input type="number" id="${side}-${prefix}-wid-${i}" class="si-input" min="1" max="5" value="5" style="font-size:12px;text-align:center">
-        </div>
-      </div>`;
-  }
-  container.innerHTML = html;
-}
+// ── Initialization ────────────────────────────────────────────
+async function init() {
+  // Load settings
+  window.WOS_API_URL = localStorage.getItem('wos_api_url') || '';
+  if (!window.WOS_API_URL) window.WOS_API_URL = 'https://wospredv3-production.up.railway.app';
 
-function init() {
-  // Create hero slots
-  createHeroSlots('atk-heroes', 'atk', 'hero', 5);
-  createHeroSlots('atk-flags',  'atk', 'flag', 4);
-  createHeroSlots('def-heroes', 'def', 'hero', 5);
-  createHeroSlots('def-flags',  'def', 'flag', 4);
-  
-  // Mode buttons
+  // Events
+  id('action-btn').addEventListener('click', runAction);
+  ['atk','def'].forEach(side => {
+    ['infantry','lancer','marksman'].forEach(t => {
+      id(`${side}-tab-${t}`)?.addEventListener('click', () => switchTab(side, t));
+    });
+    ['inf','lan','mrk'].forEach(t => {
+      id(`${side}-form-${t}`)?.addEventListener('input', () => validateForm(side));
+    });
+  });
+
   document.querySelectorAll('.mode-btn').forEach(b => {
     b.addEventListener('click', () => switchMode(b.dataset.mode));
   });
 
-  // Action button
-  id('action-btn').addEventListener('click', runAction);
-
-  // Presets
   id('btn-save-preset').addEventListener('click', handleSave);
   id('btn-load-preset').addEventListener('click', handleLoad);
   id('btn-delete-preset').addEventListener('click', handleDelete);
 
-  // Tabs — attacker
-  ['infantry','lancer','marksman'].forEach(t => {
-    id(`atk-tab-${t}`)?.addEventListener('click', () => switchTab('atk', t));
-    id(`def-tab-${t}`)?.addEventListener('click', () => switchTab('def', t));
-  });
-
-  // Formation validation
-  ['atk','def'].forEach(s => {
-    ['inf','lan','mrk'].forEach(t => {
-      id(`${s}-form-${t}`)?.addEventListener('input', () => validateForm(s === 'atk' ? 'atk' : 'def'));
+  // Hero population
+  try {
+    const data = await apiGet('/api/heroes');
+    S.heroes = data.heroes;
+    const options = S.heroes.map(h => `<option value="${h.name}">${h.name}</option>`).join('');
+    document.querySelectorAll('.hero-select').forEach(sel => {
+      sel.innerHTML += options;
     });
-  });
-
-  // Drag & Drop
-  ['atk','def'].forEach(side => {
-    const area = id(side + '-upload-area');
-    if (area) {
-      area.addEventListener('dragover', e => { e.preventDefault(); area.classList.add('dragover'); });
-      area.addEventListener('dragleave', () => area.classList.remove('dragover'));
-      area.addEventListener('drop', e => handleDrop(e, side));
-    }
-  });
+  } catch (e) {
+    console.error('Failed to load heroes', e);
+  }
 
   // Settings
   id('btn-settings').addEventListener('click', openSettings);
   id('btn-close-settings').addEventListener('click', closeSettings);
   id('btn-save-api-url').addEventListener('click', saveApiUrl);
-  id('settings-modal').addEventListener('click', e => { if (e.target === id('settings-modal')) closeSettings(); });
 
-  // Init UI state
+  // Init UI
   refreshDrop();
   switchMode('compare');
   switchTab('atk', 'infantry');
   switchTab('def', 'infantry');
   validateForm('atk');
   validateForm('def');
-
-  // Check API
   checkApi();
   setInterval(checkApi, 30000);
 }
 
-/* ── Scout image upload ───────────────────────────────────── */
+// ── Scout image upload ─────────────────────────────────────
 function handleFile(input, side) {
   const file = input.files[0];
   if (!file) return;
   showScout(side, URL.createObjectURL(file));
-}
-
-function handleDrop(e, side) {
-  e.preventDefault();
-  id(side + '-upload-area').classList.remove('dragover');
-  const file = e.dataTransfer.files[0];
-  if (file && file.type.startsWith('image/')) {
-    showScout(side, URL.createObjectURL(file));
-  }
 }
 
 function showScout(side, url) {
@@ -548,8 +498,7 @@ function showScout(side, url) {
   img.src = url;
   img.style.display = 'block';
   area.querySelector('.upload-icon').textContent = '🔄';
-  area.querySelector('.upload-label').innerHTML  =
-    'Replace image · <small>Drag &amp; drop or click</small>';
+  area.querySelector('.upload-label').innerHTML  = 'Replace image';
 }
 
 document.addEventListener('DOMContentLoaded', init);
