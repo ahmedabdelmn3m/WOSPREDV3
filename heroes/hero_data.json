@@ -1,39 +1,712 @@
-[
-  {
-    "hero_id": "flint",
-    "name": "Flint",
-    "specialty": "infantry",
-    "rarity": "epic",
-    "skills": [
-      {
-        "skill_number": 1,
-        "name": "Iron Will",
-        "trigger": "battle_start",
-        "type": "passive_buff",
-        "target": "all_troops",
-        "effects": [
-          {
-            "stat": "attack_bonus",
-            "base_value": 0.25,
-            "verified": true,
-            "confidence": "VERIFIED",
-            "source": "community research"
-          }
-        ],
-        "star_scaling": { "1": 0.10, "2": 0.15, "3": 0.20, "4": 0.22, "5": 0.25 },
-        "widget_scaling": { "1": 0.25, "2": 0.27, "3": 0.29, "4": 0.31, "5": 0.33 }
-      }
-    ]
+{
+  "heroes": [
+    {
+      "hero_id": "jeronimo",
+      "name": "Jeronimo",
+      "generation": 1,
+      "specialty": "infantry",
+      "rarity": "gold",
+      "base_stats": {
+        "attack": 546,
+        "defense": 450,
+        "health": 3375,
+        "lethality": 50
+      },
+      "expedition_skills": [
+        {
+          "name": "Troop Damage Boost",
+          "type": "offensive",
+          "coefficients": [
+            0.04,
+            0.08,
+            0.12,
+            0.16,
+            0.2
+          ]
+        },
+        {
+          "name": "Troop Defense Reduction",
+          "type": "debuff",
+          "coefficients": [
+            0.04,
+            0.08,
+            0.12,
+            0.16,
+            0.2
+          ]
+        }
+      ]
+    },
+    {
+      "hero_id": "molly",
+      "name": "Molly",
+      "generation": 1,
+      "specialty": "lancer",
+      "rarity": "gold",
+      "base_stats": {
+        "attack": 600,
+        "defense": 420,
+        "health": 3200,
+        "lethality": 60
+      },
+      "expedition_skills": [
+        {
+          "name": "Stun Chance",
+          "type": "control",
+          "coefficients": [
+            0.05,
+            0.1,
+            0.15,
+            0.2,
+            0.25
+          ]
+        },
+        {
+          "name": "Damage Amplification",
+          "type": "offensive",
+          "coefficients": [
+            0.08,
+            0.12,
+            0.16,
+            0.2,
+            0.24
+          ]
+        },
+        {
+          "name": "Team Buff",
+          "type": "support",
+          "coefficients": [
+            0.05,
+            0.1,
+            0.15,
+            0.2,
+            0.25
+          ]
+        }
+      ]
+    },
+    {
+      "hero_id": "zinman",
+      "name": "Zinman",
+      "generation": 1,
+      "specialty": "marksman",
+      "rarity": "gold",
+      "base_stats": {
+        "attack": 620,
+        "defense": 380,
+        "health": 2800,
+        "lethality": 70
+      },
+      "expedition_skills": [
+        {
+          "name": "Construction Speed",
+          "type": "utility",
+          "coefficients": [
+            0.05,
+            0.1,
+            0.15,
+            0.2,
+            0.25
+          ]
+        },
+        {
+          "name": "Cost Reduction",
+          "type": "utility",
+          "coefficients": [
+            0.03,
+            0.06,
+            0.09,
+            0.12,
+            0.15
+          ]
+        },
+        {
+          "name": "PvP Bonus",
+          "type": "offensive",
+          "coefficients": [
+            0.08,
+            0.12,
+            0.16,
+            0.2,
+            0.24
+          ]
+        }
+      ]
+    },
+    {
+      "hero_id": "flint",
+      "name": "Flint",
+      "generation": 2,
+      "specialty": "infantry",
+      "rarity": "gold",
+      "base_stats": {
+        "attack": 580,
+        "defense": 480,
+        "health": 3600,
+        "lethality": 45
+      },
+      "expedition_skills": [
+        {
+          "name": "Tank Damage Reduction",
+          "type": "defense",
+          "coefficients": [
+            0.06,
+            0.1,
+            0.14,
+            0.18,
+            0.22
+          ]
+        },
+        {
+          "name": "Troop Defense",
+          "type": "support",
+          "coefficients": [
+            0.05,
+            0.1,
+            0.15,
+            0.2,
+            0.25
+          ]
+        }
+      ]
+    },
+    {
+      "hero_id": "philly",
+      "name": "Philly",
+      "generation": 2,
+      "specialty": "lancer",
+      "rarity": "gold",
+      "base_stats": {
+        "attack": 640,
+        "defense": 400,
+        "health": 3000,
+        "lethality": 65
+      },
+      "expedition_skills": [
+        {
+          "name": "Healing Speed",
+          "type": "support",
+          "coefficients": [
+            0.06,
+            0.12,
+            0.18,
+            0.24,
+            0.3
+          ]
+        },
+        {
+          "name": "Troop Healing",
+          "type": "support",
+          "coefficients": [
+            0.04,
+            0.08,
+            0.12,
+            0.16,
+            0.2
+          ]
+        }
+      ]
+    },
+    {
+      "hero_id": "alonso",
+      "name": "Alonso",
+      "generation": 2,
+      "specialty": "marksman",
+      "rarity": "gold",
+      "base_stats": {
+        "attack": 660,
+        "defense": 360,
+        "health": 2600,
+        "lethality": 75
+      },
+      "expedition_skills": [
+        {
+          "name": "Ranged Damage",
+          "type": "offensive",
+          "coefficients": [
+            0.08,
+            0.12,
+            0.16,
+            0.2,
+            0.24
+          ]
+        },
+        {
+          "name": "Lethality Boost",
+          "type": "offensive",
+          "coefficients": [
+            0.06,
+            0.12,
+            0.18,
+            0.24,
+            0.3
+          ]
+        }
+      ]
+    },
+    {
+      "hero_id": "logan",
+      "name": "Logan",
+      "generation": 3,
+      "specialty": "infantry",
+      "rarity": "gold",
+      "base_stats": {
+        "attack": 620,
+        "defense": 520,
+        "health": 4000,
+        "lethality": 40
+      },
+      "expedition_skills": [
+        {
+          "name": "Fortified Defense",
+          "type": "defense",
+          "coefficients": [
+            0.08,
+            0.12,
+            0.16,
+            0.2,
+            0.24
+          ]
+        },
+        {
+          "name": "Troop Resilience",
+          "type": "defense",
+          "coefficients": [
+            0.05,
+            0.1,
+            0.15,
+            0.2,
+            0.25
+          ]
+        }
+      ]
+    },
+    {
+      "hero_id": "mia",
+      "name": "Mia",
+      "generation": 3,
+      "specialty": "lancer",
+      "rarity": "gold",
+      "base_stats": {
+        "attack": 680,
+        "defense": 380,
+        "health": 2900,
+        "lethality": 70
+      },
+      "expedition_skills": [
+        {
+          "name": "Charge Damage",
+          "type": "offensive",
+          "coefficients": [
+            0.1,
+            0.15,
+            0.2,
+            0.25,
+            0.3
+          ]
+        },
+        {
+          "name": "Momentum",
+          "type": "offensive",
+          "coefficients": [
+            0.06,
+            0.12,
+            0.18,
+            0.24,
+            0.3
+          ]
+        }
+      ]
+    },
+    {
+      "hero_id": "natalia",
+      "name": "Natalia",
+      "generation": 3,
+      "specialty": "marksman",
+      "rarity": "gold",
+      "base_stats": {
+        "attack": 700,
+        "defense": 340,
+        "health": 2400,
+        "lethality": 80
+      },
+      "expedition_skills": [
+        {
+          "name": "Precision Shot",
+          "type": "offensive",
+          "coefficients": [
+            0.1,
+            0.15,
+            0.2,
+            0.25,
+            0.3
+          ]
+        },
+        {
+          "name": "Headshot Chance",
+          "type": "offensive",
+          "coefficients": [
+            0.08,
+            0.16,
+            0.24,
+            0.32,
+            0.4
+          ]
+        }
+      ]
+    },
+    {
+      "hero_id": "eugene",
+      "name": "Eugene",
+      "generation": 4,
+      "specialty": "infantry",
+      "rarity": "gold",
+      "base_stats": {
+        "attack": 660,
+        "defense": 560,
+        "health": 4400,
+        "lethality": 35
+      },
+      "expedition_skills": [
+        {
+          "name": "Shield Wall",
+          "type": "defense",
+          "coefficients": [
+            0.1,
+            0.15,
+            0.2,
+            0.25,
+            0.3
+          ]
+        },
+        {
+          "name": "Counterattack",
+          "type": "offensive",
+          "coefficients": [
+            0.08,
+            0.12,
+            0.16,
+            0.2,
+            0.24
+          ]
+        }
+      ]
+    },
+    {
+      "hero_id": "seo-yoon",
+      "name": "Seo-yoon",
+      "generation": 4,
+      "specialty": "lancer",
+      "rarity": "gold",
+      "base_stats": {
+        "attack": 720,
+        "defense": 420,
+        "health": 3200,
+        "lethality": 75
+      },
+      "expedition_skills": [
+        {
+          "name": "Whirlwind",
+          "type": "offensive",
+          "coefficients": [
+            0.12,
+            0.18,
+            0.24,
+            0.3,
+            0.36
+          ]
+        },
+        {
+          "name": "Spinning Blade",
+          "type": "offensive",
+          "coefficients": [
+            0.1,
+            0.15,
+            0.2,
+            0.25,
+            0.3
+          ]
+        }
+      ]
+    },
+    {
+      "hero_id": "gina",
+      "name": "Gina",
+      "generation": 4,
+      "specialty": "marksman",
+      "rarity": "gold",
+      "base_stats": {
+        "attack": 740,
+        "defense": 360,
+        "health": 2600,
+        "lethality": 85
+      },
+      "expedition_skills": [
+        {
+          "name": "Rapid Fire",
+          "type": "offensive",
+          "coefficients": [
+            0.12,
+            0.18,
+            0.24,
+            0.3,
+            0.36
+          ]
+        },
+        {
+          "name": "Piercing Shot",
+          "type": "offensive",
+          "coefficients": [
+            0.1,
+            0.15,
+            0.2,
+            0.25,
+            0.3
+          ]
+        }
+      ]
+    },
+    {
+      "hero_id": "smith",
+      "name": "Smith",
+      "generation": 5,
+      "specialty": "infantry",
+      "rarity": "gold",
+      "base_stats": {
+        "attack": 700,
+        "defense": 600,
+        "health": 4800,
+        "lethality": 30
+      },
+      "expedition_skills": [
+        {
+          "name": "Fortress",
+          "type": "defense",
+          "coefficients": [
+            0.12,
+            0.18,
+            0.24,
+            0.3,
+            0.36
+          ]
+        },
+        {
+          "name": "Retribution",
+          "type": "offensive",
+          "coefficients": [
+            0.1,
+            0.15,
+            0.2,
+            0.25,
+            0.3
+          ]
+        }
+      ]
+    },
+    {
+      "hero_id": "bahiti",
+      "name": "Bahiti",
+      "generation": 5,
+      "specialty": "lancer",
+      "rarity": "gold",
+      "base_stats": {
+        "attack": 760,
+        "defense": 460,
+        "health": 3400,
+        "lethality": 80
+      },
+      "expedition_skills": [
+        {
+          "name": "Savage Charge",
+          "type": "offensive",
+          "coefficients": [
+            0.14,
+            0.21,
+            0.28,
+            0.35,
+            0.42
+          ]
+        },
+        {
+          "name": "Bloodlust",
+          "type": "offensive",
+          "coefficients": [
+            0.12,
+            0.18,
+            0.24,
+            0.3,
+            0.36
+          ]
+        }
+      ]
+    },
+    {
+      "hero_id": "maya",
+      "name": "Maya",
+      "generation": 5,
+      "specialty": "marksman",
+      "rarity": "gold",
+      "base_stats": {
+        "attack": 780,
+        "defense": 380,
+        "health": 2800,
+        "lethality": 90
+      },
+      "expedition_skills": [
+        {
+          "name": "Explosive Arrow",
+          "type": "offensive",
+          "coefficients": [
+            0.14,
+            0.21,
+            0.28,
+            0.35,
+            0.42
+          ]
+        },
+        {
+          "name": "Multishot",
+          "type": "offensive",
+          "coefficients": [
+            0.12,
+            0.18,
+            0.24,
+            0.3,
+            0.36
+          ]
+        }
+      ]
+    },
+    {
+      "hero_id": "atlas",
+      "name": "Atlas",
+      "generation": 6,
+      "specialty": "infantry",
+      "rarity": "gold",
+      "base_stats": {
+        "attack": 740,
+        "defense": 640,
+        "health": 5200,
+        "lethality": 25
+      },
+      "expedition_skills": [
+        {
+          "name": "Titanic Defense",
+          "type": "defense",
+          "coefficients": [
+            0.14,
+            0.21,
+            0.28,
+            0.35,
+            0.42
+          ]
+        },
+        {
+          "name": "Unstoppable Force",
+          "type": "offensive",
+          "coefficients": [
+            0.12,
+            0.18,
+            0.24,
+            0.3,
+            0.36
+          ]
+        }
+      ]
+    },
+    {
+      "hero_id": "shadow",
+      "name": "Shadow",
+      "generation": 6,
+      "specialty": "lancer",
+      "rarity": "gold",
+      "base_stats": {
+        "attack": 800,
+        "defense": 500,
+        "health": 3600,
+        "lethality": 85
+      },
+      "expedition_skills": [
+        {
+          "name": "Phantom Strike",
+          "type": "offensive",
+          "coefficients": [
+            0.16,
+            0.24,
+            0.32,
+            0.4,
+            0.48
+          ]
+        },
+        {
+          "name": "Shadow Clone",
+          "type": "offensive",
+          "coefficients": [
+            0.14,
+            0.21,
+            0.28,
+            0.35,
+            0.42
+          ]
+        }
+      ]
+    },
+    {
+      "hero_id": "artemis",
+      "name": "Artemis",
+      "generation": 6,
+      "specialty": "marksman",
+      "rarity": "gold",
+      "base_stats": {
+        "attack": 820,
+        "defense": 420,
+        "health": 3000,
+        "lethality": 95
+      },
+      "expedition_skills": [
+        {
+          "name": "Divine Arrow",
+          "type": "offensive",
+          "coefficients": [
+            0.16,
+            0.24,
+            0.32,
+            0.4,
+            0.48
+          ]
+        },
+        {
+          "name": "Godly Precision",
+          "type": "offensive",
+          "coefficients": [
+            0.14,
+            0.21,
+            0.28,
+            0.35,
+            0.42
+          ]
+        }
+      ]
+    }
+  ],
+  "star_levels": {
+    "4.1": 0.82,
+    "4.2": 0.84,
+    "4.3": 0.87,
+    "4.4": 0.9,
+    "4.5": 0.93,
+    "5.0": 1.0
   },
-  { "hero_id": "mia", "name": "Mia", "specialty": "all", "rarity": "epic", "skills": [] },
-  { "hero_id": "alonso", "name": "Alonso", "specialty": "infantry", "rarity": "epic", "skills": [] },
-  { "hero_id": "jeronimo", "name": "Jeronimo", "specialty": "lancer", "rarity": "epic", "skills": [] },
-  { "hero_id": "bahiti", "name": "Bahiti", "specialty": "marksman", "rarity": "rare", "skills": [] },
-  { "hero_id": "zinman", "name": "Zinman", "specialty": "infantry", "rarity": "epic", "skills": [] },
-  { "hero_id": "smith", "name": "Smith", "specialty": "general", "rarity": "epic", "skills": [] },
-  { "hero_id": "natalia", "name": "Natalia", "specialty": "marksman", "rarity": "epic", "skills": [] },
-  { "hero_id": "eugene", "name": "Eugene", "specialty": "lancer", "rarity": "epic", "skills": [] },
-  { "hero_id": "philly", "name": "Philly", "specialty": "infantry", "rarity": "epic", "skills": [] },
-  { "hero_id": "seo-yoon", "name": "Seo-yoon", "specialty": "all", "rarity": "epic", "skills": [] },
-  { "hero_id": "gina", "name": "Gina", "specialty": "general", "rarity": "epic", "skills": [] }
-]
+  "widget_levels": {
+    "1": 0.02,
+    "2": 0.04,
+    "3": 0.06,
+    "4": 0.08,
+    "5": 0.1,
+    "6": 0.12,
+    "7": 0.14,
+    "8": 0.16,
+    "9": 0.18,
+    "10": 0.2
+  }
+}

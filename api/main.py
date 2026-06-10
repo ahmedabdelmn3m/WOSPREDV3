@@ -356,3 +356,55 @@ async def model_accuracy():
 async def list_heroes():
     """Returns the list of heroes for the frontend dropdown."""
     return {"heroes": _hero_loader.get_all_heroes()}
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  Rally Timing Calculator Endpoints
+# ═══════════════════════════════════════════════════════════════════════════
+
+from api.rally_timing import RallyTimingRequest, RallyTimingResponse, calculate_rally_timing
+
+@app.post("/rally/calculate", response_model=RallyTimingResponse)
+async def calculate_rally_timing_endpoint(request: RallyTimingRequest):
+    """
+    Calculate synchronized rally launch timing for multiple leaders.
+    
+    Input:
+    - leaders: Array of leader objects with:
+      - name: Leader name (Alpha, Beta, etc.)
+      - march_time_str: March time in "m:ss" format (e.g., "1:15")
+      - rally_fill_minutes: Rally fill time (1, 5, 10, 15, 20)
+      - hit_order: Desired hit order (1 = first, 2 = second, etc.)
+    
+    Output:
+    - calculations: Array with launch times, hit times, and instructions for each leader
+    - summary: Overall summary of the rally timing
+    
+    Example:
+    POST /rally/calculate
+    {
+      "leaders": [
+        {"name": "Alpha", "march_time_str": "1:15", "rally_fill_minutes": 5, "hit_order": 1},
+        {"name": "Bravo", "march_time_str": "3:08", "rally_fill_minutes": 5, "hit_order": 2}
+      ]
+    }
+    """
+    try:
+        result = calculate_rally_timing(request.leaders)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Calculation error: {str(e)}")
+
+@app.get("/rally/info")
+async def rally_timing_info():
+    """Get information about the rally timing calculator"""
+    return {
+        "name": "Rally Timing Calculator",
+        "version": "1.0.0",
+        "description": "Calculate synchronized rally launch times for WOS players",
+        "max_leaders": 5,
+        "rally_fill_options": [1, 5, 10, 15, 20],
+        "endpoint": "/rally/calculate",
+        "method": "POST"
+    }
