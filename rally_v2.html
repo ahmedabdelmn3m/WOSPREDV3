@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WOS Rally Timing Calculator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .subtitle {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .how-to-use {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .how-to-use h2 {
+            color: #1e3c72;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .how-to-use ol {
+            margin-left: 20px;
+            line-height: 1.8;
+        }
+
+        .how-to-use li {
+            margin-bottom: 12px;
+            color: #555;
+        }
+
+        .how-to-use strong {
+            color: #2a5298;
+        }
+
+        .calculator-section {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .calculator-section h2 {
+            color: #1e3c72;
+            margin-bottom: 25px;
+            font-size: 1.5em;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #2a5298;
+            box-shadow: 0 0 0 3px rgba(42, 82, 152, 0.1);
+        }
+
+        .leaders-container {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .leader-input {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr auto;
+            gap: 12px;
+            margin-bottom: 12px;
+            align-items: end;
+        }
+
+        .leader-input input {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .btn-remove {
+            padding: 10px 15px;
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: background 0.3s;
+        }
+
+        .btn-remove:hover {
+            background: #ff5252;
+        }
+
+        .btn-add-leader {
+            padding: 10px 20px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.95em;
+            margin-bottom: 15px;
+            transition: background 0.3s;
+        }
+
+        .btn-add-leader:hover {
+            background: #45a049;
+        }
+
+        .hitting-order-section {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .hitting-order-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .order-item {
+            background: #2a5298;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .order-item button {
+            background: rgba(255,255,255,0.3);
+            border: none;
+            color: white;
+            cursor: pointer;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.3s;
+        }
+
+        .order-item button:hover {
+            background: rgba(255,255,255,0.5);
+        }
+
+        .hitting-order-input {
+            display: grid;
+            grid-template-columns: 1fr 1fr auto;
+            gap: 12px;
+            align-items: end;
+        }
+
+        .btn-calculate {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn-calculate:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(42, 82, 152, 0.4);
+        }
+
+        .btn-calculate:active {
+            transform: translateY(0);
+        }
+
+        .results {
+            margin-top: 30px;
+            display: none;
+        }
+
+        .results.show {
+            display: block;
+        }
+
+        .results-header {
+            background: #4CAF50;
+            color: white;
+            padding: 20px;
+            border-radius: 8px 8px 0 0;
+            font-size: 1.2em;
+            font-weight: 600;
+        }
+
+        .results-content {
+            background: #f0f7ff;
+            padding: 25px;
+            border-radius: 0 0 8px 8px;
+            border: 2px solid #4CAF50;
+        }
+
+        .summary {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            border-left: 4px solid #2a5298;
+            font-size: 1.05em;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .launch-sequence {
+            display: grid;
+            gap: 12px;
+        }
+
+        .launch-item {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #2a5298;
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .launch-order-badge {
+            background: #2a5298;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+
+        .launch-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .launch-detail {
+            display: grid;
+            gap: 4px;
+        }
+
+        .launch-detail-label {
+            font-size: 0.85em;
+            color: #666;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .launch-detail-value {
+            font-size: 1.1em;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .wait-instruction {
+            grid-column: 1 / -1;
+            background: #fff3cd;
+            padding: 10px 12px;
+            border-radius: 4px;
+            color: #856404;
+            font-size: 0.95em;
+            border-left: 3px solid #ffc107;
+        }
+
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #c62828;
+            margin-top: 15px;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.8em;
+            }
+
+            .leader-input {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .hitting-order-input {
+                grid-template-columns: 1fr;
+            }
+
+            .launch-details {
+                grid-template-columns: 1fr;
+            }
+
+            .launch-item {
+                grid-template-columns: 1fr;
+            }
+
+            .launch-order-badge {
+                width: 35px;
+                height: 35px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>⚔️ WOS Rally Timing Calculator</h1>
+            <p class="subtitle">Synchronize your rally launches for perfect hit timing</p>
+        </header>
+
+        <!-- How to Use Section -->
+        <div class="how-to-use">
+            <h2>📖 How to Use</h2>
+            <ol>
+                <li><strong>Add Leaders:</strong> Enter each leader's name and march time (how long it takes for troops to reach the target)</li>
+                <li><strong>Set Hitting Order:</strong> Choose the order you want leaders to hit (e.g., Alpha first, then Beta, then Gamma)</li>
+                <li><strong>Set Hit Spacing:</strong> Enter how many seconds apart you want each hit (0 = all hit at the same time)</li>
+                <li><strong>Calculate:</strong> Click "Calculate Launch Timing" to get the launch sequence</li>
+                <li><strong>Follow Instructions:</strong> Each leader follows their wait instruction to achieve perfect timing</li>
+            </ol>
+        </div>
+
+        <!-- Calculator Section -->
+        <div class="calculator-section">
+            <h2>⚙️ Rally Timing Calculator</h2>
+
+            <!-- Leaders Input -->
+            <div class="form-group">
+                <label>Leaders</label>
+                <div class="leaders-container">
+                    <div id="leadersContainer"></div>
+                    <button class="btn-add-leader" onclick="addLeader()">+ Add Leader</button>
+                </div>
+            </div>
+
+            <!-- Hitting Order -->
+            <div class="form-group">
+                <label>Hitting Order</label>
+                <div class="hitting-order-section">
+                    <div class="hitting-order-list" id="hittingOrderList"></div>
+                    <div class="hitting-order-input">
+                        <select id="leaderSelect" onchange="addToHittingOrder()">
+                            <option value="">Select leader to add...</option>
+                        </select>
+                        <button class="btn-add-leader" onclick="addToHittingOrder()">Add to Order</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hit Spacing -->
+            <div class="form-group">
+                <label for="hitSpacing">Hit Spacing (seconds between each hit)</label>
+                <input type="number" id="hitSpacing" value="0" min="0" step="0.5" placeholder="0 for simultaneous hits">
+            </div>
+
+            <!-- Calculate Button -->
+            <button class="btn-calculate" onclick="calculateTiming()">Calculate Launch Timing</button>
+
+            <!-- Results -->
+            <div class="results" id="results">
+                <div class="results-header" id="resultsHeader"></div>
+                <div class="results-content" id="resultsContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let leaders = [];
+        let hittingOrder = [];
+
+        function addLeader() {
+            const id = Date.now();
+            leaders.push({ id, name: '', marchTime: 30 });
+            renderLeaders();
+        }
+
+        function removeLeader(id) {
+            leaders = leaders.filter(l => l.id !== id);
+            hittingOrder = hittingOrder.filter(name => {
+                const leader = leaders.find(l => l.name === name);
+                return leader !== undefined;
+            });
+            renderLeaders();
+            renderHittingOrder();
+        }
+
+        function updateLeader(id, field, value) {
+            const leader = leaders.find(l => l.id === id);
+            if (leader) {
+                leader[field] = field === 'marchTime' ? parseFloat(value) || 0 : value;
+                renderLeaders();
+            }
+        }
+
+        function renderLeaders() {
+            const container = document.getElementById('leadersContainer');
+            container.innerHTML = leaders.map(leader => `
+                <div class="leader-input">
+                    <input 
+                        type="text" 
+                        placeholder="Leader name (e.g., Alpha)" 
+                        value="${leader.name}"
+                        onchange="updateLeader(${leader.id}, 'name', this.value)"
+                    >
+                    <input 
+                        type="number" 
+                        placeholder="March time (seconds)" 
+                        value="${leader.marchTime}"
+                        onchange="updateLeader(${leader.id}, 'marchTime', this.value)"
+                        min="0"
+                        step="1"
+                    >
+                    <input 
+                        type="number" 
+                        placeholder="Rally fill time" 
+                        value="10"
+                        disabled
+                        title="Rally fill time (not used in v2)"
+                    >
+                    <button class="btn-remove" onclick="removeLeader(${leader.id})">Remove</button>
+                </div>
+            `).join('');
+
+            updateLeaderSelect();
+        }
+
+        function updateLeaderSelect() {
+            const select = document.getElementById('leaderSelect');
+            const availableLeaders = leaders.filter(l => l.name && !hittingOrder.includes(l.name));
+            select.innerHTML = '<option value="">Select leader to add...</option>' + 
+                availableLeaders.map(l => `<option value="${l.name}">${l.name}</option>`).join('');
+        }
+
+        function addToHittingOrder() {
+            const select = document.getElementById('leaderSelect');
+            const name = select.value;
+            if (name && !hittingOrder.includes(name)) {
+                hittingOrder.push(name);
+                renderHittingOrder();
+                select.value = '';
+                updateLeaderSelect();
+            }
+        }
+
+        function removeFromHittingOrder(index) {
+            hittingOrder.splice(index, 1);
+            renderHittingOrder();
+            updateLeaderSelect();
+        }
+
+        function renderHittingOrder() {
+            const list = document.getElementById('hittingOrderList');
+            list.innerHTML = hittingOrder.map((name, index) => `
+                <div class="order-item">
+                    ${index + 1}. ${name}
+                    <button onclick="removeFromHittingOrder(${index})">×</button>
+                </div>
+            `).join('');
+        }
+
+        async function calculateTiming() {
+            // Validate inputs
+            if (leaders.length === 0) {
+                showError('Please add at least one leader');
+                return;
+            }
+
+            const validLeaders = leaders.filter(l => l.name && l.marchTime >= 0);
+            if (validLeaders.length === 0) {
+                showError('Please fill in all leader names and march times');
+                return;
+            }
+
+            if (hittingOrder.length === 0) {
+                showError('Please set a hitting order');
+                return;
+            }
+
+            const hitSpacing = parseFloat(document.getElementById('hitSpacing').value) || 0;
+
+            // Prepare request
+            const payload = {
+                leaders: validLeaders.map(l => ({
+                    name: l.name,
+                    march_time: l.marchTime,
+                    rally_fill_time: 10
+                })),
+                hitting_order: hittingOrder,
+                hit_spacing: hitSpacing
+            };
+
+            try {
+                const response = await fetch('/rally/calculate-v2', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    displayResults(result);
+                } else {
+                    showError(result.error || 'Calculation failed');
+                }
+            } catch (error) {
+                showError('Error: ' + error.message);
+            }
+        }
+
+        function displayResults(result) {
+            const resultsDiv = document.getElementById('results');
+            const header = document.getElementById('resultsHeader');
+            const content = document.getElementById('resultsContent');
+
+            header.textContent = '✅ Launch Sequence';
+
+            let html = `
+                <div class="summary">
+                    <strong>Instructions:</strong> ${result.summary}
+                </div>
+                <div class="launch-sequence">
+            `;
+
+            result.launch_sequence.forEach(item => {
+                html += `
+                    <div class="launch-item">
+                        <div class="launch-order-badge">${item.launch_order}</div>
+                        <div>
+                            <div class="launch-details">
+                                <div class="launch-detail">
+                                    <div class="launch-detail-label">Leader</div>
+                                    <div class="launch-detail-value">${item.leader_name}</div>
+                                </div>
+                                <div class="launch-detail">
+                                    <div class="launch-detail-label">Launch At</div>
+                                    <div class="launch-detail-value">${item.launch_time}s</div>
+                                </div>
+                            </div>
+                            <div class="wait-instruction">
+                                ${item.wait_instruction}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            content.innerHTML = html;
+            resultsDiv.classList.add('show');
+        }
+
+        function showError(message) {
+            const resultsDiv = document.getElementById('results');
+            const header = document.getElementById('resultsHeader');
+            const content = document.getElementById('resultsContent');
+
+            header.textContent = '❌ Error';
+            content.innerHTML = `<div class="error">${message}</div>`;
+            resultsDiv.classList.add('show');
+        }
+
+        // Initialize with one leader
+        addLeader();
+    </script>
+</body>
+</html>

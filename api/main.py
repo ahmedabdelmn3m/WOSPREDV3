@@ -612,3 +612,64 @@ async def extract_and_simulate_battle(
             "success": False,
             "error": str(e),
         }
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  Rally Timing Endpoints (v2)
+# ═══════════════════════════════════════════════════════════════════════════
+
+from api.rally_timing_v2 import get_rally_calculator
+
+
+class RallyTimingInput(BaseModel):
+    leaders: list  # [{"name": "Alpha", "march_time": 30, "rally_fill_time": 10}, ...]
+    hitting_order: list  # ["Alpha", "Beta", "Gamma"]
+    hit_spacing: float = 0.0  # seconds between hits
+
+
+@app.post("/rally/calculate-v2")
+def calculate_rally_timing(input_data: RallyTimingInput):
+    """
+    Calculate synchronized rally launch timing.
+    
+    Input:
+    {
+        "leaders": [
+            {"name": "Alpha", "march_time": 30, "rally_fill_time": 10},
+            {"name": "Beta", "march_time": 30, "rally_fill_time": 10},
+            {"name": "Gamma", "march_time": 30, "rally_fill_time": 10}
+        ],
+        "hitting_order": ["Alpha", "Beta", "Gamma"],
+        "hit_spacing": 2.0
+    }
+    
+    Output:
+    {
+        "success": true,
+        "launch_sequence": [
+            {
+                "leader_name": "Alpha",
+                "launch_time": 0.0,
+                "launch_order": 1,
+                "hit_time": 30.0,
+                "wait_instruction": "Launch immediately"
+            },
+            {
+                "leader_name": "Beta",
+                "launch_time": 2.0,
+                "launch_order": 2,
+                "hit_time": 32.0,
+                "wait_instruction": "Wait 2.0s after Alpha launches"
+            },
+            ...
+        ],
+        "summary": "Alpha launches first. Beta waits 2.0s, then launches. Gamma waits 2.0s after Beta, then launches."
+    }
+    """
+    calculator = get_rally_calculator()
+    result = calculator.calculate(
+        leaders=input_data.leaders,
+        hitting_order=input_data.hitting_order,
+        hit_spacing=input_data.hit_spacing,
+    )
+    return result
