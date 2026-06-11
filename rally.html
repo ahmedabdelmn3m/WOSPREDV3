@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WOS Rally Timing Calculator v2</title>
+    <title>WOS Rally Timing Calculator</title>
     <style>
         * {
             margin: 0;
@@ -342,18 +342,6 @@
             margin-top: 15px;
         }
 
-        .nav-link {
-            display: inline-block;
-            margin-top: 20px;
-            color: #2a5298;
-            text-decoration: none;
-            font-weight: 600;
-        }
-
-        .nav-link:hover {
-            text-decoration: underline;
-        }
-
         @media (max-width: 768px) {
             h1 {
                 font-size: 1.8em;
@@ -442,15 +430,12 @@
                 <div class="results-header" id="resultsHeader"></div>
                 <div class="results-content" id="resultsContent"></div>
             </div>
-
-            <a href="index.html" class="nav-link">← Back to Battle Predictor</a>
         </div>
     </div>
 
     <script>
         let leaders = [];
         let hittingOrder = [];
-        const API_BASE = 'https://wospredv3-production.up.railway.app';
 
         function addLeader() {
             const id = Date.now();
@@ -574,7 +559,7 @@
             };
 
             try {
-                const response = await fetch(`${API_BASE}/rally/calculate-v2`, {
+                const response = await fetch('/rally/calculate-v2', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
@@ -588,7 +573,7 @@
                     showError(result.error || 'Calculation failed');
                 }
             } catch (error) {
-                showError('Error connecting to backend: ' + error.message);
+                showError('Error: ' + error.message);
             }
         }
 
