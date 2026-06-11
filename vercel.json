@@ -5,13 +5,24 @@
     {
       "src": "frontend/**",
       "use": "@vercel/static"
+    },
+    {
+      "src": "*.html",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "*.css",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "*.js",
+      "use": "@vercel/static"
     }
   ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "/frontend/$1"
-    }
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "https://wospredv3.up.railway.app/$1" },
+    { "source": "/rally.html", "destination": "/rally.html" },
+    { "source": "/", "destination": "/frontend/index.html" }
   ],
   "headers": [
     {
