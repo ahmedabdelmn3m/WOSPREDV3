@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WOSPREDV3 — Battle Intelligence</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    /* ── Scout upload extras ────────────────────────────────── */
+    .scout-upload-area {
+      border: 2px dashed var(--border-light);
+      border-radius: var(--radius);
+      padding: 14px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+      position: relative;
+      margin-bottom: 10px;
+    }
+    .scout-upload-area:hover,
+    .scout-upload-area.dragover { border-color: var(--ice); background: rgba(0,200,255,.05); }
+    .scout-upload-area input[type="file"] {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer; width:100%; height:100%;
+    }
+    .upload-icon  { font-size: 22px; margin-bottom: 4px; }
+    .upload-label { font-size: 11px; color: var(--txt-dim); }
+    .scout-preview {
+      width: 100%; max-height: 220px; object-fit: contain;
+      border-radius: var(--radius); border: 1px solid var(--border);
+      margin-bottom: 8px; display: none;
+    }
+    .upload-hint {
+      font-size: 10px; color: var(--txt-dim); text-align: center;
+      padding: 4px; background: rgba(0,200,255,.05); border-radius: 4px;
+      margin-bottom: 8px;
+    }
+
+    /* ── Hero selection ─────────────────────────────────────── */
+    .hero-block { margin-top: 2px; }
+    .hero-slot {
+      display: grid; grid-template-columns: 1fr 50px 50px;
+      gap: 5px; align-items: end; margin-bottom: 6px;
+    }
+    .hero-slot select,
+    .hero-slot input { font-size: 12px; }
+    .hero-slot-label { font-size: 9px; color: var(--txt-dim); text-transform: uppercase; letter-spacing: .4px; }
+    .hero-coming {
+      font-size: 10px; color: var(--txt-dim);
+      padding: 6px; background: rgba(255,107,53,.06);
+      border: 1px solid rgba(255,107,53,.2);
+      border-radius: var(--radius); text-align: center; margin-top: 6px;
+    }
+    .hero-add-btn {
+      width: 100%; padding: 5px; font-size: 11px; margin-top: 4px;
+      background: rgba(0,200,255,.08); color: var(--ice);
+      border: 1px dashed rgba(0,200,255,.3); border-radius: var(--radius);
+      cursor: pointer; transition: all .2s;
+    }
+    .hero-add-btn:hover { background: rgba(0,200,255,.15); }
+
+    /* ── Nav link to rally page ─────────────────────────────── */
+    .page-nav {
+      display: flex; gap: 6px; padding: 6px 12px;
+      background: var(--bg-panel); border-bottom: 1px solid var(--border);
+      align-items: center;
+    }
+    .nav-link-btn {
+      padding: 4px 12px; border-radius: var(--radius); font-size: 11px;
+      font-weight: 600; border: 1px solid var(--border); background: transparent;
+      color: var(--txt-dim); cursor: pointer; text-decoration: none;
+      transition: all .2s;
+    }
+    .nav-link-btn:hover, .nav-link-btn.current {
+      color: var(--ice); border-color: var(--ice);
+    }
+    .nav-link-btn.current { background: rgba(0,200,255,.1); }
+  </style>
+</head>
+<body>
+
+<!-- ─── Header ──────────────────────────────────────────────────────────── -->
+<header class="app-header">
+  <div class="header-left">
+    <span class="logo-icon">⚔️</span>
+    <div class="logo-text">
+      <span class="logo-title">WOSPREDV3</span>
+      <span class="logo-sub">Battle Intelligence Platform</span>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="api-pill" id="api-pill">⬤ Offline</span>
+    <button class="btn-settings" id="btn-settings" title="API Settings">⚙</button>
+  </div>
+</header>
+
+<!-- ─── Page nav ─────────────────────────────────────────────────────────── -->
+<div class="page-nav">
+  <a href="index.html" class="nav-link-btn current">⚔️ Battle Predictor</a>
+  <a href="rally.html" class="nav-link-btn">🎯 Rally Timing</a>
+</div>
+
+<!-- ─── Settings Modal ──────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="settings-modal" style="display:none">
+  <div class="modal-box">
+    <div class="modal-title">⚙ API Settings</div>
+    <label class="modal-label">Railway Backend URL</label>
+    <input type="text" id="api-url-input" class="modal-input" placeholder="https://your-app.up.railway.app" />
+    <div class="modal-hint">After Railway deployment, paste your URL here. Saved locally.</div>
+    <div class="modal-actions">
+      <button class="btn-ice" id="btn-save-api-url">Save &amp; Reconnect</button>
+      <button class="btn-ghost" id="btn-close-settings">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Mode Nav ─────────────────────────────────────────────────────────── -->
+<nav class="mode-nav">
+  <button class="mode-btn active" id="mode-compare"   data-mode="compare">⚔️ Compare</button>
+  <button class="mode-btn"        id="mode-reverse"   data-mode="reverse">🎯 How to Win</button>
+  <button class="mode-btn"        id="mode-formation" data-mode="formation">📊 Best Formation</button>
+</nav>
+
+<div class="error-bar" id="error-bar" style="display:none"></div>
+<div class="toast"     id="toast"></div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<main class="battle-grid">
+
+  <!-- ══ LEFT: YOUR ARMY ═════════════════════════════════════════════════ -->
+  <section class="army-panel" id="attacker-section">
+    <div class="panel-header">
+      <span class="panel-badge attacker-badge">YOUR ARMY</span>
+      <input type="text" id="attacker-name" class="name-input" value="My Army" />
+    </div>
+
+    <!-- Scout image upload -->
+    <div>
+      <div class="section-label">SCOUT SCREENSHOT (optional)</div>
+      <img id="atk-preview" class="scout-preview" alt="Your scout" />
+      <div class="scout-upload-area" id="atk-upload-area"
+           ondragover="event.preventDefault();this.classList.add('dragover')"
+           ondragleave="this.classList.remove('dragover')"
+           ondrop="handleDrop(event,'atk')">
+        <input type="file" accept="image/*" onchange="handleFile(this,'atk')" />
+        <div class="upload-icon">📷</div>
+        <div class="upload-label">Upload your scout screenshot<br><small>Drag &amp; drop or click</small></div>
+      </div>
+      <div class="upload-hint">Upload your scout → read the stats from the image → fill them in below</div>
+    </div>
+
+    <!-- Preset Row -->
+    <div class="preset-block">
+      <div class="preset-row">
+        <select id="preset-select" class="preset-select"><option value="">── Saved Presets ──</option></select>
+        <button class="btn-xs btn-ice"    id="btn-load-preset">↓ Load</button>
+        <button class="btn-xs btn-danger" id="btn-delete-preset">✕</button>
+      </div>
+      <div class="preset-row">
+        <input type="text" id="preset-name" class="preset-name-input" placeholder="Name this preset…" />
+        <button class="btn-xs btn-ice" id="btn-save-preset">↑ Save</button>
+      </div>
+    </div>
+
+    <!-- Troop-type tabs -->
+    <div class="troop-tabs">
+      <button class="troop-tab atk-tab active" id="atk-tab-infantry">🛡 Infantry</button>
+      <button class="troop-tab atk-tab"        id="atk-tab-lancer"  >🗡 Lancer</button>
+      <button class="troop-tab atk-tab"        id="atk-tab-marksman">🎯 Marksman</button>
+    </div>
+
+    <div class="troop-panel atk-panel" id="atk-panel-infantry">
+      <div class="stats-grid">
+        <div class="si"><label>Attack %</label>   <input type="number" id="atk-inf-atk" class="si-input" min="0" max="9999" placeholder="0"></div>
+        <div class="si"><label>Defense %</label>  <input type="number" id="atk-inf-def" class="si-input" min="0" max="9999" placeholder="0"></div>
+        <div class="si"><label>Health %</label>   <input type="number" id="atk-inf-hp"  class="si-input" min="0" max="9999" placeholder="0"></div>
+        <div class="si"><label>Lethality %</label><input type="number" id="atk-inf-lth" class="si-input" min="0" max="9999" placeholder="0"></div>
+      </div>
+    </div>
+    <div class="troop-panel atk-panel" id="atk-panel-lancer" style="display:none">
+      <div class="stats-grid">
+        <div class="si"><label>Attack %</label>   <input type="number" id="atk-lan-atk" class="si-input" min="0" max="9999" placeholder="0"></div>
+        <div class="si"><label>Defense %</label>  <input type="number" id="atk-lan-def" class="si-input" min="0" max="9999" placeholder="0"></div>
+        <div class="si"><label>Health %</label>   <input type="number" id="atk-lan-hp"  class="si-input" min="0" max="9999" placeholder="0"></div>
+        <div class="si"><label>Lethality %</label><input type="number" id="atk-lan-lth" class="si-input" min="0" max="9999" placeholder="0"></div>
+      </div>
+    </div>
+    <div class="troop-panel atk-panel" id="atk-panel-marksman" style="display:none">
+      <div class="stats-grid">
+        <div class="si"><label>Attack %</label>   <input type="number" id="atk-mrk-atk" class="si-input" min="0" max="9999" placeholder="0"></div>
+        <div class="si"><label>Defense %</label>  <input type="number" id="atk-mrk-def" class="si-input" min="0" max="9999" placeholder="0"></div>
+        <div class="si"><label>Health %</label>   <input type="number" id="atk-mrk-hp"  class="si-input" min="0" max="9999" placeholder="0"></div>
+        <div class="si"><label>Lethality %</label><input type="number" id="atk-mrk-lth" class="si-input" min="0" max="9999" placeholder="0"></div>
+      </div>
+    </div>
+
+    <!-- Formation -->
+    <div class="formation-block">
+      <div class="section-label">FORMATION</div>
+      <div class="form-grid">
+        <div class="fi"><label>Inf %</label><input type="number" id="atk-form-inf" class="fi-input" min="0" max="100" value="50"></div>
+        <div class="fi"><label>Lan %</label><input type="number" id="atk-form-lan" class="fi-input" min="0" max="100" value="20"></div>
+        <div class="fi"><label>Mrk %</label><input type="number" id="atk-form-mrk" class="fi-input" min="0" max="100" value="30"></div>
+      </div>
+      <div class="form-total valid" id="atk-form-total">Total: 100%</div>
+    </div>
+
+    <!-- Troop count -->
+    <div class="troops-block">
+      <div class="section-label">TROOP COUNT</div>
+      <input type="number" id="atk-troops" class="troops-input" min="1" max="10000000" value="500000" />
+    </div>
+
+    <!-- Hero selection -->
+    <div class="hero-block">
+      <div class="section-label">MARCH HEROES</div>
+      <div id="atk-heroes">
+        <div class="hero-slot">
+          <div><div class="hero-slot-label">Hero</div>
+            <select class="si-input" id="atk-hero-0" style="font-size:12px">
+              <option value="">── Select Hero ──</option>
+              <optgroup label="Popular">
+                <option>Flint</option><option>Mia</option><option>Alonso</option>
+                <option>Jeronimo</option><option>Bahiti</option><option>Zinman</option>
+                <option>Smith</option><option>Natalia</option><option>Eugene</option>
+                <option>Philly</option><option>Seo-yoon</option><option>Gina</option>
+              </optgroup>
+            </select>
+          </div>
+          <div><div class="hero-slot-label">⭐ Stars</div>
+            <input type="number" id="atk-star-0" class="si-input" min="1" max="5" value="5" style="font-size:12px;text-align:center">
+          </div>
+          <div><div class="hero-slot-label">🔧 Widget</div>
+            <input type="number" id="atk-wid-0" class="si-input" min="1" max="5" value="5" style="font-size:12px;text-align:center">
+          </div>
+        </div>
+        <div class="hero-slot">
+          <div><select class="si-input" id="atk-hero-1" style="font-size:12px">
+            <option value="">── Select Hero ──</option>
+            <optgroup label="Popular">
+              <option>Flint</option><option>Mia</option><option>Alonso</option>
+              <option>Jeronimo</option><option>Bahiti</option><option>Zinman</option>
+              <option>Smith</option><option>Natalia</option><option>Eugene</option>
+              <option>Philly</option><option>Seo-yoon</option><option>Gina</option>
+            </optgroup>
+          </select></div>
+          <div><input type="number" id="atk-star-1" class="si-input" min="1" max="5" value="5" style="font-size:12px;text-align:center"></div>
+          <div><input type="number" id="atk-wid-1"  class="si-input" min="1" max="5" value="5" style="font-size:12px;text-align:center"></div>
+        </div>
+        <div class="hero-slot">
+          <div><select class="si-input" id="atk-hero-2" style="font-size:12px">
+            <option value="">── Select Hero ──</option>
+            <optgroup label="Popular">
+              <option>Flint</option><option>Mia</option><option>Alonso</option>
+              <option>Jeronimo</option><option>Bahiti</option><option>Zinman</option>
+              <option>Smith</option><option>Natalia</option><option>Eugene</option>
+              <option>Philly</option><option>Seo-yoon</option><option>Gina</option>
+            </optgroup>
+          </select></div>
+          <div><input type="number" id="atk-star-2" class="si-input" min="1" max="5" value="5" style="font-size:12px;text-align:center"></div>
+          <div><input type="number" id="atk-wid-2"  class="si-input" min="1" max="5" value="5" style="font-size:12px;text-align:center"></div>
+        </div>
+      </div>
+      <div class="hero-coming">⚡ Hero skill effects apply in V2 — selections are recorded now</div>
+    </div>
+  </section>
+
+  <!-- ══ CENTER: Controls + Results ══════════════════════════════════════ -->
+  <section class="center-panel">
+    <div class="center-options">
+      <div id="reverse-options" style="display:none" class="reverse-opts">
+        <label class="opt-label">WIN TARGET</label>
+        <select id="reverse-target" class="opt-select">
+          <option value="0.75">75%</option>
+          <option value="0.85">85%</option>
+          <option value="0.95">95%</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn-main" id="action-btn">⚔️ SIMULATE BATTLE</button>
+    <div class="results-panel" id="results-panel">
+      <div class="placeholder">
+        <div class="ph-icon">⚔️</div>
+        <div class="ph-title">Enter stats &amp; run</div>
+        <div class="ph-sub">Upload scouts · Fill stats · Compare or find what you need</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ RIGHT: ENEMY SCOUT ═══════════════════════════════════════════════ -->
+  <section class="army-panel" id="defender-section">
+    <div class="panel-header">
+      <span class="panel-badge defender-badge">ENEMY SCOUT</span>
+      <input type="text" id="def-name" class="name-input" value="Enemy" />
+    </div>
+
+    <!-- Enemy scout upload -->
+    <div>
+      <div class="section-label">ENEMY SCOUT SCREENSHOT (optional)</div>
+      <img id="def-preview" class="scout-preview" alt="Enemy scout" />
+      <div class="scout-upload-area" id="def-upload-area"
+           ondragover="event.preventDefault();this.classList.add('dragover')"
+           ondragleave="this.classList.remove('dragover')"
+           ondrop="handleDrop(event,'def')">
+        <input type="file" accept="image/*" onchange="handleFile(this,'def')" />
+        <div class="upload-icon">🔍</div>
+        <div class="upload-label">Upload enemy scout screenshot<br><small>Drag &amp; drop or click</small></div>
+      </div>
+      <div class="upload-hint">Upload their scout → read the numbers → fill them in below</div>
+    </div>
+
+    <!-- Troop-type tabs -->
+    <div class="troop-tabs">
+      <button class="troop-tab def-tab active" id="def-tab-infantry">🛡 Infantry</button>
+      <button class="troop-tab def-tab"        id="def-tab-lancer"  >🗡 Lancer</button>
+      <button class="troop-tab def-tab"        id="def-tab-marksman">🎯 Marksman</button>
+    </div>
+
+    <div class="troop-panel def-panel" id="def-panel-infantry">
+      <div class="stats-grid">
+        <div class="si"><label>Attack %</label>   <input type="number" id="def-inf-atk" class="si-input" min="0" max="9999" placeholder="0"></div>
+        <div class="si"><label>Defense %</label>  <input type="number" id="def-inf-def" class="si-input" min="0" max="9999" placeholder="0"></div>
+        <div class="si"><label>Health %</label>   <input type="number" id="def-inf-hp"  class="si-input" min="0" max="9999" placeholder="0"></div>
+        <div class="si"><label>Lethality %</label><input type="number" id="def-inf-lth" class="si-input" min="0" max="9999" placeholder="0"></div>
+      </div>
+    </div>
+    <div class="troop-panel def-panel" id="def-panel-lancer" style="display:none">
+      <div class="stats-grid">
+        <div class="si"><label>Attack %</label>   <input type="number" id="def-lan-atk" class="si-input" min="0" max="9999" placeholder="0"></div>
+        <div class="si"><label>Defense %</label>  <input type="number" id="def-lan-def" class="si-input" min="0" max="9999" placeholder="0"></div>
+        <div class="si"><label>Health %</label>   <input type="number" id="def-lan-hp"  class="si-input" min="0" max="9999" placeholder="0"></div>
+        <div class="si"><label>Lethality %</label><input type="number" id="def-lan-lth" class="si-input" min="0" max="9999" placeholder="0"></div>
+      </div>
+    </div>
+    <div class="troop-panel def-panel" id="def-panel-marksman" style="display:none">
+      <div class="stats-grid">
+        <div class="si"><label>Attack %</label>   <input type="number" id="def-mrk-atk" class="si-input" min="0" max="9999" placeholder="0"></div>
+        <div class="si"><label>Defense %</label>  <input type="number" id="def-mrk-def" class="si-input" min="0" max="9999" placeholder="0"></div>
+        <div class="si"><label>Health %</label>   <input type="number" id="def-mrk-hp"  class="si-input" min="0" max="9999" placeholder="0"></div>
+        <div class="si"><label>Lethality %</label><input type="number" id="def-mrk-lth" class="si-input" min="0" max="9999" placeholder="0"></div>
+      </div>
+    </div>
+
+    <div class="formation-block">
+      <div class="section-label">FORMATION</div>
+      <div class="form-grid">
+        <div class="fi"><label>Inf %</label><input type="number" id="def-form-inf" class="fi-input" min="0" max="100" value="50"></div>
+        <div class="fi"><label>Lan %</label><input type="number" id="def-form-lan" class="fi-input" min="0" max="100" value="20"></div>
+        <div class="fi"><label>Mrk %</label><input type="number" id="def-form-mrk" class="fi-input" min="0" max="100" value="30"></div>
+      </div>
+      <div class="form-total valid" id="def-form-total">Total: 100%</div>
+    </div>
+
+    <div class="troops-block">
+      <div class="section-label">TROOP COUNT</div>
+      <input type="number" id="def-troops" class="troops-input" min="1" max="10000000" value="400000" />
+    </div>
+
+    <!-- Enemy hero selection -->
+    <div class="hero-block">
+      <div class="section-label">ENEMY HEROES (if known)</div>
+      <div id="def-heroes">
+        <div class="hero-slot">
+          <div><div class="hero-slot-label">Hero</div>
+            <select class="si-input" id="def-hero-0" style="font-size:12px">
+              <option value="">── Unknown ──</option>
+              <optgroup label="Popular">
+                <option>Flint</option><option>Mia</option><option>Alonso</option>
+                <option>Jeronimo</option><option>Bahiti</option><option>Zinman</option>
+                <option>Smith</option><option>Natalia</option><option>Eugene</option>
+                <option>Philly</option><option>Seo-yoon</option><option>Gina</option>
+              </optgroup>
+            </select>
+          </div>
+          <div><div class="hero-slot-label">⭐</div>
+            <input type="number" id="def-star-0" class="si-input" min="1" max="5" value="5" style="font-size:12px;text-align:center"></div>
+          <div><div class="hero-slot-label">🔧</div>
+            <input type="number" id="def-wid-0" class="si-input" min="1" max="5" value="5" style="font-size:12px;text-align:center"></div>
+        </div>
+        <div class="hero-slot">
+          <div><select class="si-input" id="def-hero-1" style="font-size:12px">
+            <option value="">── Unknown ──</option>
+            <optgroup label="Popular"><option>Flint</option><option>Mia</option><option>Alonso</option><option>Jeronimo</option><option>Bahiti</option><option>Zinman</option><option>Smith</option><option>Natalia</option><option>Eugene</option><option>Philly</option><option>Seo-yoon</option><option>Gina</option></optgroup>
+          </select></div>
+          <div><input type="number" id="def-star-1" class="si-input" min="1" max="5" value="5" style="font-size:12px;text-align:center"></div>
+          <div><input type="number" id="def-wid-1"  class="si-input" min="1" max="5" value="5" style="font-size:12px;text-align:center"></div>
+        </div>
+        <div class="hero-slot">
+          <div><select class="si-input" id="def-hero-2" style="font-size:12px">
+            <option value="">── Unknown ──</option>
+            <optgroup label="Popular"><option>Flint</option><option>Mia</option><option>Alonso</option><option>Jeronimo</option><option>Bahiti</option><option>Zinman</option><option>Smith</option><option>Natalia</option><option>Eugene</option><option>Philly</option><option>Seo-yoon</option><option>Gina</option></optgroup>
+          </select></div>
+          <div><input type="number" id="def-star-2" class="si-input" min="1" max="5" value="5" style="font-size:12px;text-align:center"></div>
+          <div><input type="number" id="def-wid-2"  class="si-input" min="1" max="5" value="5" style="font-size:12px;text-align:center"></div>
+        </div>
+      </div>
+      <div class="hero-coming">⚡ Hero skill effects apply in V2</div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="app-footer">
+  Formulas verified from WOS community research · WOSPREDV3 v2.0 · <a href="rally.html" style="color:var(--ice)">Rally Timing →</a>
+</footer>
+
+<script src="config.js"></script>
+<script>
+/* ── Scout image upload ───────────────────────────────────── */
+function handleFile(input, side) {
+  const file = input.files[0];
+  if (!file) return;
+  showScout(side, URL.createObjectURL(file));
+}
+
+function handleDrop(e, side) {
+  e.preventDefault();
+  document.getElementById(side + '-upload-area').classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) {
+    showScout(side, URL.createObjectURL(file));
+  }
+}
+
+function showScout(side, url) {
+  const img  = document.getElementById(side + '-preview');
+  const area = document.getElementById(side + '-upload-area');
+  img.src = url;
+  img.style.display = 'block';
+  area.querySelector('.upload-icon').textContent = '🔄';
+  area.querySelector('.upload-label').innerHTML  =
+    'Replace image · <small>Drag &amp; drop or click</small>';
+}
+
+/* ── Read heroes from form ────────────────────────────────── */
+function readHeroes(side) {
+  const heroes = [];
+  for (let i = 0; i < 3; i++) {
+    const name = document.getElementById(`${side}-hero-${i}`)?.value;
+    if (name) {
+      heroes.push({
+        name,
+        stars:  parseInt(document.getElementById(`${side}-star-${i}`)?.value) || 5,
+        widget: parseInt(document.getElementById(`${side}-wid-${i}`)?.value)  || 5,
+      });
+    }
+  }
+  return heroes;
+}
+</script>
+<script src="app.js"></script>
+</body>
+</html>

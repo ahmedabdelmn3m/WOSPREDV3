@@ -1,35 +1,7 @@
 {
   "version": 2,
   "name": "wospredv3",
-  "builds": [
-    {
-      "src": "frontend/**",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "*.html",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "*.css",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "*.js",
-      "use": "@vercel/static"
-    }
-  ],
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "https://wospredv3.up.railway.app/$1" },
-    { "source": "/rally.html", "destination": "/rally.html" },
-    { "source": "/", "destination": "/frontend/index.html" }
-  ],
-  "headers": [
-    {
-      "source": "/frontend/(.*)",
-      "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=3600" }
-      ]
-    }
+    { "source": "/api/(.*)", "destination": "https://wospredv3.up.railway.app/$1" }
   ]
 }
