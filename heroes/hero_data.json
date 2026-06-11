@@ -1,712 +1,402 @@
 {
   "heroes": [
     {
-      "hero_id": "jeronimo",
-      "name": "Jeronimo",
-      "generation": 1,
+      "hero_id": "flint",
+      "name": "Flint",
       "specialty": "infantry",
-      "rarity": "gold",
-      "base_stats": {
-        "attack": 546,
-        "defense": 450,
-        "health": 3375,
-        "lethality": 50
-      },
+      "generation": 2,
+      "rarity": "mythic",
       "expedition_skills": [
         {
-          "name": "Troop Damage Boost",
-          "type": "offensive",
-          "coefficients": [
-            0.04,
-            0.08,
-            0.12,
-            0.16,
-            0.2
-          ]
+          "skill_number": 1,
+          "in_game_name": "Burning Resolve",
+          "effect_type": "all_troops_attack_bonus",
+          "target": "all_troops",
+          "trigger": "battle_start",
+          "star_values": {"1": null, "2": null, "3": null, "4": null, "5": 0.25},
+          "verified": true,
+          "confidence": "HIGH",
+          "source": "whiteoutsurvivalhandbook.com"
         },
         {
-          "name": "Troop Defense Reduction",
-          "type": "debuff",
-          "coefficients": [
-            0.04,
-            0.08,
-            0.12,
-            0.16,
-            0.2
-          ]
+          "skill_number": 2,
+          "in_game_name": "Pyromaniac",
+          "effect_type": "ignite_proc",
+          "target": "enemies",
+          "trigger": "on_attack",
+          "proc_chance": 0.20,
+          "damage_per_turn": 0.40,
+          "duration_turns": 3,
+          "star_values": {"1": null, "2": null, "3": null, "4": null, "5": 0.20},
+          "verified": true,
+          "confidence": "HIGH",
+          "source": "whiteoutsurvivalhandbook.com"
+        },
+        {
+          "skill_number": 3,
+          "in_game_name": "Immolation",
+          "effect_type": "damage_intake_debuff",
+          "target": "enemies",
+          "trigger": "proc_chance",
+          "proc_chance": 0.50,
+          "damage_multiplier": 0.50,
+          "star_values": {"1": null, "2": null, "3": null, "4": null, "5": 0.50},
+          "verified": true,
+          "confidence": "HIGH",
+          "source": "whiteoutsurvivalhandbook.com"
         }
       ]
     },
     {
       "hero_id": "molly",
       "name": "Molly",
-      "generation": 1,
       "specialty": "lancer",
+      "generation": 1,
       "rarity": "gold",
-      "base_stats": {
-        "attack": 600,
-        "defense": 420,
-        "health": 3200,
-        "lethality": 60
-      },
       "expedition_skills": [
         {
-          "name": "Stun Chance",
-          "type": "control",
-          "coefficients": [
-            0.05,
-            0.1,
-            0.15,
-            0.2,
-            0.25
-          ]
+          "skill_number": 1,
+          "in_game_name": "Stun Chance",
+          "effect_type": "stun_proc",
+          "target": "enemies",
+          "trigger": "on_attack",
+          "star_values": {"1": null, "2": null, "3": null, "4": null, "5": null},
+          "verified": false,
+          "confidence": "UNKNOWN",
+          "source": null
         },
         {
-          "name": "Damage Amplification",
-          "type": "offensive",
-          "coefficients": [
-            0.08,
-            0.12,
-            0.16,
-            0.2,
-            0.24
-          ]
+          "skill_number": 2,
+          "in_game_name": "Damage Amplification",
+          "effect_type": "team_damage_bonus",
+          "target": "all_troops",
+          "trigger": "battle_start",
+          "star_values": {"1": null, "2": null, "3": null, "4": null, "5": null},
+          "verified": false,
+          "confidence": "UNKNOWN",
+          "source": null
         },
         {
-          "name": "Team Buff",
-          "type": "support",
-          "coefficients": [
-            0.05,
-            0.1,
-            0.15,
-            0.2,
-            0.25
-          ]
+          "skill_number": 3,
+          "in_game_name": "Team Buff",
+          "effect_type": "permanent_team_buff",
+          "target": "all_troops",
+          "trigger": "battle_start",
+          "star_values": {"1": null, "2": null, "3": null, "4": null, "5": null},
+          "verified": true,
+          "confidence": "MEDIUM",
+          "source": "whiteoutsurvival.wiki"
         }
       ]
     },
     {
       "hero_id": "zinman",
       "name": "Zinman",
-      "generation": 1,
       "specialty": "marksman",
+      "generation": 1,
       "rarity": "gold",
-      "base_stats": {
-        "attack": 620,
-        "defense": 380,
-        "health": 2800,
-        "lethality": 70
-      },
       "expedition_skills": [
         {
-          "name": "Construction Speed",
-          "type": "utility",
-          "coefficients": [
-            0.05,
-            0.1,
-            0.15,
-            0.2,
-            0.25
-          ]
+          "skill_number": 1,
+          "in_game_name": "Construction Speed",
+          "effect_type": "construction_time_reduction",
+          "target": "buildings",
+          "trigger": "passive",
+          "star_values": {"1": null, "2": null, "3": null, "4": null, "5": null},
+          "verified": true,
+          "confidence": "MEDIUM",
+          "source": "whiteoutsurvival.wiki"
         },
         {
-          "name": "Cost Reduction",
-          "type": "utility",
-          "coefficients": [
-            0.03,
-            0.06,
-            0.09,
-            0.12,
-            0.15
-          ]
+          "skill_number": 2,
+          "in_game_name": "Cost Reduction",
+          "effect_type": "building_cost_reduction",
+          "target": "buildings",
+          "trigger": "passive",
+          "star_values": {"1": null, "2": null, "3": null, "4": null, "5": null},
+          "verified": true,
+          "confidence": "MEDIUM",
+          "source": "whiteoutsurvival.wiki"
         },
         {
-          "name": "PvP Bonus",
-          "type": "offensive",
-          "coefficients": [
-            0.08,
-            0.12,
-            0.16,
-            0.2,
-            0.24
-          ]
+          "skill_number": 3,
+          "in_game_name": "PvP Bonus",
+          "effect_type": "pvp_attack_bonus",
+          "target": "all_troops",
+          "trigger": "pvp_battle",
+          "star_values": {"1": null, "2": null, "3": null, "4": null, "5": null},
+          "verified": false,
+          "confidence": "UNKNOWN",
+          "source": null
         }
       ]
     },
     {
-      "hero_id": "flint",
-      "name": "Flint",
-      "generation": 2,
+      "hero_id": "jeronimo",
+      "name": "Jeronimo",
       "specialty": "infantry",
+      "generation": 1,
       "rarity": "gold",
-      "base_stats": {
-        "attack": 580,
-        "defense": 480,
-        "health": 3600,
-        "lethality": 45
-      },
       "expedition_skills": [
         {
-          "name": "Tank Damage Reduction",
-          "type": "defense",
-          "coefficients": [
-            0.06,
-            0.1,
-            0.14,
-            0.18,
-            0.22
-          ]
+          "skill_number": 1,
+          "in_game_name": "Infantry Attack Boost",
+          "effect_type": "infantry_attack_bonus",
+          "target": "infantry",
+          "trigger": "battle_start",
+          "star_values": {"1": null, "2": null, "3": null, "4": null, "5": null},
+          "verified": true,
+          "confidence": "MEDIUM",
+          "source": "community_feedback"
         },
         {
-          "name": "Troop Defense",
-          "type": "support",
-          "coefficients": [
-            0.05,
-            0.1,
-            0.15,
-            0.2,
-            0.25
-          ]
+          "skill_number": 2,
+          "in_game_name": "Infantry Damage Amplification",
+          "effect_type": "infantry_damage_bonus",
+          "target": "infantry",
+          "trigger": "battle_start",
+          "star_values": {"1": null, "2": null, "3": null, "4": null, "5": null},
+          "verified": true,
+          "confidence": "MEDIUM",
+          "source": "community_feedback"
+        },
+        {
+          "skill_number": 3,
+          "in_game_name": "Rally Attack Bonus",
+          "effect_type": "rally_attack_bonus",
+          "target": "all_troops",
+          "trigger": "rally_battle",
+          "star_values": {"1": null, "2": null, "3": null, "4": null, "5": null},
+          "verified": true,
+          "confidence": "MEDIUM",
+          "source": "community_feedback"
         }
       ]
     },
     {
       "hero_id": "philly",
       "name": "Philly",
-      "generation": 2,
       "specialty": "lancer",
-      "rarity": "gold",
-      "base_stats": {
-        "attack": 640,
-        "defense": 400,
-        "health": 3000,
-        "lethality": 65
-      },
+      "generation": 2,
+      "rarity": "mythic",
       "expedition_skills": [
         {
-          "name": "Healing Speed",
-          "type": "support",
-          "coefficients": [
-            0.06,
-            0.12,
-            0.18,
-            0.24,
-            0.3
-          ]
+          "skill_number": 1,
+          "in_game_name": "Healing Speed",
+          "effect_type": "healing_speed_bonus",
+          "target": "all_troops",
+          "trigger": "battle_start",
+          "star_values": {"1": null, "2": null, "3": null, "4": null, "5": null},
+          "verified": true,
+          "confidence": "MEDIUM",
+          "source": "whiteoutsurvival.wiki"
         },
         {
-          "name": "Troop Healing",
-          "type": "support",
-          "coefficients": [
-            0.04,
-            0.08,
-            0.12,
-            0.16,
-            0.2
-          ]
+          "skill_number": 2,
+          "in_game_name": "Troop Healing",
+          "effect_type": "troop_healing_bonus",
+          "target": "all_troops",
+          "trigger": "battle_start",
+          "star_values": {"1": null, "2": null, "3": null, "4": null, "5": null},
+          "verified": true,
+          "confidence": "MEDIUM",
+          "source": "whiteoutsurvival.wiki"
         }
       ]
     },
     {
       "hero_id": "alonso",
       "name": "Alonso",
+      "specialty": "marksman",
       "generation": 2,
-      "specialty": "marksman",
-      "rarity": "gold",
-      "base_stats": {
-        "attack": 660,
-        "defense": 360,
-        "health": 2600,
-        "lethality": 75
-      },
+      "rarity": "mythic",
       "expedition_skills": [
         {
-          "name": "Ranged Damage",
-          "type": "offensive",
-          "coefficients": [
-            0.08,
-            0.12,
-            0.16,
-            0.2,
-            0.24
-          ]
+          "skill_number": 1,
+          "in_game_name": "Ranged Damage",
+          "effect_type": "marksman_attack_bonus",
+          "target": "marksman",
+          "trigger": "battle_start",
+          "star_values": {"1": null, "2": null, "3": null, "4": null, "5": null},
+          "verified": false,
+          "confidence": "UNKNOWN",
+          "source": null
         },
         {
-          "name": "Lethality Boost",
-          "type": "offensive",
-          "coefficients": [
-            0.06,
-            0.12,
-            0.18,
-            0.24,
-            0.3
-          ]
-        }
-      ]
-    },
-    {
-      "hero_id": "logan",
-      "name": "Logan",
-      "generation": 3,
-      "specialty": "infantry",
-      "rarity": "gold",
-      "base_stats": {
-        "attack": 620,
-        "defense": 520,
-        "health": 4000,
-        "lethality": 40
-      },
-      "expedition_skills": [
-        {
-          "name": "Fortified Defense",
-          "type": "defense",
-          "coefficients": [
-            0.08,
-            0.12,
-            0.16,
-            0.2,
-            0.24
-          ]
-        },
-        {
-          "name": "Troop Resilience",
-          "type": "defense",
-          "coefficients": [
-            0.05,
-            0.1,
-            0.15,
-            0.2,
-            0.25
-          ]
-        }
-      ]
-    },
-    {
-      "hero_id": "mia",
-      "name": "Mia",
-      "generation": 3,
-      "specialty": "lancer",
-      "rarity": "gold",
-      "base_stats": {
-        "attack": 680,
-        "defense": 380,
-        "health": 2900,
-        "lethality": 70
-      },
-      "expedition_skills": [
-        {
-          "name": "Charge Damage",
-          "type": "offensive",
-          "coefficients": [
-            0.1,
-            0.15,
-            0.2,
-            0.25,
-            0.3
-          ]
-        },
-        {
-          "name": "Momentum",
-          "type": "offensive",
-          "coefficients": [
-            0.06,
-            0.12,
-            0.18,
-            0.24,
-            0.3
-          ]
-        }
-      ]
-    },
-    {
-      "hero_id": "natalia",
-      "name": "Natalia",
-      "generation": 3,
-      "specialty": "marksman",
-      "rarity": "gold",
-      "base_stats": {
-        "attack": 700,
-        "defense": 340,
-        "health": 2400,
-        "lethality": 80
-      },
-      "expedition_skills": [
-        {
-          "name": "Precision Shot",
-          "type": "offensive",
-          "coefficients": [
-            0.1,
-            0.15,
-            0.2,
-            0.25,
-            0.3
-          ]
-        },
-        {
-          "name": "Headshot Chance",
-          "type": "offensive",
-          "coefficients": [
-            0.08,
-            0.16,
-            0.24,
-            0.32,
-            0.4
-          ]
-        }
-      ]
-    },
-    {
-      "hero_id": "eugene",
-      "name": "Eugene",
-      "generation": 4,
-      "specialty": "infantry",
-      "rarity": "gold",
-      "base_stats": {
-        "attack": 660,
-        "defense": 560,
-        "health": 4400,
-        "lethality": 35
-      },
-      "expedition_skills": [
-        {
-          "name": "Shield Wall",
-          "type": "defense",
-          "coefficients": [
-            0.1,
-            0.15,
-            0.2,
-            0.25,
-            0.3
-          ]
-        },
-        {
-          "name": "Counterattack",
-          "type": "offensive",
-          "coefficients": [
-            0.08,
-            0.12,
-            0.16,
-            0.2,
-            0.24
-          ]
-        }
-      ]
-    },
-    {
-      "hero_id": "seo-yoon",
-      "name": "Seo-yoon",
-      "generation": 4,
-      "specialty": "lancer",
-      "rarity": "gold",
-      "base_stats": {
-        "attack": 720,
-        "defense": 420,
-        "health": 3200,
-        "lethality": 75
-      },
-      "expedition_skills": [
-        {
-          "name": "Whirlwind",
-          "type": "offensive",
-          "coefficients": [
-            0.12,
-            0.18,
-            0.24,
-            0.3,
-            0.36
-          ]
-        },
-        {
-          "name": "Spinning Blade",
-          "type": "offensive",
-          "coefficients": [
-            0.1,
-            0.15,
-            0.2,
-            0.25,
-            0.3
-          ]
+          "skill_number": 2,
+          "in_game_name": "Lethality Boost",
+          "effect_type": "lethality_bonus",
+          "target": "all_troops",
+          "trigger": "battle_start",
+          "star_values": {"1": null, "2": null, "3": null, "4": null, "5": null},
+          "verified": false,
+          "confidence": "UNKNOWN",
+          "source": null
         }
       ]
     },
     {
       "hero_id": "gina",
       "name": "Gina",
-      "generation": 4,
       "specialty": "marksman",
-      "rarity": "gold",
-      "base_stats": {
-        "attack": 740,
-        "defense": 360,
-        "health": 2600,
-        "lethality": 85
-      },
+      "generation": 4,
+      "rarity": "mythic",
       "expedition_skills": [
         {
-          "name": "Rapid Fire",
-          "type": "offensive",
-          "coefficients": [
-            0.12,
-            0.18,
-            0.24,
-            0.3,
-            0.36
-          ]
+          "skill_number": 1,
+          "in_game_name": "Main Dealer",
+          "effect_type": "marksman_damage_bonus",
+          "target": "marksman",
+          "trigger": "battle_start",
+          "star_values": {"1": null, "2": null, "3": null, "4": null, "5": null},
+          "verified": true,
+          "confidence": "MEDIUM",
+          "source": "whiteoutsurvival.wiki"
         },
         {
-          "name": "Piercing Shot",
-          "type": "offensive",
-          "coefficients": [
-            0.1,
-            0.15,
-            0.2,
-            0.25,
-            0.3
-          ]
+          "skill_number": 2,
+          "in_game_name": "Attack Speed",
+          "effect_type": "attack_speed_bonus",
+          "target": "marksman",
+          "trigger": "battle_start",
+          "star_values": {"1": null, "2": null, "3": null, "4": null, "5": null},
+          "verified": true,
+          "confidence": "MEDIUM",
+          "source": "whiteoutsurvival.wiki"
+        }
+      ]
+    },
+    {
+      "hero_id": "natalia",
+      "name": "Natalia",
+      "specialty": "marksman",
+      "generation": 3,
+      "rarity": "mythic",
+      "expedition_skills": [
+        {
+          "skill_number": 1,
+          "in_game_name": "Attack Damage",
+          "effect_type": "marksman_attack_bonus",
+          "target": "marksman",
+          "trigger": "battle_start",
+          "star_values": {"1": null, "2": null, "3": null, "4": null, "5": null},
+          "verified": true,
+          "confidence": "MEDIUM",
+          "source": "community_feedback"
+        },
+        {
+          "skill_number": 2,
+          "in_game_name": "Rally Lethality",
+          "effect_type": "rally_lethality_bonus",
+          "target": "all_troops",
+          "trigger": "rally_battle",
+          "star_values": {"1": null, "2": null, "3": null, "4": null, "5": null},
+          "verified": true,
+          "confidence": "MEDIUM",
+          "source": "community_feedback"
         }
       ]
     },
     {
       "hero_id": "smith",
       "name": "Smith",
-      "generation": 5,
       "specialty": "infantry",
-      "rarity": "gold",
-      "base_stats": {
-        "attack": 700,
-        "defense": 600,
-        "health": 4800,
-        "lethality": 30
-      },
+      "generation": 5,
+      "rarity": "blue",
       "expedition_skills": [
         {
-          "name": "Fortress",
-          "type": "defense",
-          "coefficients": [
-            0.12,
-            0.18,
-            0.24,
-            0.3,
-            0.36
-          ]
+          "skill_number": 1,
+          "in_game_name": "Iron Output",
+          "effect_type": "iron_gathering_bonus",
+          "target": "resource_gathering",
+          "trigger": "passive",
+          "star_values": {"1": null, "2": null, "3": null, "4": null, "5": null},
+          "verified": true,
+          "confidence": "HIGH",
+          "source": "whiteoutsurvival.wiki"
         },
         {
-          "name": "Retribution",
-          "type": "offensive",
-          "coefficients": [
-            0.1,
-            0.15,
-            0.2,
-            0.25,
-            0.3
-          ]
+          "skill_number": 2,
+          "in_game_name": "Iron Gathering Speed",
+          "effect_type": "iron_gathering_speed",
+          "target": "resource_gathering",
+          "trigger": "passive",
+          "star_values": {"1": null, "2": null, "3": null, "4": null, "5": null},
+          "verified": true,
+          "confidence": "HIGH",
+          "source": "whiteoutsurvival.wiki"
+        }
+      ]
+    },
+    {
+      "hero_id": "eugene",
+      "name": "Eugene",
+      "specialty": "infantry",
+      "generation": 4,
+      "rarity": "blue",
+      "expedition_skills": [
+        {
+          "skill_number": 1,
+          "in_game_name": "Wood Output",
+          "effect_type": "wood_gathering_bonus",
+          "target": "resource_gathering",
+          "trigger": "passive",
+          "star_values": {"1": null, "2": null, "3": null, "4": null, "5": null},
+          "verified": true,
+          "confidence": "HIGH",
+          "source": "whiteoutsurvival.wiki"
+        },
+        {
+          "skill_number": 2,
+          "in_game_name": "Wood Gathering Speed",
+          "effect_type": "wood_gathering_speed",
+          "target": "resource_gathering",
+          "trigger": "passive",
+          "star_values": {"1": null, "2": null, "3": null, "4": null, "5": null},
+          "verified": true,
+          "confidence": "HIGH",
+          "source": "whiteoutsurvival.wiki"
         }
       ]
     },
     {
       "hero_id": "bahiti",
       "name": "Bahiti",
-      "generation": 5,
       "specialty": "lancer",
-      "rarity": "gold",
-      "base_stats": {
-        "attack": 760,
-        "defense": 460,
-        "health": 3400,
-        "lethality": 80
-      },
-      "expedition_skills": [
-        {
-          "name": "Savage Charge",
-          "type": "offensive",
-          "coefficients": [
-            0.14,
-            0.21,
-            0.28,
-            0.35,
-            0.42
-          ]
-        },
-        {
-          "name": "Bloodlust",
-          "type": "offensive",
-          "coefficients": [
-            0.12,
-            0.18,
-            0.24,
-            0.3,
-            0.36
-          ]
-        }
-      ]
-    },
-    {
-      "hero_id": "maya",
-      "name": "Maya",
       "generation": 5,
-      "specialty": "marksman",
-      "rarity": "gold",
-      "base_stats": {
-        "attack": 780,
-        "defense": 380,
-        "health": 2800,
-        "lethality": 90
-      },
+      "rarity": "mythic",
       "expedition_skills": [
         {
-          "name": "Explosive Arrow",
-          "type": "offensive",
-          "coefficients": [
-            0.14,
-            0.21,
-            0.28,
-            0.35,
-            0.42
-          ]
+          "skill_number": 1,
+          "in_game_name": "Savage Charge",
+          "effect_type": "lancer_attack_bonus",
+          "target": "lancer",
+          "trigger": "battle_start",
+          "star_values": {"1": null, "2": null, "3": null, "4": null, "5": null},
+          "verified": true,
+          "confidence": "MEDIUM",
+          "source": "community_feedback"
         },
         {
-          "name": "Multishot",
-          "type": "offensive",
-          "coefficients": [
-            0.12,
-            0.18,
-            0.24,
-            0.3,
-            0.36
-          ]
-        }
-      ]
-    },
-    {
-      "hero_id": "atlas",
-      "name": "Atlas",
-      "generation": 6,
-      "specialty": "infantry",
-      "rarity": "gold",
-      "base_stats": {
-        "attack": 740,
-        "defense": 640,
-        "health": 5200,
-        "lethality": 25
-      },
-      "expedition_skills": [
-        {
-          "name": "Titanic Defense",
-          "type": "defense",
-          "coefficients": [
-            0.14,
-            0.21,
-            0.28,
-            0.35,
-            0.42
-          ]
-        },
-        {
-          "name": "Unstoppable Force",
-          "type": "offensive",
-          "coefficients": [
-            0.12,
-            0.18,
-            0.24,
-            0.3,
-            0.36
-          ]
-        }
-      ]
-    },
-    {
-      "hero_id": "shadow",
-      "name": "Shadow",
-      "generation": 6,
-      "specialty": "lancer",
-      "rarity": "gold",
-      "base_stats": {
-        "attack": 800,
-        "defense": 500,
-        "health": 3600,
-        "lethality": 85
-      },
-      "expedition_skills": [
-        {
-          "name": "Phantom Strike",
-          "type": "offensive",
-          "coefficients": [
-            0.16,
-            0.24,
-            0.32,
-            0.4,
-            0.48
-          ]
-        },
-        {
-          "name": "Shadow Clone",
-          "type": "offensive",
-          "coefficients": [
-            0.14,
-            0.21,
-            0.28,
-            0.35,
-            0.42
-          ]
-        }
-      ]
-    },
-    {
-      "hero_id": "artemis",
-      "name": "Artemis",
-      "generation": 6,
-      "specialty": "marksman",
-      "rarity": "gold",
-      "base_stats": {
-        "attack": 820,
-        "defense": 420,
-        "health": 3000,
-        "lethality": 95
-      },
-      "expedition_skills": [
-        {
-          "name": "Divine Arrow",
-          "type": "offensive",
-          "coefficients": [
-            0.16,
-            0.24,
-            0.32,
-            0.4,
-            0.48
-          ]
-        },
-        {
-          "name": "Godly Precision",
-          "type": "offensive",
-          "coefficients": [
-            0.14,
-            0.21,
-            0.28,
-            0.35,
-            0.42
-          ]
+          "skill_number": 2,
+          "in_game_name": "Rally Attack Bonus",
+          "effect_type": "rally_attack_bonus",
+          "target": "all_troops",
+          "trigger": "rally_battle",
+          "star_values": {"1": null, "2": null, "3": null, "4": null, "5": null},
+          "verified": true,
+          "confidence": "MEDIUM",
+          "source": "community_feedback"
         }
       ]
     }
   ],
-  "star_levels": {
-    "4.1": 0.82,
-    "4.2": 0.84,
-    "4.3": 0.87,
-    "4.4": 0.9,
-    "4.5": 0.93,
-    "5.0": 1.0
-  },
-  "widget_levels": {
-    "1": 0.02,
-    "2": 0.04,
-    "3": 0.06,
-    "4": 0.08,
-    "5": 0.1,
-    "6": 0.12,
-    "7": 0.14,
-    "8": 0.16,
-    "9": 0.18,
-    "10": 0.2
+  "star_levels": {"1": "1 star", "2": "2 stars", "3": "3 stars", "4": "4 stars", "5": "5 stars"},
+  "widget_levels": {"1": "Level 1", "2": "Level 2", "3": "Level 3", "4": "Level 4", "5": "Level 5"},
+  "notes": {
+    "star_levels": "Integer levels only (1-5). No decimal levels like 4.1, 4.2, etc.",
+    "skill_values": "Only verified values are populated. Unknown values are set to null.",
+    "verified_flag": "true = confirmed from community sources, false = needs verification",
+    "confidence": "HIGH = multiple sources confirm, MEDIUM = single source, UNKNOWN = not yet researched"
   }
 }

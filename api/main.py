@@ -408,3 +408,207 @@ async def rally_timing_info():
         "endpoint": "/rally/calculate",
         "method": "POST"
     }
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  Hero Endpoints
+# ═══════════════════════════════════════════════════════════════════════════
+
+@app.get("/heroes")
+def get_all_heroes():
+    """Get all available heroes with their skills."""
+    heroes = _hero_loader.get_all_heroes()
+    return {
+        "count": len(heroes),
+        "heroes": heroes,
+    }
+
+
+@app.get("/heroes/{hero_name}")
+def get_hero(hero_name: str):
+    """Get a specific hero by name."""
+    hero = _hero_loader.get_hero_by_name(hero_name)
+    if not hero:
+        raise HTTPException(status_code=404, detail=f"Hero '{hero_name}' not found")
+    return hero
+
+
+@app.post("/heroes/resolve-skills")
+def resolve_hero_skills(hero_name: str, star: int = 5, widget: int = 5):
+    """
+    Resolve a hero's expedition skills into combat modifiers.
+    
+    Returns:
+    {
+        "hero": "Flint",
+        "star": 5,
+        "widget": 5,
+        "modifiers": {
+            "attack_bonus": 0.25,
+            "lethality_bonus": 0.30,
+            ...
+        }
+    }
+    """
+    from heroes.skill_resolver import SkillResolver
+    
+    resolver = SkillResolver(_hero_loader)
+    modifiers = resolver.resolve(hero_name, star, widget)
+    
+    if not modifiers and not _hero_loader.get_hero_by_name(hero_name):
+        raise HTTPException(status_code=404, detail=f"Hero '{hero_name}' not found")
+    
+    return {
+        "hero": hero_name,
+        "star": star,
+        "widget": widget,
+        "modifiers": modifiers,
+    }
+
+
+@app.post("/heroes/resolve-all")
+def resolve_all_heroes_skills(star: int = 5, widget: int = 5):
+    """
+    Resolve all heroes' expedition skills into combat modifiers.
+    
+    Returns:
+    {
+        "star": 5,
+        "widget": 5,
+        "heroes": {
+            "Flint": {"attack_bonus": 0.25, ...},
+            "Molly": {"attack_bonus": 0.15, ...},
+            ...
+        }
+    }
+    """
+    from heroes.skill_resolver import SkillResolver
+    
+    resolver = SkillResolver(_hero_loader)
+    all_modifiers = resolver.resolve_all_heroes(star, widget)
+    
+    return {
+        "star": star,
+        "widget": widget,
+        "heroes": all_modifiers,
+    }
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  OCR Endpoints
+# ═══════════════════════════════════════════════════════════════════════════
+
+from fastapi import File, UploadFile
+import tempfile
+from ocr_system import get_ocr_system
+
+
+@app.post("/ocr/extract-stats")
+async def extract_stats_from_screenshot(file: UploadFile = File(...)):
+    """
+    Extract troop stats from a WOS scout screenshot using Claude Vision API.
+    
+    Upload a screenshot and get back parsed troop stats:
+    {
+        "success": true,
+        "stats": {
+            "infantry": {"attack_pct": 150, "defense_pct": 120, ...},
+            "lancer": {...},
+            "marksman": {...},
+            "formation": {...},
+            "troop_count": 50000
+        },
+        "confidence": 0.95
+    }
+    """
+    try:
+        # Save uploaded file temporarily
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp:
+            contents = await file.read()
+            tmp.write(contents)
+            tmp_path = tmp.name
+        
+        # Extract stats using OCR
+        ocr = get_ocr_system()
+        result = ocr.extract_stats_from_image(tmp_path)
+        
+        # Clean up
+        import os
+        os.unlink(tmp_path)
+        
+        return result
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+        }
+
+
+@app.post("/ocr/extract-and-simulate")
+async def extract_and_simulate_battle(
+    file: UploadFile = File(...),
+    defender_name: str = "Defender",
+    defender_attack_pct: float = 0.0,
+    defender_defense_pct: float = 0.0,
+    defender_health_pct: float = 0.0,
+    defender_lethality_pct: float = 0.0,
+):
+    """
+    Extract stats from screenshot and immediately simulate a battle.
+    
+    Useful for quick battle predictions from scout reports.
+    """
+    try:
+        # Save uploaded file temporarily
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp:
+            contents = await file.read()
+            tmp.write(contents)
+            tmp_path = tmp.name
+        
+        # Extract stats
+        ocr = get_ocr_system()
+        ocr_result = ocr.extract_stats_from_image(tmp_path)
+        
+        # Clean up
+        import os
+        os.unlink(tmp_path)
+        
+        if not ocr_result.get("success"):
+            return ocr_result
+        
+        # Build attacker army from extracted stats
+        attacker_stats = ocr_result.get("stats", {})
+        attacker_army = ArmyStats.from_scout(
+            name="Attacker",
+            infantry=attacker_stats.get("infantry", {}),
+            lancer=attacker_stats.get("lancer", {}),
+            marksman=attacker_stats.get("marksman", {}),
+            formation=attacker_stats.get("formation", {"infantry": 0.5, "lancer": 0.2, "marksman": 0.3}),
+            troop_count=attacker_stats.get("troop_count", 50000),
+        )
+        
+        # Build defender army from input
+        defender_army = ArmyStats.from_scout(
+            name=defender_name,
+            infantry={"attack_pct": defender_attack_pct, "defense_pct": defender_defense_pct, "health_pct": defender_health_pct, "lethality_pct": defender_lethality_pct},
+            lancer={"attack_pct": defender_attack_pct, "defense_pct": defender_defense_pct, "health_pct": defender_health_pct, "lethality_pct": defender_lethality_pct},
+            marksman={"attack_pct": defender_attack_pct, "defense_pct": defender_defense_pct, "health_pct": defender_health_pct, "lethality_pct": defender_lethality_pct},
+            formation={"infantry": 0.5, "lancer": 0.2, "marksman": 0.3},
+            troop_count=50000,
+        )
+        
+        # Simulate battle
+        result = _combat_engine.simulate_battle(attacker_army, defender_army)
+        
+        return {
+            "success": True,
+            "ocr_confidence": ocr_result.get("confidence"),
+            "battle_result": result,
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+        }

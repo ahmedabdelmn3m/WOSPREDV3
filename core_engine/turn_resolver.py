@@ -50,26 +50,36 @@ class TurnResolver:
                 all_mods[k] = all_mods.get(k, 0) + v
         return all_mods
 
-    def _apply_hero_mods(self, army: ArmyStats, mods: dict, trigger: str):
-        """Apply modifiers of a specific trigger type to the army stats."""
+    def _apply_hero_mods(self, army: ArmyStats, mods: dict, trigger: str = None):
+        """Apply modifiers to the army stats."""
         for troop_type in ['infantry', 'lancer', 'marksman']:
             stats = getattr(army, troop_type)
             
-            # Apply attack_bonus
-            stats.attack_bonus += mods.get(f"attack_bonus_{troop_type}_{trigger}", 0)
-            stats.attack_bonus += mods.get(f"attack_bonus_all_troops_{trigger}", 0)
+            # Apply attack_bonus (from any trigger)
+            stats.attack_bonus += mods.get(f"attack_bonus_{troop_type}", 0)
+            stats.attack_bonus += mods.get("attack_bonus", 0)
+            stats.attack_bonus += mods.get(f"{troop_type}_attack_bonus", 0)
+            stats.attack_bonus += mods.get("rally_attack_bonus", 0)
             
             # Apply defense_bonus
-            stats.defense_bonus += mods.get(f"defense_bonus_{troop_type}_{trigger}", 0)
-            stats.defense_bonus += mods.get(f"defense_bonus_all_troops_{trigger}", 0)
+            stats.defense_bonus += mods.get(f"defense_bonus_{troop_type}", 0)
+            stats.defense_bonus += mods.get("defense_bonus", 0)
+            stats.defense_bonus += mods.get(f"{troop_type}_defense_bonus", 0)
             
             # Apply health_bonus
-            stats.health_bonus += mods.get(f"health_bonus_{troop_type}_{trigger}", 0)
-            stats.health_bonus += mods.get(f"health_bonus_all_troops_{trigger}", 0)
+            stats.health_bonus += mods.get(f"health_bonus_{troop_type}", 0)
+            stats.health_bonus += mods.get("health_bonus", 0)
+            stats.health_bonus += mods.get(f"{troop_type}_health_bonus", 0)
             
             # Apply lethality_bonus
-            stats.lethality_bonus += mods.get(f"lethality_bonus_{troop_type}_{trigger}", 0)
-            stats.lethality_bonus += mods.get(f"lethality_bonus_all_troops_{trigger}", 0)
+            stats.lethality_bonus += mods.get(f"lethality_bonus_{troop_type}", 0)
+            stats.lethality_bonus += mods.get("lethality_bonus", 0)
+            stats.lethality_bonus += mods.get("rally_lethality_bonus", 0)
+            
+            # Apply attack_speed_bonus if available
+            if hasattr(stats, 'attack_speed_bonus'):
+                stats.attack_speed_bonus = stats.attack_speed_bonus or 0
+                stats.attack_speed_bonus += mods.get("attack_speed_bonus", 0)
 
     # ─────────────────────────────────────────────────────────────────────
     #  Public

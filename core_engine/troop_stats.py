@@ -21,6 +21,18 @@ from .defense_model import DefenseModel
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+#  Hero
+# ─────────────────────────────────────────────────────────────────────────────
+
+@dataclass
+class Hero:
+    """Hero selection for a march with star and widget levels."""
+    name: str = ""
+    stars: int = 5  # 1-5 star levels
+    widget: int = 5  # widget level
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 #  TroopTypeStats
 # ─────────────────────────────────────────────────────────────────────────────
 

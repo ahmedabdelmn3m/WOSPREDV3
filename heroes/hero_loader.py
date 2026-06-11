@@ -13,7 +13,11 @@ class HeroLoader:
         if not os.path.exists(self.data_path):
             return []
         with open(self.data_path, "r") as f:
-            return json.load(f)
+            data = json.load(f)
+            # Handle both {"heroes": [...]} and [...] formats
+            if isinstance(data, dict):
+                return data.get("heroes", [])
+            return data
 
     def get_hero_by_name(self, name: str) -> Optional[Dict]:
         for hero in self.heroes:
