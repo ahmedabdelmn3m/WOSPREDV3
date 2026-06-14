@@ -247,20 +247,17 @@
 <!-- ════════════════════ MAIN TAB ════════════════════════════ -->
 <div class="tab-pane active" id="tab-main">
 
-  <!-- Impact time setup -->
+  <!-- Sequential hit settings -->
   <div class="card">
-    <div class="section-title">RALLY IMPACT TIME (UTC) — when you want everyone to hit</div>
-    <div class="time-inputs">
-      <div class="form-group">
-        <label>Impact Time (hh:mm:ss)</label>
-        <input type="text" id="impactTime" placeholder="e.g. 14:30:00" />
+    <div class="section-title">HIT SEQUENCE SETTINGS</div>
+    <div class="form-group" style="max-width:300px">
+      <label>Gap between hits (seconds)</label>
+      <div style="display:flex;align-items:center;gap:12px">
+        <input type="range" id="delaySlider" min="0" max="10" step="1" value="1" oninput="updateDelay(this)" />
+        <span id="delayVal" style="font-weight:700;color:var(--ice);min-width:20px">1</span>s
       </div>
-      <div style="display:flex;flex-direction:column;gap:4px;padding-top:18px">
-        <button class="btn btn-ghost" onclick="adjustTime(-5)">−5 min</button>
-        <button class="btn btn-ghost" onclick="adjustTime(5)">+5 min</button>
-      </div>
-      <div style="padding-top:18px">
-        <button class="btn btn-ice" onclick="setNextRoundTime()">⏱ Next Round</button>
+      <div id="delayWarn" style="display:none;font-size:10px;color:var(--warn);margin-top:4px">
+        ⚠️ Gaps > 5s might allow enemy to heal between hits.
       </div>
     </div>
   </div>
@@ -409,17 +406,7 @@ const ls = {
   set: (k, v) => localStorage.setItem(k, JSON.stringify(v)),
 };
 
-// ── UTC Clock ────────────────────────────────────────────────
-function updateClock() {
-  const offset = ls.get('timeOffset') || 0;
-  const now    = new Date(Date.now() + offset);
-  const hh     = now.getUTCHours().toString().padStart(2,'0');
-  const mm     = now.getUTCMinutes().toString().padStart(2,'0');
-  const ss     = now.getUTCSeconds().toString().padStart(2,'0');
-  document.getElementById('utc-clock').textContent = `${hh}:${mm}:${ss} UTC`;
-}
-setInterval(updateClock, 1000);
-updateClock();
+// UTC clock removed as per request
 
 // ── Theme toggle ─────────────────────────────────────────────
 const themeBtn = document.getElementById('theme-toggle');
@@ -465,25 +452,7 @@ function hmsToSecs(hms) {
 
 function fmt(n) { return Math.round(n).toLocaleString(); }
 
-// ── Impact time buttons ───────────────────────────────────────
-function adjustTime(mins) {
-  const inp = document.getElementById('impactTime');
-  if (!inp.value) return;
-  const secs = hmsToSecs(inp.value) + mins * 60;
-  inp.value = secsToHMS(secs);
-  ls.set('impactTime', inp.value);
-}
-
-function setNextRoundTime() {
-  const now  = new Date(Date.now() + (ls.get('timeOffset') || 0));
-  let m = now.getUTCMinutes();
-  let h = now.getUTCHours();
-  m = Math.ceil((m + 10) / 10) * 10;
-  if (m >= 60) { m = 0; h = (h + 1) % 24; }
-  const t = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:00`;
-  document.getElementById('impactTime').value = t;
-  ls.set('impactTime', t);
-}
+// Impact time adjustment functions removed as per request
 
 // ── Leaders ───────────────────────────────────────────────────
 let leaderIdx = 0;
@@ -564,13 +533,6 @@ function clearAll() {
 
 // ── Calculate ────────────────────────────────────────────────
 function calculateTimings() {
-  const impactStr = document.getElementById('impactTime').value.trim();
-  if (!impactStr || !/^\d{2}:\d{2}:\d{2}$/.test(impactStr)) {
-    toast('Enter a valid impact time: hh:mm:ss', true);
-    return;
-  }
-  ls.set('impactTime', impactStr);
-
   const delay = parseInt(document.getElementById('delaySlider').value) || 1;
 
   const rows   = document.querySelectorAll('.leader-row');
@@ -585,29 +547,32 @@ function calculateTimings() {
 
   if (!leaders.length) { toast('Add at least one leader', true); return; }
 
-  const impactBase = hmsToSecs(impactStr);
-
+  // Logic: 
+  // We want to hit in the order they appear in the list.
+  // Leader 0 hits at T=0.
+  // Leader i hits at T = i * delay.
+  // To find launch times: Launch_i = (i * delay) - march_i - rally_i.
+  // We then normalize so the earliest launch is at "0" or just relative.
+  
   const results = leaders.map((l, i) => {
     const marchSecs  = parseTime(l.march) ?? 0;
     const rallySecs  = l.rallyTime * 60;
-    // Sequential logic: Leader i hits at Target + (i * delay)
-    const myImpact   = impactBase + (i * delay);
-    const myLaunch   = myImpact - marchSecs - rallySecs;
+    const targetHitOffset = i * delay;
+    const relativeLaunch = targetHitOffset - marchSecs - rallySecs;
     
     return {
       name:      l.name,
       rallyTime: l.rallyTime,
       marchStr:  l.march,
-      launchSecs: myLaunch,
-      launchStr: secsToHMS(myLaunch),
-      impactStr: secsToHMS(myImpact),
-      isTarget:  i === 0,
-      hitDelay:  i * delay
+      marchSecs: marchSecs,
+      relativeLaunch: relativeLaunch,
+      hitOffset: targetHitOffset,
+      isTarget:  i === 0
     };
   });
 
-  // Sort results by launch time so user knows who sends first
-  results.sort((a, b) => a.launchSecs - b.launchSecs);
+  // Sort by launch time to find who goes first
+  results.sort((a, b) => a.relativeLaunch - b.relativeLaunch);
 
   renderResults(results);
 }
@@ -616,12 +581,9 @@ function renderResults(results) {
   const container = document.getElementById('results');
   container.innerHTML = '';
 
-  const earliest = results[0].launchSecs;
-
   results.forEach((r, i) => {
-    const isEarliest = r.launchSecs === earliest;
     const div = document.createElement('div');
-    div.className = `result-item${r.isTarget ? ' suicide' : ''}${isEarliest ? ' earliest' : ''}`;
+    div.className = `result-item${r.isTarget ? ' suicide' : ''}${i === 0 ? ' earliest' : ''}`;
 
     let icon = 'fa-user';
     if (r.isTarget) icon = 'fa-crosshairs';
@@ -631,14 +593,11 @@ function renderResults(results) {
       <div class="ri-icon"><i class="fas ${icon}"></i></div>
       <div class="ri-name">${r.name}</div>
       <div class="ri-times">
-        <span class="ri-launch">${r.launchStr}</span>
-        <span class="ri-arrow">→</span>
-        💥
-        <span class="ri-impact">${r.impactStr}</span>
+        <span class="ri-launch">Launch Sequence #${i+1}</span>
       </div>
-      <div class="ri-detail">${r.rallyTime}m rally</div>
-      ${r.isTarget ? '<span class="ri-tag">TARGET</span>' : `<span class="ri-tag" style="background:var(--ice-dim)">+${r.hitDelay}s</span>`}
-      ${isEarliest ? '<span class="ri-tag" style="background:var(--warn)">LAUNCH 1ST</span>' : ''}
+      <div class="ri-detail">${r.marchStr} march / ${r.rallyTime}m rally</div>
+      ${r.isTarget ? '<span class="ri-tag">TARGET HIT</span>' : `<span class="ri-tag" style="background:var(--ice-dim)">Hit +${r.hitOffset}s</span>`}
+      ${i === 0 ? '<span class="ri-tag" style="background:var(--warn)">LAUNCH 1ST</span>' : ''}
     `;
     container.appendChild(div);
   });
@@ -647,19 +606,24 @@ function renderResults(results) {
   const lines = [];
   results.forEach((r, i) => {
     if (i === 0) {
-      lines.push(`1️⃣ ${r.name} → Launch at ${r.launchStr} (FIRST)`);
+      lines.push(`${r.name} → Launch FIRST (immediately)`);
     } else {
-      const diff = r.launchSecs - results[i-1].launchSecs;
-      lines.push(`${i+1}️⃣ ${r.name} → Launch ${diff.toFixed(1)}s AFTER ${results[i-1].name}`);
+      const wait = r.relativeLaunch - results[i-1].relativeLaunch;
+      lines.push(`${r.name} → Launch ${wait.toFixed(1)}s AFTER ${results[i-1].name} launches`);
     }
   });
+  
   lines.push('');
-  lines.push('📋 HIT SEQUENCE:');
-  const hitOrder = [...results].sort((a,b) => a.hitDelay - b.hitDelay);
+  lines.push('📋 DESIRED HIT SEQUENCE:');
+  // Sort back by hit offset for the sequence summary
+  const hitOrder = [...results].sort((a,b) => a.hitOffset - b.hitOffset);
   hitOrder.forEach((r, i) => {
-    lines.push(`${i+1}. ${r.name} (Hits ${r.impactStr}${r.hitDelay > 0 ? ` / +${r.hitDelay}s` : ''})`);
+    lines.push(`${i+1}. ${r.name} ${r.hitOffset > 0 ? `(Hits +${r.hitOffset}s)` : '(Hits FIRST)'}`);
   });
+  
+  lines.push('');
   lines.push(`📡 Generated by WOSPREDV3 · Odin #3435`);
+  
   const chatMsg = document.getElementById('chat-msg');
   chatMsg.textContent = lines.join('\n');
   document.getElementById('copy-template').style.display = 'block';
@@ -757,10 +721,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('timeOffset').value    = offset;
   if (parseInt(delay) > 5) document.getElementById('delayWarn').style.display = 'block';
 
-  // Restore impact time
-  const saved = ls.get('impactTime');
-  if (saved) document.getElementById('impactTime').value = saved;
-  else setNextRoundTime();
+  // No impact time to restore
 });
 </script>
 
