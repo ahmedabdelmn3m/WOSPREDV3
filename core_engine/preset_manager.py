@@ -70,6 +70,7 @@ class PresetManager:
             }
         return {
             "name":        name,
+            "joiners":     army.joiners,
             "troop_count": army.troop_count,
             "formation": {
                 "infantry":  army.formation.infantry,
@@ -85,6 +86,7 @@ class PresetManager:
     def _deserialise(data: dict) -> ArmyStats:
         return ArmyStats.from_scout(
             name=data.get("name", "Preset"),
+            joiners=data.get("joiners", []),
             infantry=data["infantry"],
             lancer=data["lancer"],
             marksman=data["marksman"],

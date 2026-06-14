@@ -22,7 +22,7 @@ import os
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, model_validator
-from typing import Optional
+from typing import Optional, List
 
 from core_engine.troop_stats        import ArmyStats, Formation, TroopTypeStats
 from core_engine.combat_engine      import CombatEngine
@@ -104,6 +104,7 @@ class FormationInput(BaseModel):
 
 class ArmyInput(BaseModel):
     name:        str             = "Unknown"
+    joiners:     List[str]       = []
     infantry:    TroopStatsInput = TroopStatsInput()
     lancer:      TroopStatsInput = TroopStatsInput()
     marksman:    TroopStatsInput = TroopStatsInput()
@@ -113,6 +114,7 @@ class ArmyInput(BaseModel):
     def to_army_stats(self) -> ArmyStats:
         return ArmyStats(
             name=self.name,
+            joiners=self.joiners,
             infantry=self.infantry.to_troop_type_stats(),
             lancer=self.lancer.to_troop_type_stats(),
             marksman=self.marksman.to_troop_type_stats(),
@@ -146,6 +148,7 @@ class FormationOptimizeRequest(BaseModel):
 
 class PresetSaveRequest(BaseModel):
     name:        str
+    joiners:     List[str]       = []
     infantry:    TroopStatsInput = TroopStatsInput()
     lancer:      TroopStatsInput = TroopStatsInput()
     marksman:    TroopStatsInput = TroopStatsInput()
@@ -155,6 +158,7 @@ class PresetSaveRequest(BaseModel):
     def to_army_stats(self) -> ArmyStats:
         return ArmyStats(
             name=self.name,
+            joiners=self.joiners,
             infantry=self.infantry.to_troop_type_stats(),
             lancer=self.lancer.to_troop_type_stats(),
             marksman=self.marksman.to_troop_type_stats(),

@@ -14,9 +14,10 @@ Public helpers accept percentage values (150.0 for 150 %) and convert automatica
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict
+from typing import Dict, List
 
 from .damage_model import DamageModel
+from joiner_logic import apply_joiner_bonuses
 from .defense_model import DefenseModel
 
 
@@ -181,12 +182,14 @@ class ArmyStats:
         3 × TroopTypeStats  (Infantry, Lancer, Marksman)
         +  Formation         (how troops are split)
         +  troop_count       (total troops)
+        +  joiners           (list of hero names)
 
     Army-wide effective values are formation-weighted averages
     of the per-type effective stats.
     """
 
     name:        str = "Unknown"
+    joiners:     List[str] = field(default_factory=list)
 
     infantry:    TroopTypeStats = field(default_factory=TroopTypeStats)
     lancer:      TroopTypeStats = field(default_factory=TroopTypeStats)
@@ -197,6 +200,20 @@ class ArmyStats:
 
     # ── Army-wide effective stats ────────────────────────────────────────
 
+    def _get_effective_damage_for_type(self, stats: TroopTypeStats) -> float:
+        """Apply joiner bonuses before calculating damage for a troop type."""
+        atk_with_joiners, lth_with_joiners = apply_joiner_bonuses(
+            stats.attack_bonus, 
+            stats.lethality_bonus, 
+            self.joiners
+        )
+        return DamageModel.calculate(
+            stats.attack, 
+            atk_with_joiners, 
+            stats.lethality, 
+            lth_with_joiners
+        )
+
     def army_damage(self) -> float:
         """
         Weighted damage power across all troop types.
@@ -206,9 +223,9 @@ class ArmyStats:
         self.formation.validate()
         f = self.formation
         return (
-            f.infantry  * self.infantry.effective_damage  +
-            f.lancer    * self.lancer.effective_damage    +
-            f.marksman  * self.marksman.effective_damage
+            f.infantry  * self._get_effective_damage_for_type(self.infantry)  +
+            f.lancer    * self._get_effective_damage_for_type(self.lancer)    +
+            f.marksman  * self._get_effective_damage_for_type(self.marksman)
         )
 
     def army_defense(self) -> float:
@@ -239,6 +256,7 @@ class ArmyStats:
         """Full breakdown suitable for API responses and debug display."""
         return {
             "name":             self.name,
+            "joiners":          self.joiners,
             "troop_count":      self.troop_count,
             "formation":        self.formation.to_dict(),
             "troop_breakdown":  self.troop_breakdown(),
@@ -260,6 +278,7 @@ class ArmyStats:
         marksman:    dict,
         formation:   dict,
         troop_count: int,
+        joiners:     List[str] = None,
     ) -> ArmyStats:
         """
         Build ArmyStats from scout percentage dicts.
@@ -289,6 +308,7 @@ class ArmyStats:
 
         return cls(
             name=name,
+            joiners=joiners or [],
             infantry=_parse(infantry),
             lancer=_parse(lancer),
             marksman=_parse(marksman),
