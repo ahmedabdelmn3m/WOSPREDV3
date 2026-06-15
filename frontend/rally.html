@@ -415,7 +415,7 @@ function addLeader(name='', march='', rallyTime='5', order='1') {
       <div class="form-group">
         <label>Hit Order</label>
         <select id="order-${idx}" onchange="saveLeaders()">
-          <option value="1" ${order==='1'?'selected':''}>1st (Target)</option>
+          <option value="1" ${order==='1'?'selected':''}>1st</option>
           <option value="2" ${order==='2'?'selected':''}>2nd</option>
           <option value="3" ${order==='3'?'selected':''}>3rd</option>
           <option value="4" ${order==='4'?'selected':''}>4th</option>
@@ -544,7 +544,7 @@ function renderResults(results) {
         <span class="ri-launch">Launch Sequence #${i+1}</span>
       </div>
       <div class="ri-detail">${r.marchStr} march / ${r.rallyTime}m rally</div>
-      ${r.isTarget ? '<span class="ri-tag">TARGET HIT</span>' : `<span class="ri-tag" style="background:var(--ice-dim)">Hit +${r.hitOffset}s</span>`}
+      ${r.isTarget ? `<span class="ri-tag" style="background:var(--ice-dim)">Hit +${r.hitOffset}s</span>` : `<span class="ri-tag" style="background:var(--ice-dim)">Hit +${r.hitOffset}s</span>`}
       ${i === 0 ? '<span class="ri-tag" style="background:var(--warn)">LAUNCH 1ST</span>' : ''}
     `;
     container.appendChild(div);
