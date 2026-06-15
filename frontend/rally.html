@@ -239,8 +239,6 @@
 <!-- ── Tabs ───────────────────────────────────────────────── -->
 <nav class="tab-nav">
   <button class="tab-btn active" data-tab="main">⚔️ Rally Sync</button>
-  <button class="tab-btn" data-tab="troops">🛡 Troop Calculator</button>
-  <button class="tab-btn" data-tab="settings">⚙ Settings</button>
   <button class="tab-btn" data-tab="info">ℹ Info</button>
 </nav>
 
@@ -291,81 +289,18 @@
   </div>
 </div>
 
-<!-- ══════════════ TROOP CALCULATOR TAB ═══════════════════════ -->
-<div class="tab-pane" id="tab-troops">
-  <div class="card">
-    <div class="section-title">TROOP FORMATION CALCULATOR</div>
-    <div class="form-group" style="max-width:240px;margin-bottom:18px">
-      <label>Total Troops</label>
-      <input type="number" id="totalTroops" value="500000" oninput="calcTroops()" />
-    </div>
-
-    <div class="troop-slider-block">
-      <div class="slider-header"><span>🛡 Infantry</span><span class="slider-val"><span id="infVal">50</span>%</span></div>
-      <input type="range" id="inf" min="0" max="100" value="50" oninput="onSlider(this)">
-    </div>
-    <div class="troop-slider-block">
-      <div class="slider-header"><span>🗡 Lancer</span><span class="slider-val"><span id="lanVal">20</span>%</span></div>
-      <input type="range" id="lan" min="0" max="100" value="20" oninput="onSlider(this)">
-    </div>
-    <div class="troop-slider-block">
-      <div class="slider-header"><span>🎯 Marksman</span><span class="slider-val"><span id="mrkVal">30</span>%</span></div>
-      <input type="range" id="mrk" min="0" max="100" value="30" oninput="onSlider(this)">
-    </div>
-
-    <div class="troop-grid">
-      <div class="troop-card"><div class="troop-card-title">🛡 Infantry</div><div class="troop-card-value" id="infResult">250,000</div></div>
-      <div class="troop-card"><div class="troop-card-title">🗡 Lancer</div><div class="troop-card-value" id="lanResult">100,000</div></div>
-      <div class="troop-card"><div class="troop-card-title">🎯 Marksman</div><div class="troop-card-value" id="mrkResult">150,000</div></div>
-    </div>
-  </div>
-</div>
-
-<!-- ════════════════ SETTINGS TAB ════════════════════════════ -->
-<div class="tab-pane" id="tab-settings">
-  <div class="card">
-    <div class="section-title">CLOCK ADJUSTMENT</div>
-    <p style="font-size:12px;color:var(--txt-dim);margin-bottom:14px">
-      If your device clock is slightly off from the game server, adjust here.
-    </p>
-    <div class="form-group" style="max-width:300px;margin-bottom:10px">
-      <label>Time Offset (milliseconds)</label>
-      <div style="display:flex;gap:6px;align-items:center">
-        <button class="btn btn-ghost" onclick="adjustOffset(-250)">−250ms</button>
-        <input type="number" id="timeOffset" value="0" style="text-align:center" oninput="saveOffset()" />
-        <button class="btn btn-ghost" onclick="adjustOffset(250)">+250ms</button>
-      </div>
-    </div>
-    <button class="btn btn-ghost" onclick="resetOffset()">Reset to 0</button>
-  </div>
-
-  <div class="card">
-    <div class="section-title">DELAY BETWEEN LEADERS</div>
-    <p style="font-size:12px;color:var(--txt-dim);margin-bottom:14px">
-      Seconds between each leader's impact time. 1s is recommended.
-      &gt;5s is not recommended.
-    </p>
-    <div style="display:flex;align-items:center;gap:10px">
-      <input type="range" id="delaySlider" min="0" max="10" value="1" oninput="updateDelay(this)" style="flex:1">
-      <span id="delayVal" style="font-size:18px;font-weight:800;color:var(--ice);width:30px">1</span>
-      <span style="font-size:11px;color:var(--txt-dim)">sec</span>
-    </div>
-    <div id="delayWarn" style="display:none;color:var(--loss);font-size:12px;margin-top:6px">
-      ⚠ More than 5 seconds between hits is not recommended.
-    </div>
-  </div>
-</div>
+<!-- Troop and Settings tabs removed -->
 
 <!-- ═══════════════ INFO TAB ══════════════════════════════════ -->
 <div class="tab-pane" id="tab-info">
   <div class="card">
     <div class="section-title">HOW TO USE</div>
     <p style="font-size:13px;line-height:1.7;color:var(--txt)">
-      <strong style="color:var(--ice)">1. Set the Impact Time</strong> — this is when you want all rallies to hit the target castle simultaneously. Use UTC.<br><br>
-      <strong style="color:var(--ice)">2. Add Leaders</strong> — enter each rally leader's name, their march time (how long their march takes), and their rally fill time (1 or 5 minutes).<br><br>
-      <strong style="color:var(--ice)">3. Order matters</strong> — the LAST leader in the list is the <strong style="color:var(--loss)">suicide</strong> (arrives 1st). Leaders above it sync behind it.<br><br>
-      <strong style="color:var(--ice)">4. Click Calculate</strong> — the timetable shows exactly when each leader should launch their rally.<br><br>
-      <strong style="color:var(--ice)">5. Copy All</strong> — paste directly into your alliance Discord or in-game chat.
+      <strong style="color:var(--ice)">1. Hit Sequence Settings</strong> — adjust the gap between each leader's hit (default 1s).<br><br>
+      <strong style="color:var(--ice)">2. Add Leaders</strong> — enter each rally leader's name, their march time, and select their hit order (1st, 2nd, etc.).<br><br>
+      <strong style="color:var(--ice)">3. Rally Fill Time</strong> — select how long the rally will stay open (5, 10, or 15 minutes).<br><br>
+      <strong style="color:var(--ice)">4. Calculate</strong> — click the calculate button to see the launch sequence.<br><br>
+      <strong style="color:var(--ice)">5. Sync & Copy</strong> — the tool tells you who launches first and how many seconds to wait between each subsequent launch. Copy the result for your team.
     </p>
   </div>
   <div class="card">
@@ -457,7 +392,7 @@ function fmt(n) { return Math.round(n).toLocaleString(); }
 // ── Leaders ───────────────────────────────────────────────────
 let leaderIdx = 0;
 
-function addLeader(name='', march='', rallyTime='5') {
+function addLeader(name='', march='', rallyTime='5', order='1') {
   leaderIdx++;
   const idx  = leaderIdx;
   const div  = document.createElement('div');
@@ -468,7 +403,7 @@ function addLeader(name='', march='', rallyTime='5') {
     <div class="remove-leader" onclick="this.closest('.leader-row').remove(); saveLeaders(); updateIcons()">
       <i class="fas fa-times"></i>
     </div>
-    <div class="leader-fields">
+    <div class="leader-fields" style="grid-template-columns: 1fr 1fr 1fr 1fr;">
       <div class="form-group">
         <label>Leader Name</label>
         <input type="text" id="name-${idx}" placeholder="e.g. Alpha" value="${name}" oninput="saveLeaders()">
@@ -478,10 +413,24 @@ function addLeader(name='', march='', rallyTime='5') {
         <input type="text" id="march-${idx}" placeholder="e.g. 1:15" value="${march}" oninput="saveLeaders()">
       </div>
       <div class="form-group">
+        <label>Hit Order</label>
+        <select id="order-${idx}" onchange="saveLeaders()">
+          <option value="1" ${order==='1'?'selected':''}>1st (Target)</option>
+          <option value="2" ${order==='2'?'selected':''}>2nd</option>
+          <option value="3" ${order==='3'?'selected':''}>3rd</option>
+          <option value="4" ${order==='4'?'selected':''}>4th</option>
+          <option value="5" ${order==='5'?'selected':''}>5th</option>
+          <option value="6" ${order==='6'?'selected':''}>6th</option>
+          <option value="7" ${order==='7'?'selected':''}>7th</option>
+          <option value="8" ${order==='8'?'selected':''}>8th</option>
+        </select>
+      </div>
+      <div class="form-group">
         <label>Rally Fill Time</label>
         <select id="rally-${idx}" onchange="saveLeaders()">
-          <option value="1" ${rallyTime==='1'?'selected':''}>1 minute</option>
           <option value="5" ${rallyTime==='5'?'selected':''}>5 minutes</option>
+          <option value="10" ${rallyTime==='10'?'selected':''}>10 minutes</option>
+          <option value="15" ${rallyTime==='15'?'selected':''}>15 minutes</option>
         </select>
       </div>
     </div>
@@ -511,6 +460,7 @@ function saveLeaders() {
       name:      document.getElementById(`name-${idx}`)?.value  || '',
       march:     document.getElementById(`march-${idx}`)?.value || '',
       rallyTime: document.getElementById(`rally-${idx}`)?.value || '5',
+      order:     document.getElementById(`order-${idx}`)?.value || '1',
     };
   });
   ls.set('leaders', data);
@@ -518,10 +468,10 @@ function saveLeaders() {
 
 function loadLeaders() {
   const saved = ls.get('leaders') || [
-    { name: 'Alpha', march: '1:15', rallyTime: '5' },
-    { name: 'Bravo', march: '3:08', rallyTime: '5' },
+    { name: 'Alpha', march: '1:15', rallyTime: '5', order: '1' },
+    { name: 'Bravo', march: '3:08', rallyTime: '5', order: '2' },
   ];
-  saved.forEach(l => addLeader(l.name, l.march, l.rallyTime));
+  saved.forEach(l => addLeader(l.name, l.march, l.rallyTime, l.order));
 }
 
 function clearAll() {
@@ -542,22 +492,20 @@ function calculateTimings() {
       name:      document.getElementById(`name-${idx}`)?.value || '?',
       march:     document.getElementById(`march-${idx}`)?.value || '0:00',
       rallyTime: parseInt(document.getElementById(`rally-${idx}`)?.value || '5'),
+      order:     parseInt(document.getElementById(`order-${idx}`)?.value || '1'),
     };
   });
 
   if (!leaders.length) { toast('Add at least one leader', true); return; }
 
-  // Logic: 
-  // We want to hit in the order they appear in the list.
-  // Leader 0 hits at T=0.
-  // Leader i hits at T = i * delay.
-  // To find launch times: Launch_i = (i * delay) - march_i - rally_i.
-  // We then normalize so the earliest launch is at "0" or just relative.
-  
+  // Sort leaders by their explicit hit order
+  leaders.sort((a, b) => a.order - b.order);
+
   const results = leaders.map((l, i) => {
     const marchSecs  = parseTime(l.march) ?? 0;
     const rallySecs  = l.rallyTime * 60;
-    const targetHitOffset = i * delay;
+    // Sequential logic: Hit Order 1 hits at T=0, Order 2 at T=delay, etc.
+    const targetHitOffset = (l.order - 1) * delay;
     const relativeLaunch = targetHitOffset - marchSecs - rallySecs;
     
     return {
@@ -567,7 +515,7 @@ function calculateTimings() {
       marchSecs: marchSecs,
       relativeLaunch: relativeLaunch,
       hitOffset: targetHitOffset,
-      isTarget:  i === 0
+      isTarget:  l.order === 1
     };
   });
 
@@ -726,7 +674,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 
 <footer class="app-footer">
-  Created by <span class="credit">Odin</span> · WOS Rally Timing v1.2 · <a href="index.html" style="color:var(--ice)">Battle Predictor →</a>
+  Created by <span class="credit">Odin</span> · <a href="index.html" style="color:var(--ice)">Battle Predictor →</a>
 </footer>
 </body>
 </html>
