@@ -8,34 +8,35 @@ const stats = [
   ['lethality_pct', 'Lethality %'],
 ];
 const fallbackHeroes = [
-  { id: 'natalia', name: 'Natalia', specialty: 'infantry', generation: 1 },
-  { id: 'jeronimo', name: 'Jeronimo', specialty: 'infantry', generation: 1 },
-  { id: 'molly', name: 'Molly', specialty: 'lancer', generation: 1 },
-  { id: 'zinman', name: 'Zinman', specialty: 'marksman', generation: 1 },
-  { id: 'flint', name: 'Flint', specialty: 'infantry', generation: 2 },
-  { id: 'philly', name: 'Philly', specialty: 'lancer', generation: 2 },
-  { id: 'alonso', name: 'Alonso', specialty: 'marksman', generation: 2 },
-  { id: 'logan', name: 'Logan', specialty: 'infantry', generation: 3 },
-  { id: 'mia', name: 'Mia', specialty: 'lancer', generation: 3 },
-  { id: 'greg', name: 'Greg', specialty: 'marksman', generation: 3 },
-  { id: 'ahmose', name: 'Ahmose', specialty: 'infantry', generation: 4 },
-  { id: 'reina', name: 'Reina', specialty: 'lancer', generation: 4 },
-  { id: 'lynn', name: 'Lynn', specialty: 'marksman', generation: 4 },
-  { id: 'hector', name: 'Hector', specialty: 'infantry', generation: 5 },
-  { id: 'norah', name: 'Norah', specialty: 'lancer', generation: 5 },
-  { id: 'gwen', name: 'Gwen', specialty: 'marksman', generation: 5 },
+  { id: 'natalia', name: 'Natalia', type: 'infantry', specialty: 'infantry', generation: 1 },
+  { id: 'jeronimo', name: 'Jeronimo', type: 'infantry', specialty: 'infantry', generation: 1 },
+  { id: 'molly', name: 'Molly', type: 'lancer', specialty: 'lancer', generation: 1 },
+  { id: 'zinman', name: 'Zinman', type: 'marksman', specialty: 'marksman', generation: 1 },
+  { id: 'flint', name: 'Flint', type: 'infantry', specialty: 'infantry', generation: 2 },
+  { id: 'philly', name: 'Philly', type: 'lancer', specialty: 'lancer', generation: 2 },
+  { id: 'alonso', name: 'Alonso', type: 'marksman', specialty: 'marksman', generation: 2 },
+  { id: 'logan', name: 'Logan', type: 'infantry', specialty: 'infantry', generation: 3 },
+  { id: 'mia', name: 'Mia', type: 'lancer', specialty: 'lancer', generation: 3 },
+  { id: 'greg', name: 'Greg', type: 'marksman', specialty: 'marksman', generation: 3 },
+  { id: 'ahmose', name: 'Ahmose', type: 'infantry', specialty: 'infantry', generation: 4 },
+  { id: 'reina', name: 'Reina', type: 'lancer', specialty: 'lancer', generation: 4 },
+  { id: 'lynn', name: 'Lynn', type: 'marksman', specialty: 'marksman', generation: 4 },
+  { id: 'hector', name: 'Hector', type: 'infantry', specialty: 'infantry', generation: 5 },
+  { id: 'norah', name: 'Norah', type: 'lancer', specialty: 'lancer', generation: 5 },
+  { id: 'gwen', name: 'Gwen', type: 'marksman', specialty: 'marksman', generation: 5 },
 ];
-const state = { heroes: fallbackHeroes, lastPrediction: null, lastFormation: null };
+const state = { heroes: fallbackHeroes, lastPrediction: null, lastFormation: null, lastDecisionText: '' };
 
 const $ = (id) => document.getElementById(id);
 const apiBase = () => (window.WOS_API_URL || 'http://localhost:8080').replace(/\/$/, '');
 const number = (id) => Number($(id)?.value || 0);
+const rawNumber = (id) => $(id)?.value ?? '';
 const text = (id) => ($(id)?.value || '').trim();
 
 async function api(path, options = {}) {
   const res = await fetch(`${apiBase()}${path}`, options);
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+  if (!res.ok) throw new Error(Array.isArray(data.detail) ? data.detail.map((d) => d.msg).join(', ') : data.detail || `HTTP ${res.status}`);
   return data;
 }
 
@@ -53,16 +54,17 @@ function buildStats(side) {
 }
 
 function buildHeroRows(side) {
-  const options = ['<option value="">Unknown / not applied</option>']
-    .concat(state.heroes.map((h) => `<option value="${h.id}">${h.name} - ${label(h.specialty)} Gen ${h.generation}</option>`))
-    .join('');
-  $(`${side}-heroes`).innerHTML = [0, 1, 2].map((i) => `
-    <div class="hero-row">
-      <select id="${side}-hero-${i}">${options}</select>
-      <label>Stars<input id="${side}-hero-stars-${i}" type="number" min="1" max="5" value="5" /></label>
-      <label>Widget<input id="${side}-hero-widget-${i}" type="number" min="0" max="10" value="0" /></label>
-    </div>
-  `).join('');
+  $(`${side}-heroes`).innerHTML = troops.map((troop) => {
+    const options = [`<option value="">Select ${label(troop)} hero</option>`]
+      .concat(heroesByType(troop).map((h) => `<option value="${h.id}">${h.name} - Gen ${h.generation}</option>`))
+      .join('');
+    return `
+      <div class="hero-row" data-required-type="${troop}">
+        <label>${label(troop)} Hero<select id="${side}-hero-${troop}">${options}</select></label>
+        <label>Stars<input id="${side}-hero-stars-${troop}" type="number" min="1" max="5" value="5" /></label>
+        <label>Widget<input id="${side}-hero-widget-${troop}" type="number" min="1" max="10" value="1" /></label>
+      </div>`;
+  }).join('');
 }
 
 function readArmy(side) {
@@ -76,7 +78,7 @@ function readArmy(side) {
       lancer: number(`${side}-form-lancer`) / 100,
       marksman: number(`${side}-form-marksman`) / 100,
     },
-    troop_count: Math.max(1, Math.round(number(`${side}-troops`))),
+    troop_count: Math.round(number(`${side}-troops`)),
     heroes: readHeroes(side),
   };
   troops.forEach((troop) => stats.forEach(([key]) => {
@@ -86,14 +88,15 @@ function readArmy(side) {
 }
 
 function readHeroes(side) {
-  return [0, 1, 2].map((i) => {
-    const id = text(`${side}-hero-${i}`);
+  return troops.map((troop) => {
+    const id = text(`${side}-hero-${troop}`);
     const def = state.heroes.find((h) => h.id === id);
     return id ? {
       id,
       name: def?.name || id,
-      stars: Math.max(1, Math.min(5, Math.round(number(`${side}-hero-stars-${i}`)))),
-      widget_level: Math.max(0, Math.round(number(`${side}-hero-widget-${i}`))),
+      type: heroType(def) || troop,
+      stars: Math.round(number(`${side}-hero-stars-${troop}`)),
+      widget_level: Math.round(number(`${side}-hero-widget-${troop}`)),
     } : null;
   }).filter(Boolean);
 }
@@ -107,19 +110,78 @@ function writeArmy(side, army) {
   $(`${side}-form-lancer`).value = Math.round((army.formation?.lancer ?? 0.2) * 100);
   $(`${side}-form-marksman`).value = Math.round((army.formation?.marksman ?? 0.3) * 100);
   $(`${side}-troops`).value = army.troop_count || 500000;
-  updateFormation(side);
+  (army.heroes || []).forEach((hero) => {
+    const type = hero.type || heroType(state.heroes.find((h) => h.id === hero.id));
+    if (!type || !$(`${side}-hero-${type}`)) return;
+    $(`${side}-hero-${type}`).value = hero.id || '';
+    $(`${side}-hero-stars-${type}`).value = hero.stars || 5;
+    $(`${side}-hero-widget-${type}`).value = hero.widget_level || 1;
+  });
+  updateValidation();
 }
 
-function validateAll() {
-  return ['own', 'enemy'].every(updateFormation);
+function validateStats(side) {
+  const errors = [];
+  troops.forEach((troop) => stats.forEach(([key, name]) => {
+    const value = rawNumber(`${side}-${troop}-${key}`);
+    if (value === '') errors.push(`${sideLabel(side)} ${label(troop)} ${name} is required.`);
+    if (Number(value) < 0) errors.push(`${sideLabel(side)} ${label(troop)} ${name} cannot be negative.`);
+  }));
+  return errors;
+}
+
+function validateMainMarch(side) {
+  const errors = [];
+  const heroes = readHeroes(side);
+  const ids = heroes.map((h) => h.id);
+  const types = heroes.map((h) => h.type);
+  const missingTypes = troops.filter((troop) => !types.includes(troop));
+  if (heroes.length !== 3) errors.push(`${sideLabel(side)} needs exactly 3 heroes.`);
+  missingTypes.forEach((troop) => errors.push(`${sideLabel(side)} needs one ${label(troop)} hero.`));
+  if (new Set(ids).size !== ids.length) errors.push(`${sideLabel(side)} cannot use duplicate heroes.`);
+  if (new Set(types).size !== types.length) errors.push(`${sideLabel(side)} cannot use duplicate hero types.`);
+  heroes.forEach((hero) => {
+    if (hero.stars < 1 || hero.stars > 5) errors.push(`${sideLabel(side)} ${hero.name} stars must be 1-5.`);
+    if (hero.widget_level <= 0) errors.push(`${sideLabel(side)} ${hero.name} widget level must be greater than 0.`);
+  });
+  return errors;
+}
+
+function validateArmy(side) {
+  const errors = [];
+  const total = formationTotal(side);
+  if (Math.abs(total - 100) > 0.5) errors.push(`${sideLabel(side)} formation must equal 100%.`);
+  if (number(`${side}-troops`) <= 0) errors.push(`${sideLabel(side)} troop count must be greater than 0.`);
+  return errors.concat(validateMainMarch(side), validateStats(side));
+}
+
+function validatePredictionForm() {
+  const errors = [];
+  if (!text('battle-type')) errors.push('Battle type is required.');
+  return errors.concat(validateArmy('own'), validateArmy('enemy'));
+}
+
+function updateValidation() {
+  ['own', 'enemy'].forEach(updateFormation);
+  const errors = validatePredictionForm();
+  const box = $('validation-messages');
+  if (box) {
+    box.className = `validation-box ${errors.length ? '' : 'ok'}`;
+    box.innerHTML = errors.length ? errors.slice(0, 8).map((err) => `<div>${escapeHtml(err)}</div>`).join('') : '<div>Ready to run prediction.</div>';
+  }
+  const disabled = errors.length > 0;
+  ['run-prediction', 'optimize-formation'].forEach((id) => {
+    if ($(id)) $(id).disabled = disabled;
+  });
+  return errors;
 }
 
 function updateFormation(side) {
-  const total = number(`${side}-form-infantry`) + number(`${side}-form-lancer`) + number(`${side}-form-marksman`);
+  const total = formationTotal(side);
   const ok = Math.abs(total - 100) <= 0.5;
   $(`${side}-form-total`).textContent = `Total ${total.toFixed(0)}%`;
   $(`${side}-form-total`).className = `form-total ${ok ? 'ok' : 'bad'}`;
-  const totalTroops = Math.max(1, Math.round(number(`${side}-troops`)));
+  const totalTroops = Math.max(0, Math.round(number(`${side}-troops`)));
   const inf = Math.round(totalTroops * number(`${side}-form-infantry`) / 100);
   const lan = Math.round(totalTroops * number(`${side}-form-lancer`) / 100);
   const mrk = Math.max(0, totalTroops - inf - lan);
@@ -142,20 +204,49 @@ async function uploadScout(side) {
 }
 
 async function runPrediction() {
-  if (!validateAll()) return renderError('Both formations must equal 100%.');
-  const payload = { attacker: readArmy('own'), defender: readArmy('enemy'), max_rounds: 20 };
+  const errors = updateValidation();
+  if (errors.length) return renderError(errors.join('<br>'));
+  const payload = { attacker: readArmy('own'), defender: readArmy('enemy'), battle_type: text('battle-type'), max_rounds: 20 };
   renderLoading('Running prediction...');
   try {
     const result = await api('/predict-outcome', jsonOptions(payload));
-    state.lastPrediction = { payload, result };
-    renderPrediction(result);
+    const scenarios = await runScenarios(payload, result);
+    state.lastPrediction = { payload, result, scenarios };
+    renderPrediction(result, payload, scenarios);
   } catch (err) {
     renderError(err.message);
   }
 }
 
+async function runScenarios(payload, baseResult) {
+  const scenarios = [{ name: 'Current setup', result: baseResult }];
+  const copies = [
+    ['Infantry HP +10%', (p) => { p.attacker.infantry.health_pct *= 1.1; }],
+    ['Infantry DEF +8%', (p) => { p.attacker.infantry.defense_pct *= 1.08; }],
+    ['Troops +150k', (p) => { p.attacker.troop_count += 150000; }],
+  ];
+  await Promise.all(copies.map(async ([name, mutate]) => {
+    const next = JSON.parse(JSON.stringify(payload));
+    mutate(next);
+    try {
+      scenarios.push({ name, result: await api('/predict-outcome', jsonOptions(next)) });
+    } catch {
+      scenarios.push({ name, error: 'Unavailable' });
+    }
+  }));
+  try {
+    const best = await api('/formation/optimize', jsonOptions({ own_army: payload.attacker, enemy_army: payload.defender, max_rounds: payload.max_rounds }));
+    const bestResult = (best.all_results || [])[0];
+    if (bestResult) scenarios.push({ name: `Best formation: ${best.best_label}`, result: bestResult });
+  } catch {
+    scenarios.push({ name: 'Best formation', error: 'Unavailable' });
+  }
+  return scenarios;
+}
+
 async function optimizeFormation() {
-  if (!validateAll()) return renderError('Both formations must equal 100%.');
+  const errors = updateValidation();
+  if (errors.length) return renderError(errors.join('<br>'));
   const payload = { own_army: readArmy('own'), enemy_army: readArmy('enemy'), max_rounds: 20 };
   renderLoading('Checking formation presets...');
   try {
@@ -190,38 +281,71 @@ async function saveBattleLog() {
     enemy_heroes: enemy.heroes,
     prediction_result: state.lastPrediction?.result || null,
     actual_result: null,
-    notes: 'Saved from MVP UI. Add actual result after battle.',
+    notes: 'Saved from predictor UI. Add actual result after battle.',
   };
   await api('/battle-logs', jsonOptions(body));
   await loadLogs();
   renderToast('Battle log saved.');
 }
 
-function renderPrediction(result) {
+function renderPrediction(result, payload, scenarios) {
   const meta = result.metadata || {};
-  const win = Math.round((result.win_probability || 0) * 100);
+  const winPct = Math.round((result.win_probability || 0) * 100);
   const own = result.attacker || {};
   const enemy = result.defender || {};
+  const labelText = resultLabel(winPct);
+  const decision = decisionText(winPct, payload.battle_type);
+  const confidence = confidenceLabel(meta);
+  const advantages = statAdvantages(payload.attacker, payload.defender, meta);
+  const reasons = topReasons(result, advantages);
+  const flips = flipFightText(scenarios, winPct);
+  state.lastDecisionText = summaryText(result, payload, scenarios, labelText, decision, confidence, reasons, flips);
   $('prediction-output').innerHTML = `
-    <div class="result-card">
-      <div class="metric-grid">
-        <div class="metric"><span>Win Probability</span><strong>${win}%</strong></div>
-        <div class="metric"><span>Winner</span><strong>${result.winner}</strong></div>
-        <div class="metric"><span>Confidence</span><strong>${meta.confidence_level || 'medium'}</strong></div>
-        <div class="metric"><span>Rounds</span><strong>${result.rounds_played}</strong></div>
+    <div class="result-card decision-card ${winPct >= 50 ? 'win' : 'loss'}">
+      <div class="decision-title">
+        <strong>${labelText}</strong>
+        <span>${winPct}% win chance</span>
       </div>
+      <p><strong>Final Decision:</strong> ${decision}</p>
       <div class="metric-grid">
+        <div class="metric"><span>Confidence</span><strong>${confidence}</strong></div>
+        <div class="metric"><span>Winner</span><strong>${escapeHtml(result.winner || 'n/a')}</strong></div>
         <div class="metric"><span>Own Survivors</span><strong>${format(own.survivors)} / ${format(own.initial_troops)}</strong></div>
         <div class="metric"><span>Enemy Survivors</span><strong>${format(enemy.survivors)} / ${format(enemy.initial_troops)}</strong></div>
-        <div class="metric"><span>Strongest Advantage</span><strong>${meta.strongest_advantage?.troop_type || 'n/a'}</strong></div>
-        <div class="metric"><span>Weakest Weakness</span><strong>${meta.weakest_weakness?.troop_type || 'n/a'}</strong></div>
       </div>
-      ${renderBreakdown(meta.troop_type_breakdown)}
-      ${renderStrength(result.strength_analysis)}
+      <h3>Why This Result Happened</h3>
+      <div class="list">${reasons.map((item) => `<div class="list-item">${item}</div>`).join('')}</div>
+      <h3>Stat Breakdown</h3>
+      ${renderAdvantageTable(advantages)}
+      <h3>Scenario Comparison</h3>
+      ${renderScenarioTable(scenarios)}
+      <h3>What Flips The Fight</h3>
+      <div class="list-item">${flips}</div>
       <div class="warning">${(meta.warnings || []).join('<br>')}</div>
-      <p>${result.summary || ''}</p>
+      <button id="copy-summary" type="button">Copy Result Summary</button>
     </div>
   `;
+  $('copy-summary').addEventListener('click', copySummary);
+}
+
+function renderAdvantageTable(rows) {
+  return `
+    <div class="table-wrap"><table class="result-table">
+      <thead><tr><th>Category</th><th>Own</th><th>Enemy</th><th>Edge</th></tr></thead>
+      <tbody>${rows.map((row) => `<tr><td>${row.label}</td><td>${row.own}</td><td>${row.enemy}</td><td class="${row.edgeClass}">${row.edge}</td></tr>`).join('')}</tbody>
+    </table></div>`;
+}
+
+function renderScenarioTable(scenarios = []) {
+  return `
+    <div class="table-wrap"><table class="result-table">
+      <thead><tr><th>Scenario</th><th>Win Chance</th><th>Label</th><th>Winner</th></tr></thead>
+      <tbody>${scenarios.map((s) => {
+        if (s.error) return `<tr><td>${s.name}</td><td colspan="3">${s.error}</td></tr>`;
+        const pct = Math.round((s.result.win_probability || 0) * 100);
+        return `<tr><td>${s.name}</td><td>${pct}%</td><td>${resultLabel(pct)}</td><td>${escapeHtml(s.result.winner || 'n/a')}</td></tr>`;
+      }).join('')}</tbody>
+    </table></div>`;
 }
 
 function renderFormation(result) {
@@ -238,23 +362,6 @@ function renderFormation(result) {
       <div class="warning">Formation recommendations use the same pending-verification constants as the prediction engine.</div>
     </div>
   `;
-}
-
-function renderStrength(analysis = {}) {
-  return `<div class="list">${troops.map((troop) => {
-    const item = analysis[troop] || {};
-    return `<div class="list-item"><strong>${label(troop)}</strong>: ${item.status || 'n/a'} <span class="hint">Net advantage ${item.net_advantage ?? 'n/a'}</span></div>`;
-  }).join('')}</div>`;
-}
-
-function renderBreakdown(breakdown) {
-  if (!breakdown) return '';
-  return `
-    <div class="list-item">
-      <strong>Troop Type Breakdown</strong>
-      <div class="hint">Own: ${breakdownLine(breakdown.attacker)}</div>
-      <div class="hint">Enemy: ${breakdownLine(breakdown.defender)}</div>
-    </div>`;
 }
 
 function saveLocalPreset(side) {
@@ -307,16 +414,17 @@ async function checkApi() {
   try {
     await api('/health');
     const heroes = await api('/hero-definitions');
-    state.heroes = heroes.heroes || [];
+    state.heroes = normalizeHeroes(heroes.heroes || fallbackHeroes);
   } catch (err) {
     console.warn('Prediction service is unavailable:', err.message);
     state.heroes = fallbackHeroes;
   }
   ['own', 'enemy'].forEach(buildHeroRows);
+  updateValidation();
 }
 
 function bindEvents() {
-  document.querySelectorAll('.tab').forEach((button) => {
+  document.querySelectorAll('.tab[data-view]').forEach((button) => {
     button.addEventListener('click', () => {
       document.querySelectorAll('.tab').forEach((b) => b.classList.remove('active'));
       document.querySelectorAll('.view').forEach((v) => v.classList.remove('active'));
@@ -324,10 +432,8 @@ function bindEvents() {
       $(button.dataset.view).classList.add('active');
     });
   });
-  ['own', 'enemy'].forEach((side) => {
-    troops.forEach((troop) => $(`${side}-form-${troop}`).addEventListener('input', () => updateFormation(side)));
-    $(`${side}-troops`).addEventListener('input', () => updateFormation(side));
-  });
+  document.addEventListener('input', updateValidation);
+  document.addEventListener('change', updateValidation);
   document.querySelectorAll('[data-formation]').forEach((button) => {
     button.addEventListener('click', () => {
       const [inf, lan, mrk] = button.dataset.values.split(',');
@@ -335,7 +441,7 @@ function bindEvents() {
       $(`${side}-form-infantry`).value = inf;
       $(`${side}-form-lancer`).value = lan;
       $(`${side}-form-marksman`).value = mrk;
-      updateFormation(side);
+      updateValidation();
     });
   });
   document.querySelectorAll('[data-upload]').forEach((button) => button.addEventListener('click', () => uploadScout(button.dataset.upload)));
@@ -347,6 +453,111 @@ function bindEvents() {
   $('save-enemy-preset').addEventListener('click', () => saveLocalPreset('enemy'));
 }
 
+function statAdvantages(own, enemy, meta = {}) {
+  const rows = [];
+  troops.forEach((troop) => stats.forEach(([key, name]) => {
+    const a = Number(own[troop][key] || 0);
+    const d = Number(enemy[troop][key] || 0);
+    rows.push(advRow(`${label(troop)} ${name}`, a, d, '%'));
+  }));
+  rows.push(advRow('Total Troops', own.troop_count, enemy.troop_count, ''));
+  troops.forEach((troop) => rows.push(advRow(`${label(troop)} Formation`, Math.round(own.formation[troop] * 100), Math.round(enemy.formation[troop] * 100), '%')));
+  rows.push({
+    label: 'Hero Skill Impact',
+    own: 'Recorded only',
+    enemy: 'Recorded only',
+    edge: meta.confidence_level === 'low' ? 'Pending verified skill mapping' : 'Not applied',
+    edgeClass: 'tag-warn',
+  });
+  return rows;
+}
+
+function advRow(labelText, ownValue, enemyValue, suffix) {
+  const diff = ownValue - enemyValue;
+  return {
+    label: labelText,
+    own: `${format(round(ownValue))}${suffix}`,
+    enemy: `${format(round(enemyValue))}${suffix}`,
+    edge: diff > 0 ? `Own +${round(diff)}${suffix}` : diff < 0 ? `Enemy +${round(Math.abs(diff))}${suffix}` : 'Even',
+    edgeClass: diff > 0 ? 'tag-good' : diff < 0 ? 'tag-bad' : 'tag-warn',
+    rawDiff: diff,
+  };
+}
+
+function topReasons(result, rows) {
+  const sorted = rows.filter((r) => Number.isFinite(r.rawDiff)).sort((a, b) => Math.abs(b.rawDiff) - Math.abs(a.rawDiff)).slice(0, 5);
+  const reasons = sorted.map((row) => `${row.label}: ${row.edge}.`);
+  if (result.summary) reasons.unshift(escapeHtml(result.summary));
+  return reasons.slice(0, 5);
+}
+
+function flipFightText(scenarios, basePct) {
+  const winning = (scenarios || []).filter((s) => !s.error && Math.round((s.result.win_probability || 0) * 100) >= 50 && Math.round((s.result.win_probability || 0) * 100) > basePct);
+  if (winning.length) {
+    const best = winning.sort((a, b) => (b.result.win_probability || 0) - (a.result.win_probability || 0))[0];
+    return `${best.name} moves the fight to ${Math.round((best.result.win_probability || 0) * 100)}%.`;
+  }
+  const best = (scenarios || []).filter((s) => !s.error).sort((a, b) => (b.result.win_probability || 0) - (a.result.win_probability || 0))[0];
+  return best ? `Closest improvement is ${best.name} at ${Math.round((best.result.win_probability || 0) * 100)}%; stronger verified stats or a rally are needed.` : 'No scenario comparison was available.';
+}
+
+function summaryText(result, payload, scenarios, labelText, decision, confidence, reasons, flips) {
+  const scenarioLines = (scenarios || []).map((s) => s.error ? `${s.name}: ${s.error}` : `${s.name}: ${Math.round((s.result.win_probability || 0) * 100)}%`).join('\n');
+  return [
+    `${labelText} - ${Math.round((result.win_probability || 0) * 100)}% win chance`,
+    `Battle type: ${payload.battle_type}`,
+    `Decision: ${decision}`,
+    `Confidence: ${confidence}`,
+    `Reasons: ${reasons.map((r) => r.replace(/<[^>]+>/g, '')).join(' ')}`,
+    `What flips it: ${flips}`,
+    `Scenarios:\n${scenarioLines}`,
+  ].join('\n');
+}
+
+function copySummary() {
+  navigator.clipboard.writeText(state.lastDecisionText || '').then(() => renderToast('Result summary copied.'));
+}
+
+function resultLabel(winPct) {
+  if (winPct <= 20) return 'Heavy Loss';
+  if (winPct <= 40) return 'Likely Loss';
+  if (winPct < 50) return 'Close Loss';
+  if (winPct < 60) return 'Close Win';
+  if (winPct < 80) return 'Likely Win';
+  return 'Heavy Win';
+}
+
+function decisionText(winPct, battleType) {
+  if (battleType === 'reinforce') return winPct >= 50 ? 'Reinforce is reasonable, but verify hospital/risk limits.' : 'Do not reinforce this as-is.';
+  if (winPct >= 80) return 'Safe attack by current model.';
+  if (winPct >= 60) return 'Attack is favored but still risky.';
+  if (winPct >= 50) return 'Adjust formation before committing.';
+  if (winPct >= 41) return 'Use rally or improve stats before attacking.';
+  return 'Do not solo attack.';
+}
+
+function confidenceLabel(meta) {
+  if (meta.confidence_level === 'low') return 'Low - hero skills recorded but not applied';
+  if (meta.confidence_level === 'high') return 'High';
+  return 'Medium';
+}
+
+function heroesByType(type) {
+  return normalizeHeroes(state.heroes).filter((hero) => heroType(hero) === type);
+}
+
+function heroType(hero = {}) {
+  return hero.type || hero.specialty || '';
+}
+
+function normalizeHeroes(heroes) {
+  return heroes.map((hero) => ({ ...hero, type: hero.type || hero.specialty }));
+}
+
+function formationTotal(side) {
+  return number(`${side}-form-infantry`) + number(`${side}-form-lancer`) + number(`${side}-form-marksman`);
+}
+
 function jsonOptions(body) {
   return { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
 }
@@ -355,8 +566,12 @@ function renderError(message) { $('prediction-output').innerHTML = `<div class="
 function renderToast(message) { $('prediction-output').insertAdjacentHTML('afterbegin', `<div class="warning">${message}</div>`); }
 function notice(id, message) { $(id).textContent = message; }
 function format(value) { return Number(value || 0).toLocaleString(); }
+function round(value) { return Math.round(Number(value || 0) * 10) / 10; }
 function label(value) { return value.charAt(0).toUpperCase() + value.slice(1); }
-function breakdownLine(data = {}) { return troops.map((troop) => `${label(troop)} ${format(data[troop])}`).join(', '); }
+function sideLabel(side) { return side === 'own' ? 'Own march' : 'Enemy march'; }
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[ch]));
+}
 
 function init() {
   ['own', 'enemy'].forEach(buildStats);
@@ -366,6 +581,7 @@ function init() {
   loadPresets();
   loadLogs();
   checkApi();
+  updateValidation();
 }
 
 document.addEventListener('DOMContentLoaded', init);
