@@ -1,0 +1,26 @@
+{
+  "engine_version": "mvp-2026-06",
+  "status": "pending verification",
+  "constants": {
+    "casualty_rate": {
+      "value": 0.05,
+      "verified": false,
+      "note": "Current simulation tuning constant. Calibrate with real battle logs."
+    },
+    "max_rounds_default": {
+      "value": 20,
+      "verified": false,
+      "note": "Operational default for MVP predictions."
+    },
+    "troop_type_matchups": {
+      "value": "not_applied",
+      "verified": false,
+      "note": "No hidden WOS troop-counter multiplier is applied until verified data is added."
+    },
+    "hero_skill_modifiers": {
+      "value": "record_only",
+      "verified": false,
+      "note": "Hero selections are stored for calibration but unverified skills are not applied."
+    }
+  }
+}
