@@ -275,6 +275,99 @@ VALUES
   )
 ON CONFLICT DO NOTHING;
 
+-- ============================================================
+-- WOS Battle Predictor MVP calibration tables
+-- These tables intentionally store JSONB snapshots so future
+-- formula calibration can replay old predictions exactly.
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS player_presets (
+    id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id         UUID REFERENCES users(id) ON DELETE SET NULL,
+    name            VARCHAR(100) NOT NULL,
+    preset_type     VARCHAR(20) NOT NULL DEFAULT 'own',
+    scout_stats     JSONB NOT NULL,
+    formation       JSONB NOT NULL,
+    troop_count     INT NOT NULL DEFAULT 500000,
+    heroes          JSONB NOT NULL DEFAULT '[]'::jsonb,
+    created_at      TIMESTAMPTZ DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS scout_uploads (
+    id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id         UUID REFERENCES users(id) ON DELETE SET NULL,
+    side            VARCHAR(20),
+    filename        VARCHAR(255),
+    content_type    VARCHAR(100),
+    storage_ref     VARCHAR(500),
+    raw_text        TEXT,
+    parsed_stats    JSONB,
+    ocr_status      VARCHAR(50) DEFAULT 'pending_provider',
+    manually_corrected BOOLEAN DEFAULT FALSE,
+    created_at      TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS hero_definitions (
+    id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    hero_id         VARCHAR(50) UNIQUE NOT NULL,
+    name            VARCHAR(100) NOT NULL,
+    generation      INT NOT NULL,
+    specialty       VARCHAR(50),
+    max_stars       INT DEFAULT 5,
+    widget_supported BOOLEAN DEFAULT TRUE,
+    verified        BOOLEAN DEFAULT FALSE,
+    status          VARCHAR(50) DEFAULT 'pending verification',
+    skills          JSONB NOT NULL DEFAULT '[]'::jsonb,
+    source_notes    TEXT,
+    created_at      TIMESTAMPTZ DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS prediction_runs (
+    id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id             UUID REFERENCES users(id) ON DELETE SET NULL,
+    own_stats           JSONB NOT NULL,
+    enemy_stats         JSONB NOT NULL,
+    own_formation       JSONB NOT NULL,
+    enemy_formation     JSONB,
+    own_heroes          JSONB NOT NULL DEFAULT '[]'::jsonb,
+    enemy_heroes        JSONB NOT NULL DEFAULT '[]'::jsonb,
+    prediction_result   JSONB NOT NULL,
+    confidence_level    VARCHAR(20),
+    warnings            JSONB NOT NULL DEFAULT '[]'::jsonb,
+    notes               TEXT,
+    created_at          TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS battle_logs (
+    id                          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id                     UUID REFERENCES users(id) ON DELETE SET NULL,
+    own_stats                   JSONB NOT NULL,
+    enemy_stats                 JSONB NOT NULL,
+    own_formation               JSONB NOT NULL,
+    enemy_formation             JSONB,
+    own_heroes                  JSONB NOT NULL DEFAULT '[]'::jsonb,
+    enemy_heroes                JSONB NOT NULL DEFAULT '[]'::jsonb,
+    prediction_result           JSONB,
+    actual_result               VARCHAR(50),
+    notes                       TEXT,
+    uploaded_report_image_ref   VARCHAR(255),
+    created_at                  TIMESTAMPTZ DEFAULT NOW(),
+    updated_at                  TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS combat_constants (
+    id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name            VARCHAR(100) UNIQUE NOT NULL,
+    value_json      JSONB NOT NULL,
+    verified        BOOLEAN DEFAULT FALSE,
+    status          VARCHAR(50) DEFAULT 'pending verification',
+    note            TEXT,
+    created_at      TIMESTAMPTZ DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- ── Seed: standard formations ─────────────────────────────────
 INSERT INTO formations (label, infantry_pct, lancer_pct, marksman_pct)
 VALUES
