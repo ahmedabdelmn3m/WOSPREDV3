@@ -1,229 +1,166 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>WOSPREDV3 — Battle Intelligence</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WOS Battle Predictor</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <header class="topbar">
+    <div>
+      <strong>WOS Battle Predictor</strong>
+      <span>Scout stats, formation, heroes, prediction, calibration</span>
+    </div>
+    <div class="status-row">
+      <span id="api-status" class="pill danger">Offline</span>
+      <button id="settings-button" class="icon-button" title="API settings">Settings</button>
+    </div>
+  </header>
 
-<!-- ─── Header ──────────────────────────────────────────────────────────── -->
-<header class="app-header">
-  <div class="header-left">
-    <span class="logo-icon">⚔️</span>
-    <div class="logo-text">
-      <span class="logo-title">WOSPREDV3</span>
-      <span class="logo-sub">Battle Intelligence Platform</span>
+  <nav class="tabs" aria-label="Main sections">
+    <button class="tab active" data-view="dashboard">Dashboard</button>
+    <button class="tab" data-view="predictor">Battle Predictor</button>
+    <button class="tab" data-view="presets">Presets</button>
+    <button class="tab" data-view="logs">Battle Logs</button>
+    <button class="tab" data-view="settings">Settings</button>
+  </nav>
+
+  <main>
+    <section id="dashboard" class="view active">
+      <div class="band">
+        <h1>Battle readiness</h1>
+        <div class="summary-grid">
+          <div><span>API</span><strong id="summary-api">Checking</strong></div>
+          <div><span>Constants</span><strong>Pending verification</strong></div>
+          <div><span>Hero skills</span><strong>Recorded only</strong></div>
+          <div><span>OCR</span><strong>Manual fallback</strong></div>
+        </div>
+      </div>
+      <div class="two-col">
+        <section>
+          <h2>Prediction Uses</h2>
+          <p>The MVP compares the 12 scout stats by troop type, troop count, formation split, and configured combat constants. Hero selections are saved for calibration, but unverified hero skill values are not applied.</p>
+        </section>
+        <section>
+          <h2>Calibration Path</h2>
+          <p>Save prediction runs and battle logs after real fights. Those records are structured so the engine can be tuned later without hiding made-up WOS multipliers in the UI.</p>
+        </section>
+      </div>
+    </section>
+
+    <section id="predictor" class="view">
+      <div class="predictor-grid">
+        <section class="panel" data-side="own">
+          <div class="panel-head">
+            <h2>Own Scout Input</h2>
+            <input id="own-name" value="My March" />
+          </div>
+          <div class="upload-row">
+            <input id="own-upload" type="file" accept="image/*" />
+            <button data-upload="own">Upload Scout</button>
+          </div>
+          <div id="own-upload-state" class="hint">Manual entry is always available.</div>
+          <div id="own-stats" class="stats"></div>
+          <div class="formation-box">
+            <h3>Formation & Troop Count</h3>
+            <div class="triple">
+              <label>Infantry %<input id="own-form-infantry" type="number" value="50" min="0" max="100" /></label>
+              <label>Lancer %<input id="own-form-lancer" type="number" value="20" min="0" max="100" /></label>
+              <label>Marksman %<input id="own-form-marksman" type="number" value="30" min="0" max="100" /></label>
+            </div>
+            <div id="own-form-total" class="form-total ok">Total 100%</div>
+            <input id="own-troops" type="number" value="500000" min="1" />
+            <div id="own-breakdown" class="hint"></div>
+            <div class="preset-buttons">
+              <button data-formation="own" data-values="50,20,30">50/20/30</button>
+              <button data-formation="own" data-values="60,10,30">60/10/30</button>
+              <button data-formation="own" data-values="40,20,40">40/20/40</button>
+            </div>
+          </div>
+          <div class="heroes">
+            <h3>Hero Selection</h3>
+            <div id="own-heroes"></div>
+          </div>
+          <button id="save-own-preset">Save Own Scout Preset</button>
+        </section>
+
+        <section class="panel" data-side="enemy">
+          <div class="panel-head">
+            <h2>Enemy Scout Input</h2>
+            <input id="enemy-name" value="Enemy March" />
+          </div>
+          <div class="upload-row">
+            <input id="enemy-upload" type="file" accept="image/*" />
+            <button data-upload="enemy">Upload Scout</button>
+          </div>
+          <div id="enemy-upload-state" class="hint">Manual entry is always available.</div>
+          <div id="enemy-stats" class="stats"></div>
+          <div class="formation-box">
+            <h3>Formation & Troop Count</h3>
+            <div class="triple">
+              <label>Infantry %<input id="enemy-form-infantry" type="number" value="50" min="0" max="100" /></label>
+              <label>Lancer %<input id="enemy-form-lancer" type="number" value="20" min="0" max="100" /></label>
+              <label>Marksman %<input id="enemy-form-marksman" type="number" value="30" min="0" max="100" /></label>
+            </div>
+            <div id="enemy-form-total" class="form-total ok">Total 100%</div>
+            <input id="enemy-troops" type="number" value="400000" min="1" />
+            <div id="enemy-breakdown" class="hint"></div>
+            <div class="preset-buttons">
+              <button data-formation="enemy" data-values="50,20,30">50/20/30</button>
+              <button data-formation="enemy" data-values="70,10,20">70/10/20</button>
+              <button data-formation="enemy" data-values="20,10,70">20/10/70</button>
+            </div>
+          </div>
+          <div class="heroes">
+            <h3>Enemy Heroes</h3>
+            <div id="enemy-heroes"></div>
+          </div>
+          <button id="save-enemy-preset">Save Enemy Scout Preset</button>
+        </section>
+      </div>
+
+      <section class="result-panel">
+        <div class="action-row">
+          <button id="run-prediction" class="primary">Run Prediction</button>
+          <button id="optimize-formation">Recommend Formation</button>
+          <button id="save-prediction">Save Prediction Run</button>
+          <button id="save-battle-log">Save Battle Log</button>
+        </div>
+        <div id="prediction-output" class="empty">Enter scout stats and run a prediction.</div>
+      </section>
+    </section>
+
+    <section id="presets" class="view">
+      <h2>Presets / Saved Scouts</h2>
+      <div id="preset-list" class="list empty">No presets saved yet.</div>
+    </section>
+
+    <section id="logs" class="view">
+      <h2>Battle Logs / Calibration Data</h2>
+      <div id="log-list" class="list empty">No battle logs saved yet.</div>
+    </section>
+
+    <section id="settings" class="view">
+      <h2>Settings / API Status</h2>
+      <label>Backend API URL
+        <input id="api-url" placeholder="http://localhost:8080" />
+      </label>
+      <button id="save-api-url">Save API URL</button>
+      <pre id="api-details"></pre>
+    </section>
+  </main>
+
+  <div id="modal" class="modal hidden">
+    <div>
+      <h2>API Settings</h2>
+      <label>Backend API URL<input id="modal-api-url" /></label>
+      <button id="modal-save">Save</button>
+      <button id="modal-close">Cancel</button>
     </div>
   </div>
-  <div class="header-right">
-    <span class="api-pill" id="api-pill">⬤ Offline</span>
-    <button class="btn-settings" id="btn-settings" title="API Settings">⚙</button>
-  </div>
-</header>
 
-<!-- ─── Settings Modal ──────────────────────────────────────────────────── -->
-<div class="modal-overlay" id="settings-modal" style="display:none">
-  <div class="modal-box">
-    <div class="modal-title">⚙ API Settings</div>
-    <label class="modal-label">Railway Backend URL</label>
-    <input type="text" id="api-url-input" class="modal-input"
-           placeholder="https://your-app.up.railway.app" />
-    <div class="modal-hint">After Railway deployment, paste your URL here. It is saved locally.</div>
-    <div class="modal-actions">
-      <button class="btn-ice" id="btn-save-api-url">Save & Reconnect</button>
-      <button class="btn-ghost" id="btn-close-settings">Cancel</button>
-    </div>
-  </div>
-</div>
-
-<!-- ─── Mode Nav ─────────────────────────────────────────────────────────── -->
-<nav class="mode-nav">
-  <button class="mode-btn active" id="mode-compare"   data-mode="compare">⚔️ Compare</button>
-  <button class="mode-btn"        id="mode-reverse"   data-mode="reverse">🎯 How to Win</button>
-  <button class="mode-btn"        id="mode-formation" data-mode="formation">📊 Best Formation</button>
-</nav>
-
-<!-- ─── Error bar ────────────────────────────────────────────────────────── -->
-<div class="error-bar" id="error-bar" style="display:none"></div>
-
-<!-- ─── Toast ───────────────────────────────────────────────────────────── -->
-<div class="toast" id="toast"></div>
-
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-<!--  Main 3-column grid                                                    -->
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-<main class="battle-grid">
-
-  <!-- ══ LEFT: YOUR ARMY ═════════════════════════════════════════════════ -->
-  <section class="army-panel" id="attacker-section">
-    <div class="panel-header">
-      <span class="panel-badge attacker-badge">YOUR ARMY</span>
-      <input type="text" id="attacker-name" class="name-input" value="My Army" />
-    </div>
-
-    <!-- Preset Row -->
-    <div class="preset-block">
-      <div class="preset-row">
-        <select id="preset-select" class="preset-select">
-          <option value="">── Saved Presets ──</option>
-        </select>
-        <button class="btn-xs btn-ice"    id="btn-load-preset"   title="Load preset">↓ Load</button>
-        <button class="btn-xs btn-danger" id="btn-delete-preset" title="Delete preset">✕</button>
-      </div>
-      <div class="preset-row">
-        <input type="text" id="preset-name" class="preset-name-input" placeholder="Name this preset…" />
-        <button class="btn-xs btn-ice" id="btn-save-preset" title="Save preset">↑ Save</button>
-      </div>
-    </div>
-
-    <!-- Troop-type tabs -->
-    <div class="troop-tabs">
-      <button class="troop-tab atk-tab active" id="atk-tab-infantry">🛡 Infantry</button>
-      <button class="troop-tab atk-tab"        id="atk-tab-lancer"  >🗡 Lancer</button>
-      <button class="troop-tab atk-tab"        id="atk-tab-marksman">🎯 Marksman</button>
-    </div>
-
-    <!-- Infantry stats -->
-    <div class="troop-panel atk-panel" id="atk-panel-infantry">
-      <div class="stats-grid">
-        <div class="si"><label>Attack %</label>   <input type="number" id="atk-inf-atk" class="si-input" min="0" max="9999" placeholder="0"></div>
-        <div class="si"><label>Defense %</label>  <input type="number" id="atk-inf-def" class="si-input" min="0" max="9999" placeholder="0"></div>
-        <div class="si"><label>Health %</label>   <input type="number" id="atk-inf-hp"  class="si-input" min="0" max="9999" placeholder="0"></div>
-        <div class="si"><label>Lethality %</label><input type="number" id="atk-inf-lth" class="si-input" min="0" max="9999" placeholder="0"></div>
-      </div>
-    </div>
-    <!-- Lancer stats -->
-    <div class="troop-panel atk-panel" id="atk-panel-lancer" style="display:none">
-      <div class="stats-grid">
-        <div class="si"><label>Attack %</label>   <input type="number" id="atk-lan-atk" class="si-input" min="0" max="9999" placeholder="0"></div>
-        <div class="si"><label>Defense %</label>  <input type="number" id="atk-lan-def" class="si-input" min="0" max="9999" placeholder="0"></div>
-        <div class="si"><label>Health %</label>   <input type="number" id="atk-lan-hp"  class="si-input" min="0" max="9999" placeholder="0"></div>
-        <div class="si"><label>Lethality %</label><input type="number" id="atk-lan-lth" class="si-input" min="0" max="9999" placeholder="0"></div>
-      </div>
-    </div>
-    <!-- Marksman stats -->
-    <div class="troop-panel atk-panel" id="atk-panel-marksman" style="display:none">
-      <div class="stats-grid">
-        <div class="si"><label>Attack %</label>   <input type="number" id="atk-mrk-atk" class="si-input" min="0" max="9999" placeholder="0"></div>
-        <div class="si"><label>Defense %</label>  <input type="number" id="atk-mrk-def" class="si-input" min="0" max="9999" placeholder="0"></div>
-        <div class="si"><label>Health %</label>   <input type="number" id="atk-mrk-hp"  class="si-input" min="0" max="9999" placeholder="0"></div>
-        <div class="si"><label>Lethality %</label><input type="number" id="atk-mrk-lth" class="si-input" min="0" max="9999" placeholder="0"></div>
-      </div>
-    </div>
-
-    <!-- Formation -->
-    <div class="formation-block">
-      <div class="section-label">FORMATION</div>
-      <div class="form-grid">
-        <div class="fi"><label>Inf %</label><input type="number" id="atk-form-inf" class="fi-input" min="0" max="100" value="50"></div>
-        <div class="fi"><label>Lan %</label><input type="number" id="atk-form-lan" class="fi-input" min="0" max="100" value="20"></div>
-        <div class="fi"><label>Mrk %</label><input type="number" id="atk-form-mrk" class="fi-input" min="0" max="100" value="30"></div>
-      </div>
-      <div class="form-total valid" id="atk-form-total">Total: 100%</div>
-    </div>
-
-    <!-- Troop count -->
-    <div class="troops-block">
-      <div class="section-label">TROOP COUNT</div>
-      <input type="number" id="atk-troops" class="troops-input" min="1" max="10000000" value="500000" />
-    </div>
-  </section>
-
-  <!-- ══ CENTER: Controls + Results ══════════════════════════════════════ -->
-  <section class="center-panel">
-    <!-- Mode-specific options -->
-    <div class="center-options">
-      <div id="reverse-options" style="display:none" class="reverse-opts">
-        <label class="opt-label">WIN TARGET</label>
-        <select id="reverse-target" class="opt-select">
-          <option value="0.75">75%</option>
-          <option value="0.85">85%</option>
-          <option value="0.95">95%</option>
-        </select>
-      </div>
-    </div>
-
-    <button class="btn-main" id="action-btn">⚔️ SIMULATE BATTLE</button>
-
-    <!-- Results area -->
-    <div class="results-panel" id="results-panel">
-      <div class="placeholder">
-        <div class="ph-icon">⚔️</div>
-        <div class="ph-title">Enter stats &amp; run</div>
-        <div class="ph-sub">Compare armies · Find what you need · Optimise formation</div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ══ RIGHT: ENEMY SCOUT ═══════════════════════════════════════════════ -->
-  <section class="army-panel" id="defender-section">
-    <div class="panel-header">
-      <span class="panel-badge defender-badge">ENEMY SCOUT</span>
-      <input type="text" id="def-name" class="name-input" value="Enemy" />
-    </div>
-
-    <!-- Troop-type tabs -->
-    <div class="troop-tabs">
-      <button class="troop-tab def-tab active" id="def-tab-infantry">🛡 Infantry</button>
-      <button class="troop-tab def-tab"        id="def-tab-lancer"  >🗡 Lancer</button>
-      <button class="troop-tab def-tab"        id="def-tab-marksman">🎯 Marksman</button>
-    </div>
-
-    <!-- Infantry stats -->
-    <div class="troop-panel def-panel" id="def-panel-infantry">
-      <div class="stats-grid">
-        <div class="si"><label>Attack %</label>   <input type="number" id="def-inf-atk" class="si-input" min="0" max="9999" placeholder="0"></div>
-        <div class="si"><label>Defense %</label>  <input type="number" id="def-inf-def" class="si-input" min="0" max="9999" placeholder="0"></div>
-        <div class="si"><label>Health %</label>   <input type="number" id="def-inf-hp"  class="si-input" min="0" max="9999" placeholder="0"></div>
-        <div class="si"><label>Lethality %</label><input type="number" id="def-inf-lth" class="si-input" min="0" max="9999" placeholder="0"></div>
-      </div>
-    </div>
-    <!-- Lancer stats -->
-    <div class="troop-panel def-panel" id="def-panel-lancer" style="display:none">
-      <div class="stats-grid">
-        <div class="si"><label>Attack %</label>   <input type="number" id="def-lan-atk" class="si-input" min="0" max="9999" placeholder="0"></div>
-        <div class="si"><label>Defense %</label>  <input type="number" id="def-lan-def" class="si-input" min="0" max="9999" placeholder="0"></div>
-        <div class="si"><label>Health %</label>   <input type="number" id="def-lan-hp"  class="si-input" min="0" max="9999" placeholder="0"></div>
-        <div class="si"><label>Lethality %</label><input type="number" id="def-lan-lth" class="si-input" min="0" max="9999" placeholder="0"></div>
-      </div>
-    </div>
-    <!-- Marksman stats -->
-    <div class="troop-panel def-panel" id="def-panel-marksman" style="display:none">
-      <div class="stats-grid">
-        <div class="si"><label>Attack %</label>   <input type="number" id="def-mrk-atk" class="si-input" min="0" max="9999" placeholder="0"></div>
-        <div class="si"><label>Defense %</label>  <input type="number" id="def-mrk-def" class="si-input" min="0" max="9999" placeholder="0"></div>
-        <div class="si"><label>Health %</label>   <input type="number" id="def-mrk-hp"  class="si-input" min="0" max="9999" placeholder="0"></div>
-        <div class="si"><label>Lethality %</label><input type="number" id="def-mrk-lth" class="si-input" min="0" max="9999" placeholder="0"></div>
-      </div>
-    </div>
-
-    <!-- Formation -->
-    <div class="formation-block">
-      <div class="section-label">FORMATION</div>
-      <div class="form-grid">
-        <div class="fi"><label>Inf %</label><input type="number" id="def-form-inf" class="fi-input" min="0" max="100" value="50"></div>
-        <div class="fi"><label>Lan %</label><input type="number" id="def-form-lan" class="fi-input" min="0" max="100" value="20"></div>
-        <div class="fi"><label>Mrk %</label><input type="number" id="def-form-mrk" class="fi-input" min="0" max="100" value="30"></div>
-      </div>
-      <div class="form-total valid" id="def-form-total">Total: 100%</div>
-    </div>
-
-    <!-- Troop count -->
-    <div class="troops-block">
-      <div class="section-label">TROOP COUNT</div>
-      <input type="number" id="def-troops" class="troops-input" min="1" max="10000000" value="400000" />
-    </div>
-  </section>
-
-</main>
-
-<footer class="app-footer">
-  Formulas verified from WOS community research · WOSPREDV3 v2.0 · <a href="rally.html" style="color:var(--ice)">Rally Timing →</a>
-</footer>
-
-<script src="config.js"></script>
-<script src="app.js"></script>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
