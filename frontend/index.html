@@ -12,44 +12,16 @@
       <strong>WOS Battle Predictor</strong>
       <span>Scout stats, formation, heroes, prediction, calibration</span>
     </div>
-    <div class="status-row">
-      <span id="api-status" class="pill danger">Offline</span>
-      <button id="settings-button" class="icon-button" title="API settings">Settings</button>
-    </div>
   </header>
 
   <nav class="tabs" aria-label="Main sections">
-    <button class="tab active" data-view="dashboard">Dashboard</button>
-    <button class="tab" data-view="predictor">Battle Predictor</button>
+    <button class="tab active" data-view="predictor">Battle Predictor</button>
     <button class="tab" data-view="presets">Presets</button>
     <button class="tab" data-view="logs">Battle Logs</button>
-    <button class="tab" data-view="settings">Settings</button>
   </nav>
 
   <main>
-    <section id="dashboard" class="view active">
-      <div class="band">
-        <h1>Battle readiness</h1>
-        <div class="summary-grid">
-          <div><span>API</span><strong id="summary-api">Checking</strong></div>
-          <div><span>Constants</span><strong>Pending verification</strong></div>
-          <div><span>Hero skills</span><strong>Recorded only</strong></div>
-          <div><span>OCR</span><strong>Manual fallback</strong></div>
-        </div>
-      </div>
-      <div class="two-col">
-        <section>
-          <h2>Prediction Uses</h2>
-          <p>The MVP compares the 12 scout stats by troop type, troop count, formation split, and configured combat constants. Hero selections are saved for calibration, but unverified hero skill values are not applied.</p>
-        </section>
-        <section>
-          <h2>Calibration Path</h2>
-          <p>Save prediction runs and battle logs after real fights. Those records are structured so the engine can be tuned later without hiding made-up WOS multipliers in the UI.</p>
-        </section>
-      </div>
-    </section>
-
-    <section id="predictor" class="view">
+    <section id="predictor" class="view active">
       <div class="predictor-grid">
         <section class="panel" data-side="own">
           <div class="panel-head">
@@ -140,25 +112,7 @@
       <h2>Battle Logs / Calibration Data</h2>
       <div id="log-list" class="list empty">No battle logs saved yet.</div>
     </section>
-
-    <section id="settings" class="view">
-      <h2>Settings / API Status</h2>
-      <label>Backend API URL
-        <input id="api-url" placeholder="http://localhost:8080" />
-      </label>
-      <button id="save-api-url">Save API URL</button>
-      <pre id="api-details"></pre>
-    </section>
   </main>
-
-  <div id="modal" class="modal hidden">
-    <div>
-      <h2>API Settings</h2>
-      <label>Backend API URL<input id="modal-api-url" /></label>
-      <button id="modal-save">Save</button>
-      <button id="modal-close">Cancel</button>
-    </div>
-  </div>
 
   <script src="config.js"></script>
   <script src="app.js"></script>
