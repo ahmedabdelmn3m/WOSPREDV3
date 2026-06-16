@@ -7,7 +7,25 @@ const stats = [
   ['health_pct', 'Health %'],
   ['lethality_pct', 'Lethality %'],
 ];
-const state = { heroes: [], lastPrediction: null, lastFormation: null };
+const fallbackHeroes = [
+  { id: 'natalia', name: 'Natalia', specialty: 'infantry', generation: 1 },
+  { id: 'jeronimo', name: 'Jeronimo', specialty: 'infantry', generation: 1 },
+  { id: 'molly', name: 'Molly', specialty: 'lancer', generation: 1 },
+  { id: 'zinman', name: 'Zinman', specialty: 'marksman', generation: 1 },
+  { id: 'flint', name: 'Flint', specialty: 'infantry', generation: 2 },
+  { id: 'philly', name: 'Philly', specialty: 'lancer', generation: 2 },
+  { id: 'alonso', name: 'Alonso', specialty: 'marksman', generation: 2 },
+  { id: 'logan', name: 'Logan', specialty: 'infantry', generation: 3 },
+  { id: 'mia', name: 'Mia', specialty: 'lancer', generation: 3 },
+  { id: 'greg', name: 'Greg', specialty: 'marksman', generation: 3 },
+  { id: 'ahmose', name: 'Ahmose', specialty: 'infantry', generation: 4 },
+  { id: 'reina', name: 'Reina', specialty: 'lancer', generation: 4 },
+  { id: 'lynn', name: 'Lynn', specialty: 'marksman', generation: 4 },
+  { id: 'hector', name: 'Hector', specialty: 'infantry', generation: 5 },
+  { id: 'norah', name: 'Norah', specialty: 'lancer', generation: 5 },
+  { id: 'gwen', name: 'Gwen', specialty: 'marksman', generation: 5 },
+];
+const state = { heroes: fallbackHeroes, lastPrediction: null, lastFormation: null };
 
 const $ = (id) => document.getElementById(id);
 const apiBase = () => (window.WOS_API_URL || 'http://localhost:8080').replace(/\/$/, '');
@@ -292,6 +310,7 @@ async function checkApi() {
     state.heroes = heroes.heroes || [];
   } catch (err) {
     console.warn('Prediction service is unavailable:', err.message);
+    state.heroes = fallbackHeroes;
   }
   ['own', 'enemy'].forEach(buildHeroRows);
 }
