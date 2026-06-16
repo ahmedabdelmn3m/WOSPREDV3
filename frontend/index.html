@@ -18,6 +18,7 @@
     <button class="tab active" data-view="predictor">Battle Predictor</button>
     <button class="tab" data-view="presets">Presets</button>
     <button class="tab" data-view="logs">Battle Logs</button>
+    <a class="tab link-tab" href="rally-organizer.html">Rally Organizer</a>
   </nav>
 
   <main>
@@ -93,6 +94,18 @@
       </div>
 
       <section class="result-panel">
+        <div class="battle-type-row">
+          <label>Battle Type
+            <select id="battle-type">
+              <option value="">Select battle type</option>
+              <option value="solo_attack">Solo attack</option>
+              <option value="rally_attack">Rally attack</option>
+              <option value="reinforce">Reinforce</option>
+              <option value="defense_check">Defense check</option>
+            </select>
+          </label>
+        </div>
+        <div id="validation-messages" class="validation-box"></div>
         <div class="action-row">
           <button id="run-prediction" class="primary">Run Prediction</button>
           <button id="optimize-formation">Recommend Formation</button>
