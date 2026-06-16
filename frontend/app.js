@@ -192,15 +192,102 @@ function updateFormation(side) {
 async function uploadScout(side) {
   const file = $(`${side}-upload`).files?.[0];
   if (!file) return notice(`${side}-upload-state`, 'Choose an image first.');
-  const form = new FormData();
-  form.append('file', file);
-  notice(`${side}-upload-state`, 'Uploading scout image...');
+  if (!window.Tesseract) return notice(`${side}-upload-state`, 'OCR did not load. Please refresh and try again.');
+  notice(`${side}-upload-state`, 'Reading screenshot with free OCR...');
   try {
-    const result = await api('/scout-upload', { method: 'POST', body: form });
-    notice(`${side}-upload-state`, `${result.ocr_status}: ${result.message}`);
+    const result = await Tesseract.recognize(file, 'eng', {
+      logger: (event) => {
+        if (event.status === 'recognizing text') {
+          notice(`${side}-upload-state`, `Reading screenshot... ${Math.round((event.progress || 0) * 100)}%`);
+        }
+      },
+    });
+    const parsed = parseScoutText(result.data?.text || '');
+    const filled = applyParsedStats(side, parsed);
+    notice(`${side}-upload-state`, `OCR filled ${filled}/12 stat fields. Please review before predicting.`);
+    updateValidation();
   } catch (err) {
-    notice(`${side}-upload-state`, err.message);
+    notice(`${side}-upload-state`, `OCR failed: ${err.message}`);
   }
+}
+
+function parseScoutText(ocrText) {
+  const textBody = normalizeOcrText(ocrText);
+  const parsed = {};
+  troops.forEach((troop) => {
+    parsed[troop] = {};
+    stats.forEach(([key]) => {
+      parsed[troop][key] = extractScoutValue(textBody, troop, key);
+    });
+  });
+  return parsed;
+}
+
+function normalizeOcrText(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/[|]/g, ' ')
+    .replace(/defen[sc]e/g, 'defense')
+    .replace(/marksmen/g, 'marksman')
+    .replace(/\s+/g, ' ');
+}
+
+function extractScoutValue(textBody, troop, key) {
+  const statWords = {
+    attack_pct: '(?:attack|atk)',
+    defense_pct: '(?:defense|def|defence)',
+    health_pct: '(?:health|hp)',
+    lethality_pct: '(?:lethality|lethal)',
+  }[key];
+  const patterns = [
+    new RegExp(`${troop}.{0,50}${statWords}[^0-9]{0,20}([0-9][0-9,.]*)`, 'i'),
+    new RegExp(`${statWords}.{0,50}${troop}[^0-9]{0,20}([0-9][0-9,.]*)`, 'i'),
+  ];
+  for (const pattern of patterns) {
+    const match = textBody.match(pattern);
+    if (!match) continue;
+    const value = Number(match[1].replace(/,/g, ''));
+    if (Number.isFinite(value)) return round(value);
+  }
+  return null;
+}
+
+function applyParsedStats(side, parsed) {
+  let filled = 0;
+  troops.forEach((troop) => stats.forEach(([key]) => {
+    const value = parsed[troop]?.[key];
+    if (value === null || value === undefined) return;
+    $(`${side}-${troop}-${key}`).value = value;
+    filled += 1;
+  }));
+  return filled;
+}
+
+function fillTestPredictor() {
+  const ownFormation = randomItem([[50, 20, 30], [60, 40, 0], [60, 20, 20], [55, 20, 25]]);
+  const enemyFormation = randomItem([[50, 20, 30], [60, 40, 0], [60, 20, 20], [55, 20, 25]]);
+  $('battle-type').value = 'solo_attack';
+  fillTestSide('own', ownFormation, 1.06);
+  fillTestSide('enemy', enemyFormation, 0.98);
+  updateValidation();
+  renderToast('Test predictor filled realistic sample stats. You can run prediction now.');
+}
+
+function fillTestSide(side, formation, strengthMultiplier) {
+  $(`${side}-name`).value = side === 'own' ? 'Sample Player' : 'Sample Enemy';
+  $(`${side}-troops`).value = randomInt(850000, 1450000);
+  troops.forEach((troop, index) => {
+    $(`${side}-form-${troop}`).value = formation[index];
+    stats.forEach(([key]) => {
+      const base = key === 'health_pct' || key === 'defense_pct' ? randomInt(850, 1650) : randomInt(950, 1850);
+      $(`${side}-${troop}-${key}`).value = Math.round(base * strengthMultiplier);
+    });
+    const hero = randomItem(heroesByType(troop).slice(-3)) || heroesByType(troop)[0];
+    if (hero) $(`${side}-hero-${troop}`).value = hero.id;
+    $(`${side}-hero-stars-${troop}`).value = 5;
+    $(`${side}-hero-widget-${troop}`).value = randomInt(4, 10);
+  });
+  updateFormation(side);
 }
 
 async function runPrediction() {
@@ -446,6 +533,7 @@ function bindEvents() {
   });
   document.querySelectorAll('[data-upload]').forEach((button) => button.addEventListener('click', () => uploadScout(button.dataset.upload)));
   $('run-prediction').addEventListener('click', runPrediction);
+  $('test-predictor').addEventListener('click', fillTestPredictor);
   $('optimize-formation').addEventListener('click', optimizeFormation);
   $('save-prediction').addEventListener('click', savePredictionRun);
   $('save-battle-log').addEventListener('click', saveBattleLog);
@@ -567,6 +655,8 @@ function renderToast(message) { $('prediction-output').insertAdjacentHTML('after
 function notice(id, message) { $(id).textContent = message; }
 function format(value) { return Number(value || 0).toLocaleString(); }
 function round(value) { return Math.round(Number(value || 0) * 10) / 10; }
+function randomInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+function randomItem(items) { return items[Math.floor(Math.random() * items.length)]; }
 function label(value) { return value.charAt(0).toUpperCase() + value.slice(1); }
 function sideLabel(side) { return side === 'own' ? 'Own march' : 'Enemy march'; }
 function escapeHtml(value) {
