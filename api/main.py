@@ -62,6 +62,20 @@ def _load_json(relative_path: str, fallback: Any) -> Any:
         return fallback
 
 
+HERO_DEFINITIONS = _load_json("heroes/hero_definitions.json", [])
+HERO_BY_ID = {hero.get("id"): hero for hero in HERO_DEFINITIONS}
+
+
+def _hero_type(hero: Any) -> str:
+    if isinstance(hero, HeroSelection):
+        if hero.type:
+            return hero.type
+        return HERO_BY_ID.get(hero.id, {}).get("type") or HERO_BY_ID.get(hero.id, {}).get("specialty") or ""
+    if isinstance(hero, dict):
+        return hero.get("type") or hero.get("specialty") or HERO_BY_ID.get(hero.get("id"), {}).get("type") or HERO_BY_ID.get(hero.get("id"), {}).get("specialty") or ""
+    return ""
+
+
 def _cors_origins() -> list[str]:
     raw = os.getenv("CORS_ORIGINS", "")
     if not raw:
@@ -103,6 +117,14 @@ class TroopStatsInput(BaseModel):
     health_base:    float = 1.0
     lethality_base: float = 1.0
 
+    @model_validator(mode="after")
+    def values_cannot_be_negative(self) -> "TroopStatsInput":
+        values = self.model_dump()
+        negatives = [name for name, value in values.items() if value < 0]
+        if negatives:
+            raise ValueError(f"Stats cannot be negative: {', '.join(negatives)}.")
+        return self
+
     def to_troop_type_stats(self) -> TroopTypeStats:
         return TroopTypeStats(
             attack=self.attack_base,
@@ -119,8 +141,21 @@ class TroopStatsInput(BaseModel):
 class HeroSelection(BaseModel):
     id: Optional[str] = None
     name: Optional[str] = None
+    type: Optional[str] = None
     stars: int = 5
     widget_level: Optional[int] = None
+
+    @model_validator(mode="after")
+    def hero_values_are_valid(self) -> "HeroSelection":
+        if not self.id:
+            raise ValueError("Hero id is required.")
+        if self.stars < 1 or self.stars > 5:
+            raise ValueError("Hero stars must be between 1 and 5.")
+        if self.widget_level is None or self.widget_level <= 0:
+            raise ValueError("Hero widget level must be greater than zero.")
+        if _hero_type(self) not in {"infantry", "lancer", "marksman"}:
+            raise ValueError(f"Hero '{self.id}' must have infantry, lancer, or marksman type.")
+        return self
 
 
 class FormationInput(BaseModel):
@@ -151,9 +186,20 @@ class ArmyInput(BaseModel):
     heroes:      List[HeroSelection] = []
 
     @model_validator(mode="after")
-    def must_have_positive_troops(self) -> "ArmyInput":
+    def main_march_is_valid(self) -> "ArmyInput":
         if self.troop_count <= 0:
             raise ValueError("Troop count must be greater than zero.")
+        if len(self.heroes) != 3:
+            raise ValueError("Main march must include exactly 3 heroes.")
+        ids = [hero.id for hero in self.heroes]
+        if len(set(ids)) != len(ids):
+            raise ValueError("Main march cannot use duplicate heroes.")
+        types = [_hero_type(hero) for hero in self.heroes]
+        if len(set(types)) != len(types):
+            raise ValueError("Main march cannot use duplicate hero types.")
+        required = {"infantry", "lancer", "marksman"}
+        if set(types) != required:
+            raise ValueError("Main march must include exactly one infantry, one lancer, and one marksman hero.")
         return self
 
     def to_army_stats(self) -> ArmyStats:
