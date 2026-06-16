@@ -1,0 +1,79 @@
+[
+  {
+    "id": "flint",
+    "name": "Flint",
+    "generation": 2,
+    "specialty": "infantry",
+    "max_stars": 5,
+    "widget_supported": true,
+    "verified": false,
+    "status": "pending verification",
+    "skills": []
+  },
+  {
+    "id": "mia",
+    "name": "Mia",
+    "generation": 3,
+    "specialty": "lancer",
+    "max_stars": 5,
+    "widget_supported": true,
+    "verified": false,
+    "status": "pending verification",
+    "skills": []
+  },
+  {
+    "id": "alonso",
+    "name": "Alonso",
+    "generation": 3,
+    "specialty": "marksman",
+    "max_stars": 5,
+    "widget_supported": true,
+    "verified": false,
+    "status": "pending verification",
+    "skills": []
+  },
+  {
+    "id": "jeronimo",
+    "name": "Jeronimo",
+    "generation": 1,
+    "specialty": "infantry",
+    "max_stars": 5,
+    "widget_supported": true,
+    "verified": false,
+    "status": "pending verification",
+    "skills": []
+  },
+  {
+    "id": "natalia",
+    "name": "Natalia",
+    "generation": 1,
+    "specialty": "infantry",
+    "max_stars": 5,
+    "widget_supported": true,
+    "verified": false,
+    "status": "pending verification",
+    "skills": []
+  },
+  {
+    "id": "philly",
+    "name": "Philly",
+    "generation": 4,
+    "specialty": "lancer",
+    "max_stars": 5,
+    "widget_supported": true,
+    "verified": false,
+    "status": "pending verification",
+    "skills": []
+  },
+  {
+    "id": "greg",
+    "name": "Greg",
+    "generation": 5,
+    "specialty": "marksman",
+    "max_stars": 5,
+    "widget_supported": true,
+    "verified": false,
+    "status": "pending verification",
+    "skills": []
+  }
+]
