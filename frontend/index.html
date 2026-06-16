@@ -47,8 +47,9 @@
             <div id="own-breakdown" class="hint"></div>
             <div class="preset-buttons">
               <button data-formation="own" data-values="50,20,30">50/20/30</button>
-              <button data-formation="own" data-values="60,10,30">60/10/30</button>
-              <button data-formation="own" data-values="40,20,40">40/20/40</button>
+              <button data-formation="own" data-values="60,40,0">60/40/0</button>
+              <button data-formation="own" data-values="60,20,20">60/20/20</button>
+              <button data-formation="own" data-values="55,20,25">55/20/25</button>
             </div>
           </div>
           <div class="heroes">
@@ -81,8 +82,9 @@
             <div id="enemy-breakdown" class="hint"></div>
             <div class="preset-buttons">
               <button data-formation="enemy" data-values="50,20,30">50/20/30</button>
-              <button data-formation="enemy" data-values="70,10,20">70/10/20</button>
-              <button data-formation="enemy" data-values="20,10,70">20/10/70</button>
+              <button data-formation="enemy" data-values="60,40,0">60/40/0</button>
+              <button data-formation="enemy" data-values="60,20,20">60/20/20</button>
+              <button data-formation="enemy" data-values="55,20,25">55/20/25</button>
             </div>
           </div>
           <div class="heroes">
@@ -107,6 +109,7 @@
         </div>
         <div id="validation-messages" class="validation-box"></div>
         <div class="action-row">
+          <button id="test-predictor">Test predictor</button>
           <button id="run-prediction" class="primary">Run Prediction</button>
           <button id="optimize-formation">Recommend Formation</button>
           <button id="save-prediction">Save Prediction Run</button>
@@ -128,6 +131,7 @@
   </main>
 
   <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
