@@ -287,18 +287,11 @@ async function loadLogs() {
 
 async function checkApi() {
   try {
-    const health = await api('/health');
-    $('api-status').textContent = 'Online';
-    $('api-status').className = 'pill ok';
-    $('summary-api').textContent = 'Online';
-    $('api-details').textContent = JSON.stringify(health, null, 2);
+    await api('/health');
     const heroes = await api('/hero-definitions');
     state.heroes = heroes.heroes || [];
   } catch (err) {
-    $('api-status').textContent = 'Offline';
-    $('api-status').className = 'pill danger';
-    $('summary-api').textContent = 'Offline';
-    $('api-details').textContent = err.message;
+    console.warn('Prediction service is unavailable:', err.message);
   }
   ['own', 'enemy'].forEach(buildHeroRows);
 }
@@ -333,22 +326,6 @@ function bindEvents() {
   $('save-battle-log').addEventListener('click', saveBattleLog);
   $('save-own-preset').addEventListener('click', () => saveLocalPreset('own'));
   $('save-enemy-preset').addEventListener('click', () => saveLocalPreset('enemy'));
-  $('save-api-url').addEventListener('click', () => saveApiUrl($('api-url').value));
-  $('settings-button').addEventListener('click', () => {
-    $('modal-api-url').value = apiBase();
-    $('modal').classList.remove('hidden');
-  });
-  $('modal-close').addEventListener('click', () => $('modal').classList.add('hidden'));
-  $('modal-save').addEventListener('click', () => saveApiUrl($('modal-api-url').value));
-}
-
-function saveApiUrl(value) {
-  if (!value.trim()) return;
-  localStorage.setItem('wos_api_url', value.trim());
-  window.WOS_API_URL = value.trim();
-  $('api-url').value = value.trim();
-  $('modal').classList.add('hidden');
-  checkApi();
 }
 
 function jsonOptions(body) {
@@ -366,7 +343,6 @@ function init() {
   ['own', 'enemy'].forEach(buildStats);
   ['own', 'enemy'].forEach(buildHeroRows);
   ['own', 'enemy'].forEach(updateFormation);
-  $('api-url').value = apiBase();
   bindEvents();
   loadPresets();
   loadLogs();
