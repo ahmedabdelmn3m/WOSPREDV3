@@ -18,11 +18,16 @@ POST /upload-battle-report   Queue a report for calibration
 GET  /model-accuracy         Current model accuracy stats
 """
 
+import json
 import os
-from fastapi import FastAPI, HTTPException
+import re
+from datetime import datetime, timezone
+from pathlib import Path
+from uuid import uuid4
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, model_validator
-from typing import Optional, List
+from typing import Optional, List, Any
 
 from core_engine.troop_stats        import ArmyStats, Formation, TroopTypeStats
 from core_engine.combat_engine      import CombatEngine
@@ -41,6 +46,32 @@ _formation_optimizer = FormationOptimizer(_combat_engine)
 _preset_manager    = PresetManager()
 _v1                = V1RawModel()
 _v2                = V2CalibratedModel(_v1)
+_prediction_runs: list[dict[str, Any]] = []
+_battle_logs: list[dict[str, Any]] = []
+_scout_uploads: list[dict[str, Any]] = []
+
+ROOT_DIR = Path(__file__).resolve().parents[1]
+
+
+def _load_json(relative_path: str, fallback: Any) -> Any:
+    path = ROOT_DIR / relative_path
+    try:
+        with path.open("r", encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return fallback
+
+
+def _cors_origins() -> list[str]:
+    raw = os.getenv("CORS_ORIGINS", "")
+    if not raw:
+        return [
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+            "http://localhost:8080",
+            "http://127.0.0.1:8080",
+        ]
+    return [origin.strip() for origin in raw.split(",") if origin.strip()]
 
 # ── App ──────────────────────────────────────────────────────────────────────
 app = FastAPI(
@@ -51,7 +82,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_cors_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -85,6 +116,13 @@ class TroopStatsInput(BaseModel):
         )
 
 
+class HeroSelection(BaseModel):
+    id: Optional[str] = None
+    name: Optional[str] = None
+    stars: int = 5
+    widget_level: Optional[int] = None
+
+
 class FormationInput(BaseModel):
     infantry:  float = 0.50
     lancer:    float = 0.20
@@ -110,6 +148,13 @@ class ArmyInput(BaseModel):
     marksman:    TroopStatsInput = TroopStatsInput()
     formation:   FormationInput  = FormationInput()
     troop_count: int             = 500_000
+    heroes:      List[HeroSelection] = []
+
+    @model_validator(mode="after")
+    def must_have_positive_troops(self) -> "ArmyInput":
+        if self.troop_count <= 0:
+            raise ValueError("Troop count must be greater than zero.")
+        return self
 
     def to_army_stats(self) -> ArmyStats:
         return ArmyStats(
@@ -178,6 +223,99 @@ class FeedbackRequest(BaseModel):
     notes:              Optional[str] = None
 
 
+class PredictionRunSaveRequest(BaseModel):
+    attacker: ArmyInput
+    defender: ArmyInput
+    result: dict[str, Any]
+    notes: Optional[str] = None
+
+
+class BattleLogSaveRequest(BaseModel):
+    own_stats: dict[str, Any]
+    enemy_stats: dict[str, Any]
+    own_formation: dict[str, Any]
+    enemy_formation: Optional[dict[str, Any]] = None
+    own_heroes: List[dict[str, Any]] = []
+    enemy_heroes: List[dict[str, Any]] = []
+    prediction_result: Optional[dict[str, Any]] = None
+    actual_result: Optional[str] = None
+    notes: Optional[str] = None
+    uploaded_report_image_ref: Optional[str] = None
+
+
+SCOUT_PATTERNS = {
+    "infantry.attack_pct": r"infantry\s+attack\D+([\d,.]+)",
+    "infantry.defense_pct": r"infantry\s+defen[sc]e\D+([\d,.]+)",
+    "infantry.health_pct": r"infantry\s+health\D+([\d,.]+)",
+    "infantry.lethality_pct": r"infantry\s+lethality\D+([\d,.]+)",
+    "lancer.attack_pct": r"lancer\s+attack\D+([\d,.]+)",
+    "lancer.defense_pct": r"lancer\s+defen[sc]e\D+([\d,.]+)",
+    "lancer.health_pct": r"lancer\s+health\D+([\d,.]+)",
+    "lancer.lethality_pct": r"lancer\s+lethality\D+([\d,.]+)",
+    "marksman.attack_pct": r"marksman\s+attack\D+([\d,.]+)",
+    "marksman.defense_pct": r"marksman\s+defen[sc]e\D+([\d,.]+)",
+    "marksman.health_pct": r"marksman\s+health\D+([\d,.]+)",
+    "marksman.lethality_pct": r"marksman\s+lethality\D+([\d,.]+)",
+}
+
+
+def _empty_scout_stats() -> dict:
+    return {
+        troop: {
+            "attack_pct": None,
+            "defense_pct": None,
+            "health_pct": None,
+            "lethality_pct": None,
+        }
+        for troop in ("infantry", "lancer", "marksman")
+    }
+
+
+def _parse_scout_text(text: str) -> dict:
+    parsed = _empty_scout_stats()
+    for key, pattern in SCOUT_PATTERNS.items():
+        match = re.search(pattern, text, re.IGNORECASE)
+        if not match:
+            continue
+        troop, stat = key.split(".")
+        parsed[troop][stat] = float(match.group(1).replace(",", ""))
+    return parsed
+
+
+def _prediction_metadata(attacker: ArmyInput, defender: ArmyInput, result: dict) -> dict:
+    analysis = result.get("strength_analysis", {})
+    ranked = []
+    for troop, data in analysis.items():
+        ranked.append((troop, data.get("net_advantage", 1), data.get("status", "EVEN")))
+    strongest = max(ranked, key=lambda item: item[1], default=None)
+    weakest = min(ranked, key=lambda item: item[1], default=None)
+    uses_heroes = bool(attacker.heroes or defender.heroes)
+    return {
+        "confidence_level": "medium" if not uses_heroes else "low",
+        "strongest_advantage": {
+            "troop_type": strongest[0],
+            "net_advantage": strongest[1],
+            "status": strongest[2],
+        } if strongest else None,
+        "weakest_weakness": {
+            "troop_type": weakest[0],
+            "net_advantage": weakest[1],
+            "status": weakest[2],
+        } if weakest else None,
+        "troop_type_breakdown": {
+            "attacker": attacker.to_army_stats().troop_breakdown(),
+            "defender": defender.to_army_stats().troop_breakdown(),
+        },
+        "recommended_formation_adjustment": "Use /formation/optimize to compare standard formation presets for this matchup.",
+        "recommended_stat_improvements": result.get("bottleneck"),
+        "warnings": [
+            "Prediction uses configurable MVP constants pending calibration.",
+            "Hero selections are recorded but unverified hero skill values are not applied.",
+            "Scout stats are treated as already including base hero/stat bonuses to avoid double counting.",
+        ],
+    }
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 #  Routes
 # ═══════════════════════════════════════════════════════════════════════════
@@ -205,6 +343,29 @@ async def root():
     }
 
 
+@app.get("/health")
+async def health():
+    return {
+        "status": "ok",
+        "service": "WOS Battle Predictor API",
+        "version": app.version,
+        "time": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+@app.get("/hero-definitions")
+async def hero_definitions():
+    return {
+        "heroes": _load_json("heroes/hero_definitions.json", []),
+        "note": "Unverified skills are exposed as pending verification and are not applied by the engine.",
+    }
+
+
+@app.get("/combat-constants")
+async def combat_constants():
+    return _load_json("config/combat_constants.json", {"constants": {}})
+
+
 # ── Battle ───────────────────────────────────────────────────────────────────
 
 @app.post("/simulate-battle")
@@ -226,15 +387,85 @@ async def simulate_battle(req: BattleRequest):
 async def predict_outcome(req: BattleRequest):
     """V2 full prediction: win probability, strength analysis, bottleneck."""
     try:
-        return _prediction_engine.predict(
+        result = _prediction_engine.predict(
             req.attacker.to_army_stats(),
             req.defender.to_army_stats(),
             max_rounds=req.max_rounds,
         )
+        result["metadata"] = _prediction_metadata(req.attacker, req.defender, result)
+        return result
     except ValueError as e:
         raise HTTPException(422, str(e))
     except Exception as e:
         raise HTTPException(400, str(e))
+
+
+@app.post("/prediction-runs")
+async def save_prediction_run(req: PredictionRunSaveRequest):
+    item = {
+        "id": str(uuid4()),
+        "attacker": req.attacker.model_dump(),
+        "defender": req.defender.model_dump(),
+        "result": req.result,
+        "notes": req.notes,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    _prediction_runs.append(item)
+    return {"status": "saved", "prediction_run": item}
+
+
+@app.get("/prediction-runs")
+async def list_prediction_runs():
+    return {"prediction_runs": _prediction_runs}
+
+
+@app.post("/battle-logs")
+async def save_battle_log(req: BattleLogSaveRequest):
+    item = {
+        "id": str(uuid4()),
+        **req.model_dump(),
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    _battle_logs.append(item)
+    return {"status": "saved", "battle_log": item}
+
+
+@app.get("/battle-logs")
+async def list_battle_logs():
+    return {"battle_logs": _battle_logs}
+
+
+@app.post("/scout-upload")
+async def upload_scout_image(file: UploadFile = File(...)):
+    contents = await file.read()
+    upload_id = str(uuid4())
+    item = {
+        "id": upload_id,
+        "filename": file.filename,
+        "content_type": file.content_type,
+        "size_bytes": len(contents),
+        "parsed_stats": _empty_scout_stats(),
+        "ocr_status": "pending_provider",
+        "message": "Image received. OCR provider is not configured in this MVP; manual correction is required.",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    _scout_uploads.append(item)
+    return item
+
+
+@app.post("/parse-scout-text")
+async def parse_scout_text(payload: dict):
+    text = str(payload.get("text", ""))
+    parsed = _parse_scout_text(text)
+    found = sum(
+        1 for troop in parsed.values() for value in troop.values()
+        if value is not None
+    )
+    return {
+        "parsed_stats": parsed,
+        "fields_found": found,
+        "manual_correction_required": found < 12,
+    }
 
 
 @app.post("/army-preview")
