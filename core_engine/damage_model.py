@@ -37,6 +37,35 @@ class DamageModel:
             lethality * (1.0 + lethality_bonus)
         ) / 100.0
 
+    @staticmethod
+    def calculate_with_layers(
+        attack: float,
+        attack_bonus: float,
+        lethality: float,
+        lethality_bonus: float,
+        damage_up: float = 0.0,
+        attack_damage_up: float = 0.0,
+        damage_taken_down: float = 0.0,
+    ) -> float:
+        """
+        Transparent layered model:
+
+        base_damage = existing attack/lethality formula
+        final_damage = base_damage * (1 + damage_up + attack_damage_up)
+        final_incoming_damage = final_damage * (1 - damage_taken_down)
+
+        This is a configurable layer separation, not a claim of exact hidden
+        Whiteout Survival formula precision.
+        """
+        base_damage = DamageModel.calculate(
+            attack,
+            attack_bonus,
+            lethality,
+            lethality_bonus,
+        )
+        outgoing = base_damage * (1.0 + damage_up + attack_damage_up)
+        return outgoing * max(0.0, 1.0 - damage_taken_down)
+
     # ── Legacy alias — keeps old call-sites working ─────────────────────
     @staticmethod
     def calculate_damage(
