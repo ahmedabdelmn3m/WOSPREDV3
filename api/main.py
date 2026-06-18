@@ -37,6 +37,7 @@ from core_engine.formation_optimizer import FormationOptimizer
 from core_engine.preset_manager     import PresetManager
 from mechanics.v1_raw_model         import V1RawModel
 from mechanics.v2_calibrated_model  import V2CalibratedModel
+from hero_data import HEROES_BY_ID as STRUCTURED_HEROES, hero_to_dict
 
 # ── Singletons (one per process) ─────────────────────────────────────────────
 _combat_engine     = CombatEngine()
@@ -70,9 +71,11 @@ def _hero_type(hero: Any) -> str:
     if isinstance(hero, HeroSelection):
         if hero.type:
             return hero.type
-        return HERO_BY_ID.get(hero.id, {}).get("type") or HERO_BY_ID.get(hero.id, {}).get("specialty") or ""
+        structured = STRUCTURED_HEROES.get(str(hero.id or "").lower())
+        return HERO_BY_ID.get(hero.id, {}).get("type") or HERO_BY_ID.get(hero.id, {}).get("specialty") or (structured.hero_type if structured else "") or ""
     if isinstance(hero, dict):
-        return hero.get("type") or hero.get("specialty") or HERO_BY_ID.get(hero.get("id"), {}).get("type") or HERO_BY_ID.get(hero.get("id"), {}).get("specialty") or ""
+        structured = STRUCTURED_HEROES.get(str(hero.get("id") or "").lower())
+        return hero.get("type") or hero.get("specialty") or HERO_BY_ID.get(hero.get("id"), {}).get("type") or HERO_BY_ID.get(hero.get("id"), {}).get("specialty") or (structured.hero_type if structured else "") or ""
     return ""
 
 
@@ -404,6 +407,19 @@ async def hero_definitions():
     return {
         "heroes": _load_json("heroes/hero_definitions.json", []),
         "note": "Unverified skills are exposed as pending verification and are not applied by the engine.",
+    }
+
+
+@app.get("/rally-hero-definitions")
+async def rally_hero_definitions():
+    return {
+        "heroes": [hero_to_dict(hero) for hero in STRUCTURED_HEROES.values()],
+        "mechanics_note": (
+            "Rally leaders apply all configured expedition skills from the 3-hero march. "
+            "Joiners and garrison helpers apply only the first/primary expedition skill "
+            "from up to 4 heroes, per the official Combat FAQ."
+        ),
+        "formula_note": "Damage Up and Attack Damage Up remain separate final damage multiplier layers from Attack Up.",
     }
 
 
