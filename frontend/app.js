@@ -69,8 +69,10 @@ function buildStats(side) {
 
 function buildHeroRows(side) {
   $(`${side}-heroes`).innerHTML = troops.map((troop) => {
+    const availableHeroes = heroesByType(troop);
+    const typedHeroes = availableHeroes.length ? availableHeroes : fallbackHeroes.filter((hero) => heroType(hero) === troop);
     const options = [`<option value="">Select ${label(troop)} hero</option>`]
-      .concat(heroesByType(troop).map((h) => `<option value="${h.id}">${h.name} - Gen ${h.generation}</option>`))
+      .concat(typedHeroes.map((h) => `<option value="${h.id}">${h.name} - Gen ${h.generation}</option>`))
       .join('');
     return `
       <div class="hero-row" data-required-type="${troop}">
@@ -711,7 +713,7 @@ function heroesByType(type) {
 }
 
 function heroType(hero = {}) {
-  return hero.type || hero.specialty || '';
+  return hero.type || hero.specialty || hero.hero_type || '';
 }
 
 function normalizeHeroes(heroes) {
