@@ -107,6 +107,17 @@
             </select>
           </label>
         </div>
+        <div class="simulation-row">
+          <label>Simulation Mode
+            <select id="simulation-mode">
+              <option value="expected_value">Expected Value</option>
+              <option value="monte_carlo">Monte Carlo</option>
+            </select>
+          </label>
+          <label>Monte Carlo Runs
+            <input id="monte-carlo-runs" type="number" min="50" max="5000" step="50" value="1000" />
+          </label>
+        </div>
         <div id="validation-messages" class="validation-box"></div>
         <div class="action-row">
           <button id="test-predictor">Test predictor</button>
@@ -132,6 +143,7 @@
 
   <script src="config.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <script src="src/data/troopStats.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
