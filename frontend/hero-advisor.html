@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WOS Hero Advisor</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="hero-advisor.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <strong>Rally Leader Hero Advisor</strong>
+      <span>Compare rally leader heroes, replacements, investment, and source confidence</span>
+    </div>
+  </header>
+
+  <nav class="tabs" aria-label="Main sections">
+    <a class="tab link-tab" href="index.html">Battle Predictor</a>
+    <a class="tab link-tab" href="rally-organizer.html">Rally Organizer</a>
+    <button class="tab active">Hero Advisor</button>
+  </nav>
+
+  <main class="advisor-shell">
+    <section class="advisor-section">
+      <h2>Choose Use Case</h2>
+      <div class="mode-grid">
+        <button class="mode-card active" data-mode="rallyLeader">PvP Rally Leader</button>
+        <button class="mode-card" disabled>Rally Joiner <span>Coming soon</span></button>
+        <button class="mode-card" disabled>Garrison <span>Coming soon</span></button>
+        <button class="mode-card" disabled>Solo PvP <span>Coming soon</span></button>
+        <button class="mode-card" disabled>Bear Trap <span>Coming soon</span></button>
+        <button class="mode-card" disabled>Crazy Joe <span>Coming soon</span></button>
+      </div>
+    </section>
+
+    <section class="advisor-section">
+      <div class="section-head">
+        <h2>Your Current Rally Heroes</h2>
+        <span class="hint">All 3 rally leader heroes are scored.</span>
+      </div>
+      <div id="current-heroes" class="advisor-grid"></div>
+    </section>
+
+    <section class="advisor-section">
+      <div class="section-head">
+        <h2>Heroes to Compare</h2>
+        <button id="add-comparison" type="button">Add comparison hero</button>
+      </div>
+      <div class="preset-buttons">
+        <button data-preset="1">Preset 1</button>
+        <button data-preset="2">Preset 2</button>
+        <button data-preset="3">Preset 3</button>
+        <button data-preset="4">Preset 4</button>
+      </div>
+      <div id="comparison-heroes" class="comparison-list"></div>
+    </section>
+
+    <section class="advisor-section">
+      <button id="analyze-setup" type="button" class="primary">Analyze Rally Setup</button>
+      <div id="advisor-output" class="empty">Select heroes or use a preset, then analyze the setup.</div>
+    </section>
+  </main>
+
+  <script src="src/data/heroDatabase.js"></script>
+  <script src="src/heroAdvisorRules.js"></script>
+  <script src="heroAdvisor.js"></script>
+</body>
+</html>
