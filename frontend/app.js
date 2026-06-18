@@ -318,8 +318,12 @@ function fillTestSide(side, formation, strengthMultiplier) {
       const base = key === 'health_pct' || key === 'defense_pct' ? randomInt(850, 1650) : randomInt(950, 1850);
       $(`${side}-${troop}-${key}`).value = Math.round(base * strengthMultiplier);
     });
-    const hero = randomItem(heroesByType(troop).slice(-3)) || heroesByType(troop)[0];
-    if (hero) $(`${side}-hero-${troop}`).value = hero.id;
+    const fallbackIds = { infantry: 'hector', lancer: 'norah', marksman: 'gwen' };
+    const select = $(`${side}-hero-${troop}`);
+    const preferred = heroesByType(troop).slice(-3);
+    const hero = randomItem(preferred.length ? preferred : heroesByType(troop));
+    const targetId = optionExists(select, fallbackIds[troop]) ? fallbackIds[troop] : hero?.id || firstOptionValue(select);
+    if (targetId) select.value = targetId;
     $(`${side}-hero-stars-${troop}`).value = 5;
     $(`${side}-hero-widget-${troop}`).value = randomInt(4, 10);
   });
@@ -745,6 +749,8 @@ function format(value) { return Number(value || 0).toLocaleString(); }
 function round(value) { return Math.round(Number(value || 0) * 10) / 10; }
 function randomInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
 function randomItem(items) { return items[Math.floor(Math.random() * items.length)]; }
+function optionExists(select, value) { return !!select && Array.from(select.options).some((option) => option.value === value); }
+function firstOptionValue(select) { return select ? Array.from(select.options).map((option) => option.value).find(Boolean) : ''; }
 function label(value) { return value.charAt(0).toUpperCase() + value.slice(1); }
 function sideLabel(side) { return side === 'own' ? 'Own march' : 'Enemy march'; }
 function escapeHtml(value) {
