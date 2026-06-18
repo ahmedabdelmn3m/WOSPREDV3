@@ -14,36 +14,36 @@ from core_engine.battle_simulator import BattleSimulator
 from core_engine.combat_engine  import CombatEngine
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-#  Tier 1 — Formula correctness
-# ─────────────────────────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+#  Tier 1 â€” Formula correctness
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class TestDamageFormula(unittest.TestCase):
     """
     Verified formula:
-        damage = (attack × (1 + attack_bonus) × lethality × (1 + lethality_bonus)) / 100
+        damage = (attack Ã— (1 + attack_bonus) Ã— lethality Ã— (1 + lethality_bonus)) / 100
     """
 
     def test_basic(self):
-        # (1 × 2.50 × 1 × 1.80) / 100 = 4.50 / 100 = 0.045
+        # (1 Ã— 2.50 Ã— 1 Ã— 1.80) / 100 = 4.50 / 100 = 0.045
         result = DamageModel.calculate(1.0, 1.50, 1.0, 0.80)
         self.assertAlmostEqual(result, 0.045, places=8)
 
     def test_zero_bonuses(self):
-        # (1 × 1 × 1 × 1) / 100 = 0.01
+        # (1 Ã— 1 Ã— 1 Ã— 1) / 100 = 0.01
         result = DamageModel.calculate(1.0, 0.0, 1.0, 0.0)
         self.assertAlmostEqual(result, 0.01, places=8)
 
     def test_high_bonuses(self):
-        # (1 × 3.0 × 1 × 2.0) / 100 = 0.06
+        # (1 Ã— 3.0 Ã— 1 Ã— 2.0) / 100 = 0.06
         result = DamageModel.calculate(1.0, 2.0, 1.0, 1.0)
         self.assertAlmostEqual(result, 0.06, places=8)
 
     def test_is_not_inverted(self):
         """Confirm we are NOT using the old wrong formula (100 / ...)."""
         result = DamageModel.calculate(1.0, 1.0, 1.0, 1.0)
-        # Correct:  (1 × 2 × 1 × 2) / 100  = 0.04
-        # Wrong:    100 / (1 × 2 × 1 × 2)  = 25.0
+        # Correct:  (1 Ã— 2 Ã— 1 Ã— 2) / 100  = 0.04
+        # Wrong:    100 / (1 Ã— 2 Ã— 1 Ã— 2)  = 25.0
         self.assertAlmostEqual(result, 0.04, places=8)
         self.assertNotAlmostEqual(result, 25.0, places=1)
 
@@ -56,24 +56,24 @@ class TestDamageFormula(unittest.TestCase):
 class TestDefenseFormula(unittest.TestCase):
     """
     Verified formula:
-        defense = (defense × (1 + defense_bonus) × health × (1 + health_bonus)) / 100
+        defense = (defense Ã— (1 + defense_bonus) Ã— health Ã— (1 + health_bonus)) / 100
     """
 
     def test_basic(self):
-        # (1 × 2.20 × 1 × 3.00) / 100 = 6.60 / 100 = 0.066
+        # (1 Ã— 2.20 Ã— 1 Ã— 3.00) / 100 = 6.60 / 100 = 0.066
         result = DefenseModel.calculate(1.0, 1.20, 1.0, 2.00)
         self.assertAlmostEqual(result, 0.066, places=8)
 
     def test_zero_bonuses(self):
-        # (1 × 1 × 1 × 1) / 100 = 0.01
+        # (1 Ã— 1 Ã— 1 Ã— 1) / 100 = 0.01
         result = DefenseModel.calculate(1.0, 0.0, 1.0, 0.0)
         self.assertAlmostEqual(result, 0.01, places=8)
 
     def test_is_not_inverted(self):
-        """Confirm we are NOT using the old wrong formula (100 × ...)."""
+        """Confirm we are NOT using the old wrong formula (100 Ã— ...)."""
         result = DefenseModel.calculate(1.0, 1.0, 1.0, 1.0)
-        # Correct:  (1 × 2 × 1 × 2) / 100  = 0.04
-        # Wrong:    100 × 1 × 2 × 1 × 2     = 400.0
+        # Correct:  (1 Ã— 2 Ã— 1 Ã— 2) / 100  = 0.04
+        # Wrong:    100 Ã— 1 Ã— 2 Ã— 1 Ã— 2     = 400.0
         self.assertAlmostEqual(result, 0.04, places=8)
         self.assertNotAlmostEqual(result, 400.0, places=1)
 
@@ -83,9 +83,9 @@ class TestDefenseFormula(unittest.TestCase):
         self.assertEqual(r1, r2)
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-#  Tier 2 — Troop-type architecture
-# ─────────────────────────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+#  Tier 2 â€” Troop-type architecture
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class TestTroopTypeStats(unittest.TestCase):
 
@@ -95,7 +95,7 @@ class TestTroopTypeStats(unittest.TestCase):
             defense_pct=120.0, health_pct=200.0,
         )
         # attack_bonus=1.50, lethality_bonus=0.80
-        # (1 × 2.50 × 1 × 1.80) / 100 = 0.045
+        # (1 Ã— 2.50 Ã— 1 Ã— 1.80) / 100 = 0.045
         self.assertAlmostEqual(troop.effective_damage, 0.045, places=8)
 
     def test_effective_defense_from_percentages(self):
@@ -104,7 +104,7 @@ class TestTroopTypeStats(unittest.TestCase):
             defense_pct=120.0, health_pct=200.0,
         )
         # defense_bonus=1.20, health_bonus=2.00
-        # (1 × 2.20 × 1 × 3.00) / 100 = 0.066
+        # (1 Ã— 2.20 Ã— 1 Ã— 3.00) / 100 = 0.066
         self.assertAlmostEqual(troop.effective_defense, 0.066, places=8)
 
     def test_to_dict_has_computed_fields(self):
@@ -135,7 +135,7 @@ class TestFormation(unittest.TestCase):
 class TestArmyStats(unittest.TestCase):
 
     def _make_army(self, troop_count: int = 100_000) -> ArmyStats:
-        """Helper — returns a standard test army."""
+        """Helper â€” returns a standard test army."""
         return ArmyStats.from_scout(
             name="TestArmy",
             infantry={"attack_pct": 150, "defense_pct": 120,
@@ -188,9 +188,9 @@ class TestArmyStats(unittest.TestCase):
             self.assertIn(k, keys)
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-#  Integration — full battle simulation
-# ─────────────────────────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+#  Integration â€” full battle simulation
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class TestBattleSimulation(unittest.TestCase):
 
@@ -219,6 +219,17 @@ class TestBattleSimulation(unittest.TestCase):
         engine = CombatEngine()
         result = engine.run_battle(strong, weak)
         self.assertEqual(result["winner"], "attacker")
+
+    def test_loser_has_zero_survivors(self):
+        """The result summary should show no surviving troops on the losing side."""
+        strong = self._make_army(300, 200, 300, 200, name="Strong")
+        weak   = self._make_army(50,   50,  50,  50, name="Weak")
+        result = CombatEngine().run_battle(strong, weak)
+
+        self.assertEqual(result["winner"], "attacker")
+        self.assertEqual(result["defender"]["survivors"], 0)
+        self.assertEqual(result["defender"]["casualties"], result["defender"]["initial_troops"])
+        self.assertEqual(result["defender"]["loss_rate"], 1.0)
 
     def test_result_has_required_keys(self):
         army = self._make_army(150, 120, 200, 80)
