@@ -54,6 +54,9 @@ class TroopTypeStats:
     defense_bonus:   float = 0.0
     health_bonus:    float = 0.0
     lethality_bonus: float = 0.0
+    troop_skill_damage_bonus: float = 0.0
+    troop_skill_damage_taken_down: float = 0.0
+    troop_skill_notes: List[str] = field(default_factory=list)
 
     # ── Verified formulas ────────────────────────────────────────────────
 
@@ -62,9 +65,13 @@ class TroopTypeStats:
         """
         damage = (attack × (1 + attack_bonus) × lethality × (1 + lethality_bonus)) / 100
         """
-        return DamageModel.calculate(
-            self.attack,    self.attack_bonus,
-            self.lethality, self.lethality_bonus,
+        return DamageModel.calculate_with_layers(
+            self.attack,
+            self.attack_bonus,
+            self.lethality,
+            self.lethality_bonus,
+            damage_up=self.troop_skill_damage_bonus,
+            damage_taken_down=self.troop_skill_damage_taken_down,
         )
 
     @property
@@ -118,6 +125,9 @@ class TroopTypeStats:
             "defense_bonus_pct": round(self.defense_bonus   * 100, 2),
             "health_bonus_pct":  round(self.health_bonus    * 100, 2),
             "lethality_bonus_pct": round(self.lethality_bonus * 100, 2),
+            "troop_skill_damage_bonus_pct": round(self.troop_skill_damage_bonus * 100, 2),
+            "troop_skill_damage_taken_down_pct": round(self.troop_skill_damage_taken_down * 100, 2),
+            "troop_skill_notes": self.troop_skill_notes,
             "effective_damage":  round(self.effective_damage,  6),
             "effective_defense": round(self.effective_defense, 6),
         }
@@ -208,9 +218,9 @@ class ArmyStats:
             stats.attack_bonus + modifiers["attack_up"],
             stats.lethality,
             stats.lethality_bonus + modifiers["lethality_up"],
-            damage_up=modifiers["damage_up"],
+            damage_up=stats.troop_skill_damage_bonus + modifiers["damage_up"],
             attack_damage_up=modifiers["attack_damage_up"],
-            damage_taken_down=modifiers["damage_taken_down"],
+            damage_taken_down=stats.troop_skill_damage_taken_down + modifiers["damage_taken_down"],
         )
 
     def army_damage(self) -> float:
