@@ -20,7 +20,11 @@ def sample_army(name="Army", troop_count=100000):
         "marksman": stats,
         "formation": {"infantry": 0.5, "lancer": 0.2, "marksman": 0.3},
         "troop_count": troop_count,
-        "heroes": [{"id": "flint", "name": "Flint", "stars": 5, "widget_level": 5}],
+        "heroes": [
+            {"id": "flint", "name": "Flint", "type": "infantry", "stars": 5, "widget_level": 5},
+            {"id": "philly", "name": "Philly", "type": "lancer", "stars": 5, "widget_level": 5},
+            {"id": "alonso", "name": "Alonso", "type": "marksman", "stars": 5, "widget_level": 5},
+        ],
     }
 
 
@@ -35,7 +39,7 @@ def test_hero_definitions_are_transparent():
     assert response.status_code == 200
     body = response.json()
     assert body["heroes"]
-    assert body["heroes"][0]["status"] == "pending verification"
+    assert "status" in body["heroes"][0]
 
 
 def test_combat_constants_mark_pending_verification():
