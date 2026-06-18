@@ -557,6 +557,10 @@ async function loadLogs() {
 }
 
 async function checkApi() {
+  const selected = {
+    own: readHeroes('own'),
+    enemy: readHeroes('enemy'),
+  };
   try {
     await api('/health');
     const heroes = await api('/hero-definitions');
@@ -566,6 +570,15 @@ async function checkApi() {
     state.heroes = fallbackHeroes;
   }
   ['own', 'enemy'].forEach(buildHeroRows);
+  ['own', 'enemy'].forEach((side) => {
+    selected[side].forEach((hero) => {
+      if ($(`${side}-hero-${hero.type}`)) {
+        $(`${side}-hero-${hero.type}`).value = hero.id;
+        $(`${side}-hero-stars-${hero.type}`).value = hero.stars || 5;
+        $(`${side}-hero-widget-${hero.type}`).value = hero.widget_level || 1;
+      }
+    });
+  });
   updateValidation();
 }
 
