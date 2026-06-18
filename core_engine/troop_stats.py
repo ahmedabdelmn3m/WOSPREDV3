@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List
 
 from .damage_model import DamageModel
-from joiner_logic import apply_joiner_bonuses
+from joiner_logic import calculate_rally_effective_modifiers
 from .defense_model import DefenseModel
 
 
@@ -200,18 +200,17 @@ class ArmyStats:
 
     # ── Army-wide effective stats ────────────────────────────────────────
 
-    def _get_effective_damage_for_type(self, stats: TroopTypeStats) -> float:
-        """Apply joiner bonuses before calculating damage for a troop type."""
-        atk_with_joiners, lth_with_joiners = apply_joiner_bonuses(
-            stats.attack_bonus, 
-            stats.lethality_bonus, 
-            self.joiners
-        )
-        return DamageModel.calculate(
-            stats.attack, 
-            atk_with_joiners, 
-            stats.lethality, 
-            lth_with_joiners
+    def _get_effective_damage_for_type(self, troop_type: str, stats: TroopTypeStats) -> float:
+        """Apply transparent hero skill layers before calculating damage."""
+        modifiers = calculate_rally_effective_modifiers([], self.joiners, [])["modifiers"][troop_type]
+        return DamageModel.calculate_with_layers(
+            stats.attack,
+            stats.attack_bonus + modifiers["attack_up"],
+            stats.lethality,
+            stats.lethality_bonus + modifiers["lethality_up"],
+            damage_up=modifiers["damage_up"],
+            attack_damage_up=modifiers["attack_damage_up"],
+            damage_taken_down=modifiers["damage_taken_down"],
         )
 
     def army_damage(self) -> float:
@@ -223,9 +222,9 @@ class ArmyStats:
         self.formation.validate()
         f = self.formation
         return (
-            f.infantry  * self._get_effective_damage_for_type(self.infantry)  +
-            f.lancer    * self._get_effective_damage_for_type(self.lancer)    +
-            f.marksman  * self._get_effective_damage_for_type(self.marksman)
+            f.infantry  * self._get_effective_damage_for_type("infantry", self.infantry)  +
+            f.lancer    * self._get_effective_damage_for_type("lancer", self.lancer)    +
+            f.marksman  * self._get_effective_damage_for_type("marksman", self.marksman)
         )
 
     def army_defense(self) -> float:
