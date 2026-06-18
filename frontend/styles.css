@@ -175,6 +175,23 @@ label {
   max-width: 260px;
   margin-bottom: 12px;
 }
+.simulation-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 260px) minmax(160px, 220px);
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.troop-base-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.troop-base-note {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 12px;
+}
 .validation-box {
   display: grid;
   gap: 6px;
@@ -282,5 +299,5 @@ pre {
 @media (max-width: 920px) {
   .summary-grid, .two-col, .predictor-grid, .metric-grid { grid-template-columns: 1fr; }
   .stat-grid { grid-template-columns: 1fr 1fr; }
-  .panel-head, .hero-row { grid-template-columns: 1fr; }
+  .panel-head, .hero-row, .simulation-row, .troop-base-grid { grid-template-columns: 1fr; }
 }
