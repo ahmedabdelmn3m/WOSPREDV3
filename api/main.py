@@ -20,6 +20,7 @@ GET  /model-accuracy         Current model accuracy stats
 
 import json
 import os
+import random
 import re
 from datetime import datetime, timezone
 from pathlib import Path
@@ -38,6 +39,7 @@ from core_engine.preset_manager     import PresetManager
 from mechanics.v1_raw_model         import V1RawModel
 from mechanics.v2_calibrated_model  import V2CalibratedModel
 from hero_data import HEROES_BY_ID as STRUCTURED_HEROES, hero_to_dict
+from troop_data import all_troop_stats, get_troop_base_stats, expected_skill_modifiers, TROOP_SKILL_RULES
 
 # ── Singletons (one per process) ─────────────────────────────────────────────
 _combat_engine     = CombatEngine()
@@ -111,6 +113,9 @@ app.add_middleware(
 # ═══════════════════════════════════════════════════════════════════════════
 
 class TroopStatsInput(BaseModel):
+    troop_type: Optional[str] = None
+    tier: int = 11
+    fc_level: int = 10
     attack_pct:     float = 0.0
     defense_pct:    float = 0.0
     health_pct:     float = 0.0
@@ -122,22 +127,41 @@ class TroopStatsInput(BaseModel):
 
     @model_validator(mode="after")
     def values_cannot_be_negative(self) -> "TroopStatsInput":
+        if self.tier not in (10, 11):
+            raise ValueError("Troop tier must be 10 or 11.")
+        if self.fc_level < 1 or self.fc_level > 10:
+            raise ValueError("FC level must be between 1 and 10.")
         values = self.model_dump()
-        negatives = [name for name, value in values.items() if value < 0]
+        negatives = [name for name, value in values.items() if isinstance(value, (int, float)) and value < 0]
         if negatives:
             raise ValueError(f"Stats cannot be negative: {', '.join(negatives)}.")
         return self
 
-    def to_troop_type_stats(self) -> TroopTypeStats:
+    def to_troop_type_stats(self, troop_type: Optional[str] = None) -> TroopTypeStats:
+        resolved_type = troop_type or self.troop_type
+        attack_base = self.attack_base
+        defense_base = self.defense_base
+        health_base = self.health_base
+        lethality_base = self.lethality_base
+        if resolved_type:
+            base = get_troop_base_stats(resolved_type, self.tier, self.fc_level)
+            attack_base = base.attack
+            defense_base = base.defense
+            health_base = base.health
+            lethality_base = base.lethality
+        skill_mods = expected_skill_modifiers(resolved_type, self.fc_level) if resolved_type else {"damage_up": 0, "defense_up": 0, "damage_taken_down": 0}
         return TroopTypeStats(
-            attack=self.attack_base,
-            defense=self.defense_base,
-            health=self.health_base,
-            lethality=self.lethality_base,
-            attack_bonus=self.attack_pct     / 100.0,
-            defense_bonus=self.defense_pct   / 100.0,
+            attack=attack_base,
+            defense=defense_base,
+            health=health_base,
+            lethality=lethality_base,
+            attack_bonus=self.attack_pct / 100.0,
+            defense_bonus=(self.defense_pct / 100.0) + skill_mods["defense_up"],
             health_bonus=self.health_pct     / 100.0,
             lethality_bonus=self.lethality_pct / 100.0,
+            troop_skill_damage_bonus=skill_mods["damage_up"],
+            troop_skill_damage_taken_down=skill_mods["damage_taken_down"],
+            troop_skill_notes=skill_mods["skills"],
         )
 
 
@@ -209,9 +233,9 @@ class ArmyInput(BaseModel):
         return ArmyStats(
             name=self.name,
             joiners=self.joiners,
-            infantry=self.infantry.to_troop_type_stats(),
-            lancer=self.lancer.to_troop_type_stats(),
-            marksman=self.marksman.to_troop_type_stats(),
+            infantry=self.infantry.to_troop_type_stats("infantry"),
+            lancer=self.lancer.to_troop_type_stats("lancer"),
+            marksman=self.marksman.to_troop_type_stats("marksman"),
             formation=Formation(
                 infantry=self.formation.infantry,
                 lancer=self.formation.lancer,
@@ -225,6 +249,8 @@ class BattleRequest(BaseModel):
     attacker:   ArmyInput
     defender:   ArmyInput
     max_rounds: int = 20
+    simulation_mode: str = "expected_value"
+    monte_carlo_runs: int = 1000
 
 
 class ReverseOptimizeRequest(BaseModel):
@@ -253,9 +279,9 @@ class PresetSaveRequest(BaseModel):
         return ArmyStats(
             name=self.name,
             joiners=self.joiners,
-            infantry=self.infantry.to_troop_type_stats(),
-            lancer=self.lancer.to_troop_type_stats(),
-            marksman=self.marksman.to_troop_type_stats(),
+            infantry=self.infantry.to_troop_type_stats("infantry"),
+            lancer=self.lancer.to_troop_type_stats("lancer"),
+            marksman=self.marksman.to_troop_type_stats("marksman"),
             formation=Formation(
                 infantry=self.formation.infantry,
                 lancer=self.formation.lancer,
@@ -357,12 +383,107 @@ def _prediction_metadata(attacker: ArmyInput, defender: ArmyInput, result: dict)
         },
         "recommended_formation_adjustment": "Use /formation/optimize to compare standard formation presets for this matchup.",
         "recommended_stat_improvements": result.get("bottleneck"),
+        "effective_stats": {
+            "attacker": _effective_army_stats(attacker),
+            "defender": _effective_army_stats(defender),
+        },
+        "frontline": _frontline_summary(attacker, defender),
+        "backline_damage": _backline_summary(attacker, defender),
+        "main_reason": _main_reason(result),
+        "suggested_changes": _suggested_changes(attacker, defender, result),
         "warnings": [
             "Prediction uses configurable MVP constants pending calibration.",
             "Hero selections are recorded but unverified hero skill values are not applied.",
             "Scout stats are treated as already including base hero/stat bonuses to avoid double counting.",
         ],
     }
+
+
+def _effective_army_stats(army: ArmyInput) -> dict:
+    stats = army.to_army_stats()
+    return {
+        "infantry": stats.infantry.to_dict(),
+        "lancer": stats.lancer.to_dict(),
+        "marksman": stats.marksman.to_dict(),
+    }
+
+
+def _frontline_summary(attacker: ArmyInput, defender: ArmyInput) -> dict:
+    atk = attacker.to_army_stats().infantry.effective_defense
+    dfn = defender.to_army_stats().infantry.effective_defense
+    return {
+        "stronger_side": "attacker" if atk > dfn else "defender" if dfn > atk else "even",
+        "attacker_infantry_defense": round(atk, 6),
+        "defender_infantry_defense": round(dfn, 6),
+    }
+
+
+def _backline_summary(attacker: ArmyInput, defender: ArmyInput) -> dict:
+    atk = attacker.to_army_stats().marksman.effective_damage
+    dfn = defender.to_army_stats().marksman.effective_damage
+    return {
+        "stronger_side": "attacker" if atk > dfn else "defender" if dfn > atk else "even",
+        "attacker_marksman_damage": round(atk, 6),
+        "defender_marksman_damage": round(dfn, 6),
+    }
+
+
+def _main_reason(result: dict) -> str:
+    analysis = result.get("strength_analysis", {})
+    if not analysis:
+        return "Battle result is driven by total effective damage and defense."
+    strongest = max(analysis.items(), key=lambda item: item[1].get("net_advantage", 1))
+    return f"{strongest[0].title()} matchup has the largest edge ({strongest[1].get('status', 'EVEN')})."
+
+
+def _suggested_changes(attacker: ArmyInput, defender: ArmyInput, result: dict) -> list[str]:
+    suggestions = []
+    atk_stats = attacker.to_army_stats()
+    def_stats = defender.to_army_stats()
+    if atk_stats.formation.infantry < 0.45:
+        suggestions.append("Increase Infantry ratio for stronger frontline survival.")
+    if atk_stats.marksman.effective_damage < def_stats.marksman.effective_damage:
+        suggestions.append("Prioritize Marksman FC level or damage hero skills for backline pressure.")
+    if atk_stats.infantry.effective_defense < def_stats.infantry.effective_defense:
+        suggestions.append("Prioritize Infantry FC level, Infantry Defense, or Health upgrades.")
+    if not suggestions:
+        suggestions.append("Compare hero skill setup and FC priority; current ratio is not the obvious weakness.")
+    return suggestions
+
+
+def _monte_carlo_prediction(req: "BattleRequest") -> dict:
+    runs = max(50, min(int(req.monte_carlo_runs or 1000), 5000))
+    attacker_wins = 0
+    defender_wins = 0
+    draws = 0
+    base_attacker = req.attacker.model_dump()
+    base_defender = req.defender.model_dump()
+    for _ in range(runs):
+        atk = ArmyInput(**_jitter_army(base_attacker))
+        dfn = ArmyInput(**_jitter_army(base_defender))
+        result = _prediction_engine.predict(atk.to_army_stats(), dfn.to_army_stats(), max_rounds=req.max_rounds)
+        if result["winner"] == "attacker":
+            attacker_wins += 1
+        elif result["winner"] == "defender":
+            defender_wins += 1
+        else:
+            draws += 1
+    deterministic = _prediction_engine.predict(req.attacker.to_army_stats(), req.defender.to_army_stats(), max_rounds=req.max_rounds)
+    deterministic["winner"] = "attacker" if attacker_wins > defender_wins else "defender" if defender_wins > attacker_wins else "draw"
+    deterministic["win_probability"] = round((attacker_wins + draws * 0.5) / runs, 4)
+    deterministic["monte_carlo"] = {"runs": runs, "attacker_wins": attacker_wins, "defender_wins": defender_wins, "draws": draws}
+    return deterministic
+
+
+def _jitter_army(raw: dict) -> dict:
+    copy = json.loads(json.dumps(raw))
+    for troop in ("infantry", "lancer", "marksman"):
+        fc = int(copy[troop].get("fc_level", 10))
+        width = 0.015 + min(fc, 10) * 0.002
+        roll = 1 + random.uniform(-width, width)
+        copy[troop]["attack_pct"] = max(0, copy[troop].get("attack_pct", 0) * roll)
+        copy[troop]["lethality_pct"] = max(0, copy[troop].get("lethality_pct", 0) * roll)
+    return copy
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -388,6 +509,7 @@ async def root():
             "POST /presets":            "Save a preset",
             "GET  /presets/{name}":     "Load a preset",
             "DELETE /presets/{name}":   "Delete a preset",
+            "GET  /troop-stats":         "T10 Apex and T11 Helios troop base stats and skill rules",
         },
     }
 
@@ -428,6 +550,15 @@ async def combat_constants():
     return _load_json("config/combat_constants.json", {"constants": {}})
 
 
+@app.get("/troop-stats")
+async def troop_stats():
+    return {
+        "troop_stats": all_troop_stats(),
+        "troop_skill_rules": TROOP_SKILL_RULES,
+        "formula": "effective_stat = base_stat * (1 + scout_bonus_percent / 100), with hero/widget/troop skills kept as separate layers.",
+    }
+
+
 # ── Battle ───────────────────────────────────────────────────────────────────
 
 @app.post("/simulate-battle")
@@ -449,11 +580,15 @@ async def simulate_battle(req: BattleRequest):
 async def predict_outcome(req: BattleRequest):
     """V2 full prediction: win probability, strength analysis, bottleneck."""
     try:
-        result = _prediction_engine.predict(
-            req.attacker.to_army_stats(),
-            req.defender.to_army_stats(),
-            max_rounds=req.max_rounds,
-        )
+        if req.simulation_mode == "monte_carlo":
+            result = _monte_carlo_prediction(req)
+        else:
+            result = _prediction_engine.predict(
+                req.attacker.to_army_stats(),
+                req.defender.to_army_stats(),
+                max_rounds=req.max_rounds,
+            )
+        result["simulation_mode"] = req.simulation_mode
         result["metadata"] = _prediction_metadata(req.attacker, req.defender, result)
         return result
     except ValueError as e:
