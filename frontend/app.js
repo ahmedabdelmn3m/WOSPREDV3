@@ -44,6 +44,20 @@ function buildStats(side) {
   $(`${side}-stats`).innerHTML = troops.map((troop) => `
     <section class="troop-card">
       <h3>${label(troop)}</h3>
+      <div class="troop-base-grid">
+        <label>Tier
+          <select id="${side}-${troop}-tier">
+            <option value="10">T10 Apex</option>
+            <option value="11" selected>T11 Helios</option>
+          </select>
+        </label>
+        <label>FC Level
+          <select id="${side}-${troop}-fc">
+            ${Array.from({ length: 10 }, (_, i) => `<option value="${i + 1}" ${i === 9 ? 'selected' : ''}>FC${i + 1}</option>`).join('')}
+          </select>
+        </label>
+        <div id="${side}-${troop}-base-note" class="troop-base-note"></div>
+      </div>
       <div class="stat-grid">
         ${stats.map(([key, name]) => `
           <label>${name}<input id="${side}-${troop}-${key}" type="number" min="0" max="9999" value="0" /></label>
@@ -84,6 +98,18 @@ function readArmy(side) {
   troops.forEach((troop) => stats.forEach(([key]) => {
     army[troop][key] = number(`${side}-${troop}-${key}`);
   }));
+  troops.forEach((troop) => {
+    const base = selectedTroopBase(side, troop);
+    army[troop].troop_type = troop;
+    army[troop].tier = Number($(`${side}-${troop}-tier`)?.value || 11);
+    army[troop].fc_level = Number($(`${side}-${troop}-fc`)?.value || 10);
+    if (base) {
+      army[troop].attack_base = base.attack;
+      army[troop].defense_base = base.defense;
+      army[troop].health_base = base.health;
+      army[troop].lethality_base = base.lethality;
+    }
+  });
   return army;
 }
 
@@ -106,6 +132,10 @@ function writeArmy(side, army) {
   troops.forEach((troop) => stats.forEach(([key]) => {
     $(`${side}-${troop}-${key}`).value = army[troop]?.[key] ?? 0;
   }));
+  troops.forEach((troop) => {
+    if ($(`${side}-${troop}-tier`)) $(`${side}-${troop}-tier`).value = army[troop]?.tier || 11;
+    if ($(`${side}-${troop}-fc`)) $(`${side}-${troop}-fc`).value = army[troop]?.fc_level || 10;
+  });
   $(`${side}-form-infantry`).value = Math.round((army.formation?.infantry ?? 0.5) * 100);
   $(`${side}-form-lancer`).value = Math.round((army.formation?.lancer ?? 0.2) * 100);
   $(`${side}-form-marksman`).value = Math.round((army.formation?.marksman ?? 0.3) * 100);
@@ -158,6 +188,9 @@ function validateArmy(side) {
 function validatePredictionForm() {
   const errors = [];
   if (!text('battle-type')) errors.push('Battle type is required.');
+  if (text('simulation-mode') === 'monte_carlo' && (number('monte-carlo-runs') < 50 || number('monte-carlo-runs') > 5000)) {
+    errors.push('Monte Carlo runs must be between 50 and 5000.');
+  }
   return errors.concat(validateArmy('own'), validateArmy('enemy'));
 }
 
@@ -186,6 +219,7 @@ function updateFormation(side) {
   const lan = Math.round(totalTroops * number(`${side}-form-lancer`) / 100);
   const mrk = Math.max(0, totalTroops - inf - lan);
   $(`${side}-breakdown`).textContent = `Troops: ${format(inf)} infantry, ${format(lan)} lancer, ${format(mrk)} marksman`;
+  troops.forEach((troop) => updateTroopBaseNote(side, troop));
   return ok;
 }
 
@@ -277,6 +311,8 @@ function fillTestSide(side, formation, strengthMultiplier) {
   $(`${side}-name`).value = side === 'own' ? 'Sample Player' : 'Sample Enemy';
   $(`${side}-troops`).value = randomInt(850000, 1450000);
   troops.forEach((troop, index) => {
+    $(`${side}-${troop}-tier`).value = randomItem([10, 11]);
+    $(`${side}-${troop}-fc`).value = randomInt(5, 10);
     $(`${side}-form-${troop}`).value = formation[index];
     stats.forEach(([key]) => {
       const base = key === 'health_pct' || key === 'defense_pct' ? randomInt(850, 1650) : randomInt(950, 1850);
@@ -293,7 +329,14 @@ function fillTestSide(side, formation, strengthMultiplier) {
 async function runPrediction() {
   const errors = updateValidation();
   if (errors.length) return renderError(errors.join('<br>'));
-  const payload = { attacker: readArmy('own'), defender: readArmy('enemy'), battle_type: text('battle-type'), max_rounds: 20 };
+  const payload = {
+    attacker: readArmy('own'),
+    defender: readArmy('enemy'),
+    battle_type: text('battle-type'),
+    max_rounds: 20,
+    simulation_mode: text('simulation-mode') || 'expected_value',
+    monte_carlo_runs: Math.round(number('monte-carlo-runs') || 1000),
+  };
   renderLoading('Running prediction...');
   try {
     const result = await api('/predict-outcome', jsonOptions(payload));
@@ -315,6 +358,7 @@ async function runScenarios(payload, baseResult) {
   await Promise.all(copies.map(async ([name, mutate]) => {
     const next = JSON.parse(JSON.stringify(payload));
     mutate(next);
+    next.simulation_mode = 'expected_value';
     try {
       scenarios.push({ name, result: await api('/predict-outcome', jsonOptions(next)) });
     } catch {
@@ -403,6 +447,7 @@ function renderPrediction(result, payload, scenarios) {
       <h3>Why This Result Happened</h3>
       <div class="list">${reasons.map((item) => `<div class="list-item">${item}</div>`).join('')}</div>
       <h3>Stat Breakdown</h3>
+      ${renderEffectiveStats(meta.effective_stats)}
       ${renderAdvantageTable(advantages)}
       <h3>Scenario Comparison</h3>
       ${renderScenarioTable(scenarios)}
@@ -420,6 +465,20 @@ function renderAdvantageTable(rows) {
     <div class="table-wrap"><table class="result-table">
       <thead><tr><th>Category</th><th>Own</th><th>Enemy</th><th>Edge</th></tr></thead>
       <tbody>${rows.map((row) => `<tr><td>${row.label}</td><td>${row.own}</td><td>${row.enemy}</td><td class="${row.edgeClass}">${row.edge}</td></tr>`).join('')}</tbody>
+    </table></div>`;
+}
+
+function renderEffectiveStats(effectiveStats) {
+  if (!effectiveStats) return '';
+  const rows = [];
+  ['attacker', 'defender'].forEach((side) => troops.forEach((troop) => {
+    const item = effectiveStats[side]?.[troop] || {};
+    rows.push(`<tr><td>${label(side)}</td><td>${label(troop)}</td><td>${item.attack || 0}</td><td>${item.defense || 0}</td><td>${item.health || 0}</td><td>${item.lethality || 0}</td><td>${format(item.effective_damage)}</td><td>${format(item.effective_defense)}</td></tr>`);
+  }));
+  return `
+    <div class="table-wrap"><table class="result-table">
+      <thead><tr><th>Side</th><th>Troop</th><th>Base ATK</th><th>Base DEF</th><th>Base HP</th><th>Base LETH</th><th>Effective Damage</th><th>Effective Defense</th></tr></thead>
+      <tbody>${rows.join('')}</tbody>
     </table></div>`;
 }
 
@@ -640,6 +699,22 @@ function heroType(hero = {}) {
 
 function normalizeHeroes(heroes) {
   return heroes.map((hero) => ({ ...hero, type: hero.type || hero.specialty }));
+}
+
+function selectedTroopBase(side, troop) {
+  const data = window.WOS_TROOP_DATA;
+  if (!data) return null;
+  return data.getTroopStats(troop, Number($(`${side}-${troop}-tier`)?.value || 11), Number($(`${side}-${troop}-fc`)?.value || 10));
+}
+
+function updateTroopBaseNote(side, troop) {
+  const target = $(`${side}-${troop}-base-note`);
+  if (!target) return;
+  const base = selectedTroopBase(side, troop);
+  const skills = window.WOS_TROOP_DATA?.unlockedSkills(troop, Number($(`${side}-${troop}-fc`)?.value || 10)) || [];
+  target.textContent = base
+    ? `${base.familyName} FC${base.fcLevel}: ATK ${base.attack}, DEF ${base.defense}, HP ${base.health}, LETH ${base.lethality}. Skills: ${skills.map((s) => s.skillName).join(', ') || 'base skills'}`
+    : 'Troop base stats unavailable.';
 }
 
 function formationTotal(side) {
