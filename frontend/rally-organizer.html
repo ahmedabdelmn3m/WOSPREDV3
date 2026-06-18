@@ -6,145 +6,50 @@
   <title>WOS Rally Organizer</title>
   <style>
     :root {
-      --bg: #07090f;
-      --surface: #0d1421;
-      --card: #111c2e;
-      --input-bg: #0a1220;
-      --border: #1e3a5f;
-      --border-hi: #2a4a6f;
-      --ice: #00c8ff;
-      --win: #2ecc71;
-      --loss: #e74c3c;
-      --warn: #f39c12;
-      --txt: #d4e8f0;
-      --txt-dim: #7a99b8;
-      --txt-hi: #ffffff;
-      --radius: 8px;
+      --bg:#07090f; --surface:#0d1421; --card:#111c2e; --input-bg:#0a1220;
+      --border:#1e3a5f; --border-hi:#2a4a6f; --ice:#00c8ff; --win:#2ecc71;
+      --loss:#e74c3c; --warn:#f39c12; --txt:#d4e8f0; --txt-dim:#7a99b8;
+      --txt-hi:#fff; --radius:8px; --shadow:0 8px 32px rgba(0,0,0,.6);
     }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      min-height: 100vh;
-      padding: 16px;
-      background: var(--bg);
-      color: var(--txt);
-      font-family: "Segoe UI", system-ui, sans-serif;
-      font-size: 14px;
-    }
-    .app-header {
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      align-items: center;
-      background: linear-gradient(90deg, #060c18, #0d1a30);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 12px 20px;
-      margin-bottom: 14px;
-    }
-    .logo-title { font-size: 17px; font-weight: 800; color: var(--ice); letter-spacing: 2px; }
-    .logo-sub { display: block; font-size: 11px; color: var(--txt-dim); letter-spacing: 1px; }
-    .nav-links { display: flex; flex-wrap: wrap; gap: 8px; }
-    .nav-links a, button {
-      min-height: 36px;
-      padding: 8px 14px;
-      border-radius: var(--radius);
-      border: 1px solid var(--border-hi);
-      background: rgba(0,200,255,.12);
-      color: var(--ice);
-      font-weight: 700;
-      text-decoration: none;
-      cursor: pointer;
-    }
-    button.secondary { background: transparent; color: var(--txt); border-color: var(--border); }
-    input, select {
-      width: 100%;
-      min-height: 36px;
-      padding: 8px 10px;
-      background: var(--input-bg);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      color: var(--txt-hi);
-    }
-    label {
-      display: grid;
-      gap: 5px;
-      color: var(--txt-dim);
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: .5px;
-    }
-    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 16px;
-      margin-bottom: 12px;
-    }
-    .section-title {
-      color: var(--txt-dim);
-      font-size: 12px;
-      font-weight: 800;
-      letter-spacing: 1px;
-      margin-bottom: 10px;
-      text-transform: uppercase;
-    }
-    .field-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
-    .hero-grid { display: grid; gap: 8px; margin-top: 10px; }
-    .hero-row, .joiner-card {
-      display: grid;
-      grid-template-columns: 1fr 90px 110px;
-      gap: 8px;
-      padding: 12px;
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-    }
-    .joiner-card { grid-template-columns: 1fr 130px 130px 90px 110px; margin-bottom: 8px; }
-    .output-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-    .metric {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 12px;
-    }
-    .metric span { display: block; color: var(--txt-dim); font-size: 11px; text-transform: uppercase; }
-    .metric strong { display: block; margin-top: 4px; color: var(--txt-hi); font-size: 20px; }
-    .list { display: grid; gap: 8px; margin-top: 10px; }
-    .list-item {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 10px 12px;
-    }
-    .warn { color: var(--warn); }
-    .good { color: var(--win); }
-    .bad { color: var(--loss); }
-    .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-    .toast {
-      position: fixed;
-      left: 50%;
-      bottom: 24px;
-      transform: translateX(-50%);
-      display: none;
-      padding: 10px 20px;
-      border-radius: 20px;
-      background: var(--win);
-      color: #07100b;
-      font-weight: 800;
-    }
-    @media (max-width: 980px) {
-      .grid, .field-grid, .hero-row, .joiner-card, .output-grid { grid-template-columns: 1fr; }
-      .app-header { align-items: flex-start; flex-direction: column; }
-    }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; padding:16px; background:var(--bg); color:var(--txt); font-family:"Segoe UI",system-ui,sans-serif; font-size:14px; }
+    .app-header { display:flex; justify-content:space-between; gap:12px; align-items:center; background:linear-gradient(90deg,#060c18,#0d1a30); border:1px solid var(--border); border-radius:var(--radius); padding:12px 20px; margin-bottom:14px; }
+    .logo-title { font-size:17px; font-weight:800; color:var(--ice); letter-spacing:2px; }
+    .logo-sub { display:block; font-size:11px; color:var(--txt-dim); letter-spacing:1px; }
+    .nav-links,.actions,.button-row { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+    .nav-links a,button { min-height:36px; padding:8px 14px; border-radius:var(--radius); border:1px solid var(--border-hi); background:rgba(0,200,255,.12); color:var(--ice); font-weight:700; text-decoration:none; cursor:pointer; }
+    button.secondary { background:transparent; color:var(--txt); border-color:var(--border); }
+    button:disabled { opacity:.45; cursor:not-allowed; }
+    input,select { width:100%; min-height:36px; padding:8px 10px; background:var(--input-bg); border:1px solid var(--border); border-radius:var(--radius); color:var(--txt-hi); }
+    label { display:grid; gap:5px; color:var(--txt-dim); font-size:11px; text-transform:uppercase; letter-spacing:.5px; }
+    .grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px; margin-bottom:12px; }
+    .section-title { color:var(--txt-dim); font-size:12px; font-weight:800; letter-spacing:1px; margin-bottom:10px; text-transform:uppercase; }
+    .field-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
+    .hero-grid { display:grid; gap:8px; margin-top:10px; }
+    .hero-row,.joiner-card { display:grid; gap:8px; padding:12px; background:var(--card); border:1px solid var(--border); border-radius:var(--radius); }
+    .hero-row { grid-template-columns:1fr 90px 110px; }
+    .joiner-card { grid-template-columns:1fr 130px 1.3fr 90px 110px; margin-bottom:8px; }
+    .joiner-skill { grid-column:1 / -1; color:var(--txt-dim); font-size:12px; }
+    .output-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; }
+    .metric,.list-item { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:10px 12px; }
+    .metric span { display:block; color:var(--txt-dim); font-size:11px; text-transform:uppercase; }
+    .metric strong { display:block; margin-top:4px; color:var(--txt-hi); font-size:20px; }
+    .list { display:grid; gap:8px; margin-top:10px; }
+    .table-wrap { overflow-x:auto; }
+    table { width:100%; min-width:720px; border-collapse:collapse; }
+    th,td { padding:8px; border-bottom:1px solid var(--border); text-align:left; font-size:13px; }
+    th { color:var(--txt-dim); font-weight:700; }
+    .warn { color:var(--warn); } .good { color:var(--win); } .bad { color:var(--loss); }
+    .toast { position:fixed; left:50%; bottom:24px; transform:translateX(-50%); display:none; padding:10px 20px; border-radius:20px; background:var(--win); color:#07100b; font-weight:800; box-shadow:var(--shadow); }
+    @media (max-width:980px) { .grid,.field-grid,.hero-row,.joiner-card,.output-grid { grid-template-columns:1fr; } .app-header { align-items:flex-start; flex-direction:column; } }
   </style>
 </head>
 <body>
   <header class="app-header">
     <div>
       <div class="logo-title">WOS RALLY ORGANIZER</div>
-      <span class="logo-sub">Leader heroes, joiner captains, formation mix, copyable rally plan</span>
+      <span class="logo-sub">Leader full skills + 4 joiner primary skills</span>
     </div>
     <nav class="nav-links">
       <a href="index.html">Battle Predictor</a>
@@ -155,17 +60,11 @@
   <main>
     <div class="grid">
       <section class="card">
-        <div class="section-title">Leader Main March</div>
+        <div class="section-title">Rally Leader</div>
         <div class="field-grid">
           <label>Leader Name<input id="leader-name" value="Rally Leader" /></label>
           <label>Total Troops<input id="leader-troops" type="number" min="1" value="800000" /></label>
-          <label>Rally Type
-            <select id="rally-type">
-              <option value="attack">Attack</option>
-              <option value="defense">Defense</option>
-              <option value="bear">Bear / Beast</option>
-            </select>
-          </label>
+          <label>Battle Type<select id="rally-type"><option value="">Select battle type</option><option value="rally_attack">Rally attack</option><option value="garrison">Garrison</option><option value="bear">Bear / Beast</option></select></label>
         </div>
         <div class="field-grid" style="margin-top:10px">
           <label>Infantry %<input id="leader-form-infantry" type="number" min="0" max="100" value="50" /></label>
@@ -176,17 +75,27 @@
       </section>
 
       <section class="card">
-        <div class="section-title">Joiners - Captain Hero Only</div>
+        <div class="section-title">Rally Joiners - Captain / First Hero Only</div>
         <div id="joiners"></div>
       </section>
     </div>
 
     <section class="card">
-      <div class="section-title">Rally Output</div>
+      <div class="section-title">Validation</div>
       <div id="validation" class="list"></div>
+    </section>
+
+    <section class="card">
+      <div class="section-title">Rally Skill Summary</div>
+      <div id="skill-output"></div>
+    </section>
+
+    <section class="card">
+      <div class="section-title">Rally Formation & Output</div>
       <div id="output"></div>
       <div class="actions">
         <button id="copy-plan">Copy Rally Setup</button>
+        <button id="save-preset">Save Rally Preset</button>
         <button id="clear-plan" class="secondary">Clear</button>
       </div>
     </section>
@@ -198,37 +107,56 @@
   'use strict';
 
   const troops = ['infantry', 'lancer', 'marksman'];
+  const effects = ['attack_up', 'damage_up', 'attack_damage_up', 'lethality_up', 'defense_up', 'health_up', 'damage_taken_down'];
   const heroes = [
-    { id: 'natalia', name: 'Natalia', type: 'infantry', generation: 1, expedition: { attack_pct: 200.16, defense_pct: 200.16 }, skills: [] },
-    { id: 'jeronimo', name: 'Jeronimo', type: 'infantry', generation: 1, expedition: { attack_pct: 260.2, defense_pct: 260.2 }, skills: [] },
-    { id: 'molly', name: 'Molly', type: 'lancer', generation: 1, expedition: { attack_pct: 200.16, defense_pct: 200.16 }, skills: [] },
-    { id: 'zinman', name: 'Zinman', type: 'marksman', generation: 1, expedition: { attack_pct: 200.16, defense_pct: 200.16 }, skills: [] },
-    { id: 'flint', name: 'Flint', type: 'infantry', generation: 2, expedition: { attack_pct: 240.19, defense_pct: 240.19 }, skills: [] },
-    { id: 'philly', name: 'Philly', type: 'lancer', generation: 2, expedition: { attack_pct: 240.19, defense_pct: 240.19 }, skills: [] },
-    { id: 'alonso', name: 'Alonso', type: 'marksman', generation: 2, expedition: { attack_pct: 240.19, defense_pct: 240.19 }, skills: [] },
-    { id: 'logan', name: 'Logan', type: 'infantry', generation: 3, expedition: { attack_pct: 290.23, defense_pct: 290.23 }, skills: [] },
-    { id: 'mia', name: 'Mia', type: 'lancer', generation: 3, expedition: { attack_pct: 290.23, defense_pct: 290.23 }, skills: [] },
-    { id: 'greg', name: 'Greg', type: 'marksman', generation: 3, expedition: { attack_pct: 290.23, defense_pct: 290.23 }, skills: [] },
-    { id: 'ahmose', name: 'Ahmose', type: 'infantry', generation: 4, expedition: { attack_pct: 370.29, defense_pct: 370.29 }, skills: [] },
-    { id: 'reina', name: 'Reina', type: 'lancer', generation: 4, expedition: { attack_pct: 370.29, defense_pct: 370.29 }, skills: [] },
-    { id: 'lynn', name: 'Lynn', type: 'marksman', generation: 4, expedition: { attack_pct: 370.29, defense_pct: 370.29 }, skills: [] },
-    { id: 'hector', name: 'Hector', type: 'infantry', generation: 5, expedition: { attack_pct: 444.35, defense_pct: 444.35 }, skills: [] },
-    { id: 'norah', name: 'Norah', type: 'lancer', generation: 5, expedition: { attack_pct: 444.35, defense_pct: 444.35 }, skills: [] },
-    { id: 'gwen', name: 'Gwen', type: 'marksman', generation: 5, expedition: { attack_pct: 444.35, defense_pct: 444.35 }, skills: [] },
+    hero('natalia','Natalia','infantry',1,[],true),
+    hero('jeronimo','Jeronimo','infantry',1,[skill(1,'Primary Expedition Skill','damage_up',25,'all_troops')],true),
+    hero('molly','Molly','lancer',1,[]),
+    hero('zinman','Zinman','marksman',1,[]),
+    hero('flint','Flint','infantry',2,[skill(1,'Primary Expedition Skill','damage_up',100,'infantry')],true),
+    hero('philly','Philly','lancer',2,[skill(1,'Primary Expedition Skill','attack_up',15,'all_troops')]),
+    hero('alonso','Alonso','marksman',2,[],true),
+    hero('logan','Logan','infantry',3,[],true),
+    hero('mia','Mia','lancer',3,[],true),
+    hero('greg','Greg','marksman',3,[],true),
+    hero('jessie','Jessie','unknown',null,[skill(1,'Primary Expedition Skill','damage_up',25,'all_troops')]),
+    hero('jasser','Jasser','unknown',null,[skill(1,'Primary Expedition Skill','damage_up',25,'all_troops')]),
+    hero('seo-yoon','Seo-Yoon','unknown',null,[skill(1,'Primary Expedition Skill','damage_up',25,'all_troops','Corrected from old +50% attack-only model.')]),
+    hero('ahmose','Ahmose','infantry',4,[],true),
+    hero('reina','Reina','lancer',4,[skill(1,'Primary Expedition Skill','attack_damage_up',30,'all_troops')]),
+    hero('lynn','Lynn','marksman',4,[],true),
+    hero('hector','Hector','infantry',5,[],true),
+    hero('norah','Norah','lancer',5,[],true),
+    hero('gwen','Gwen','marksman',5,[],true),
   ];
   let lastPlan = '';
 
   const $ = (id) => document.getElementById(id);
   const num = (id) => Number($(id).value || 0);
   const fmt = (value) => Math.round(Number(value || 0)).toLocaleString();
-  const label = (value) => value.charAt(0).toUpperCase() + value.slice(1);
-
+  const label = (value) => value ? value.charAt(0).toUpperCase() + value.slice(1).replace(/_/g, ' ') : 'Unknown';
+  function hero(id,name,type,generation,expeditionSkills,widgetSupported=false) {
+    return { id, name, hero_type:type, type, generation, expedition_skills:expeditionSkills, widget:{ supported:widgetSupported, effect_type:null, value_pct_by_level:null, target_scope:null, notes:widgetSupported ? 'Widget supported; exact per-level values pending verification.' : 'No configured widget support.' } };
+  }
+  function skill(slot,name,effectType,valuePct,targetScope,notes='User-provided 4-star / level-5 primary expedition skill reference.') {
+    return { slot, name, effect_type:effectType, value_pct:valuePct, target_scope:targetScope, applies_to:'both', source:'user_provided', confidence:'medium', notes };
+  }
+  function emptyModifiers() {
+    return Object.fromEntries(troops.map((troop) => [troop, Object.fromEntries(effects.map((effect) => [effect, 0]))]));
+  }
   function options(type, placeholder) {
     return [`<option value="">${placeholder}</option>`]
-      .concat(heroes.filter((h) => !type || h.type === type).map((h) => `<option value="${h.id}">${h.name} - ${label(h.type)} Gen ${h.generation}</option>`))
+      .concat(heroes.filter((h) => !type || h.hero_type === type).map((h) => `<option value="${h.id}">${h.name} - ${label(h.hero_type)}${h.generation ? ` Gen ${h.generation}` : ''}</option>`))
       .join('');
   }
-
+  function readHero(id) { return heroes.find((item) => item.id === id); }
+  function primarySkill(heroData) { return (heroData?.expedition_skills || []).slice().sort((a,b) => a.slot - b.slot)[0] || null; }
+  function skillText(heroData) {
+    const primary = primarySkill(heroData);
+    if (!heroData) return 'Select a captain to preview primary skill.';
+    if (!primary) return `${heroData.name}: no verified primary skill value configured.`;
+    return `${heroData.name}: +${primary.value_pct}% ${label(primary.effect_type)} to ${label(primary.target_scope)} (${primary.source}, ${primary.confidence})`;
+  }
   function buildLeaderHeroes() {
     $('leader-heroes').innerHTML = troops.map((type) => `
       <div class="hero-row">
@@ -237,9 +165,8 @@
         <label>Widget<input id="leader-widget-${type}" type="number" min="1" max="10" value="1" /></label>
       </div>`).join('');
   }
-
   function buildJoiners() {
-    $('joiners').innerHTML = Array.from({ length: 4 }, (_, i) => {
+    $('joiners').innerHTML = Array.from({ length:4 }, (_, i) => {
       const n = i + 1;
       return `
         <div class="joiner-card">
@@ -248,52 +175,73 @@
           <label>Captain Hero<select id="joiner-${n}-hero">${options('', 'Select captain')}</select></label>
           <label>Stars<input id="joiner-${n}-stars" type="number" min="1" max="5" value="5" /></label>
           <label>Widget<input id="joiner-${n}-widget" type="number" min="1" max="10" value="1" /></label>
+          <div id="joiner-${n}-skill" class="joiner-skill">Select a captain to preview primary skill.</div>
         </div>`;
     }).join('');
   }
-
-  function readHero(id) {
-    return heroes.find((hero) => hero.id === id);
-  }
-
   function readLeaderHeroes() {
     return troops.map((type) => {
-      const hero = readHero($(`leader-hero-${type}`).value);
-      return hero ? { ...hero, stars: num(`leader-stars-${type}`), widget: num(`leader-widget-${type}`) } : null;
+      const heroData = readHero($(`leader-hero-${type}`).value);
+      return heroData ? { ...heroData, stars:num(`leader-stars-${type}`), widget_level:num(`leader-widget-${type}`) } : null;
     }).filter(Boolean);
   }
-
   function readJoiners() {
-    return Array.from({ length: 4 }, (_, i) => {
+    return Array.from({ length:4 }, (_, i) => {
       const n = i + 1;
-      const hero = readHero($(`joiner-${n}-hero`).value);
-      return {
-        name: $(`joiner-${n}-name`).value.trim() || `Joiner ${n}`,
-        troops: num(`joiner-${n}-troops`),
-        captain: hero ? { ...hero, stars: num(`joiner-${n}-stars`), widget: num(`joiner-${n}-widget`) } : null,
-      };
+      const heroData = readHero($(`joiner-${n}-hero`).value);
+      return { name:$(`joiner-${n}-name`).value.trim() || `Joiner ${n}`, troops:num(`joiner-${n}-troops`), captain:heroData ? { ...heroData, stars:num(`joiner-${n}-stars`), widget_level:num(`joiner-${n}-widget`) } : null };
     });
   }
-
-  function validate() {
+  function validateMainMarch(leaderHeroes) {
     const errors = [];
+    const ids = leaderHeroes.map((h) => h.id);
+    const types = leaderHeroes.map((h) => h.hero_type);
+    if (leaderHeroes.length !== 3 || !troops.every((type) => types.includes(type))) errors.push('Main march must include exactly 1 Infantry, 1 Lancer, and 1 Marksman hero.');
+    if (new Set(ids).size !== ids.length) errors.push('Duplicate hero ID selected.');
+    if (new Set(types).size !== types.length) errors.push('Duplicate hero type selected.');
+    return errors;
+  }
+  function validate() {
     const leaderHeroes = readLeaderHeroes();
-    const leaderTypes = leaderHeroes.map((hero) => hero.type);
     const joiners = readJoiners();
-    if (num('leader-troops') <= 0) errors.push('Leader troop count must be greater than 0.');
-    if (num('leader-form-infantry') + num('leader-form-lancer') + num('leader-form-marksman') !== 100) errors.push('Leader formation must equal 100%.');
-    if (leaderHeroes.length !== 3) errors.push('Leader must select exactly 3 heroes.');
-    troops.forEach((type) => { if (!leaderTypes.includes(type)) errors.push(`Leader needs one ${label(type)} hero.`); });
-    leaderHeroes.forEach((hero) => { if (hero.stars < 1 || hero.stars > 5 || hero.widget <= 0) errors.push(`${hero.name} stars/widget are invalid.`); });
+    const errors = [];
+    if (!$('rally-type').value) errors.push('Battle type selected where needed.');
+    if (num('leader-troops') <= 0) errors.push('Troop count > 0.');
+    if (num('leader-form-infantry') + num('leader-form-lancer') + num('leader-form-marksman') !== 100) errors.push('Formation total must equal 100%.');
+    errors.push(...validateMainMarch(leaderHeroes));
+    leaderHeroes.forEach((h) => { if (h.widget_level <= 0) errors.push('Widget level cannot be 0.'); });
     joiners.forEach((joiner, index) => {
       if (joiner.troops <= 0) errors.push(`Joiner ${index + 1} troop count must be greater than 0.`);
       if (!joiner.captain) errors.push(`Joiner ${index + 1} needs a captain hero.`);
-      if (joiner.captain && (joiner.captain.stars < 1 || joiner.captain.stars > 5 || joiner.captain.widget <= 0)) errors.push(`${joiner.name} captain stars/widget are invalid.`);
+      if (joiner.captain?.widget_level <= 0) errors.push('Widget level cannot be 0.');
     });
     $('validation').innerHTML = errors.length ? errors.map((err) => `<div class="list-item bad">${err}</div>`).join('') : '<div class="list-item good">Rally setup is complete.</div>';
+    $('copy-plan').disabled = errors.length > 0;
+    $('save-preset').disabled = errors.length > 0;
     return errors;
   }
-
+  function applySkill(modifiers, skillData) {
+    if (!skillData || !effects.includes(skillData.effect_type)) return;
+    const targets = skillData.target_scope === 'all_troops' ? troops : [skillData.target_scope];
+    targets.forEach((troop) => { if (modifiers[troop]) modifiers[troop][skillData.effect_type] += skillData.value_pct / 100; });
+  }
+  function skillBreakdown(heroData, skillData, source) {
+    return { hero:heroData.name, source, skill:skillData ? `${label(skillData.effect_type)} +${skillData.value_pct}% to ${label(skillData.target_scope)}` : 'No configured verified skill', dataSource:skillData?.source || 'unknown', confidence:skillData?.confidence || 'low' };
+  }
+  function calculateSkills(leaderHeroes, joiners) {
+    const modifiers = emptyModifiers();
+    const breakdown = [];
+    leaderHeroes.forEach((heroData) => {
+      (heroData.expedition_skills || []).forEach((skillData) => { applySkill(modifiers, skillData); breakdown.push(skillBreakdown(heroData, skillData, 'Leader full skill')); });
+      if (!(heroData.expedition_skills || []).length) breakdown.push(skillBreakdown(heroData, null, 'Leader full skill'));
+    });
+    joiners.slice(0, 4).forEach((joiner, index) => {
+      const primary = primarySkill(joiner.captain);
+      applySkill(modifiers, primary);
+      breakdown.push(skillBreakdown(joiner.captain || { name:`Joiner ${index + 1}` }, primary, `Joiner ${index + 1} primary skill`));
+    });
+    return { modifiers, breakdown };
+  }
   function formationTotals(joiners) {
     const leaderTroops = num('leader-troops');
     const totals = {
@@ -301,48 +249,45 @@
       lancer: leaderTroops * num('leader-form-lancer') / 100,
       marksman: leaderTroops * num('leader-form-marksman') / 100,
     };
-    joiners.forEach((joiner) => {
-      const type = joiner.captain?.type;
-      if (type) totals[type] += joiner.troops;
-    });
+    joiners.forEach((joiner) => { const type = joiner.captain?.hero_type; if (troops.includes(type)) totals[type] += joiner.troops; });
     totals.total = totals.infantry + totals.lancer + totals.marksman;
     return totals;
   }
-
-  function skillSummary(leaderHeroes, joiners) {
-    const leaderAttack = leaderHeroes.reduce((sum, hero) => sum + Number(hero.expedition?.attack_pct || 0), 0);
-    const leaderDefense = leaderHeroes.reduce((sum, hero) => sum + Number(hero.expedition?.defense_pct || 0), 0);
-    const captainCount = joiners.filter((joiner) => joiner.captain).length;
-    return {
-      leaderAttack,
-      leaderDefense,
-      captainCount,
-      appliedNote: 'Leader expedition stats are listed from hero records. Joiner captains are counted as first-hero captain slots, but detailed captain skill modifiers remain pending verified mapping.',
-    };
+  function renderSkillSummary(skillResult) {
+    $('skill-output').innerHTML = `
+      <div class="table-wrap"><table>
+        <thead><tr><th>Troop</th><th>Attack Up</th><th>Damage Up</th><th>Attack Damage Up</th><th>Lethality Up</th><th>Damage Taken Down</th></tr></thead>
+        <tbody>${troops.map((troop) => `<tr><td>${label(troop)}</td><td>${pct(skillResult.modifiers[troop].attack_up)}</td><td>${pct(skillResult.modifiers[troop].damage_up)}</td><td>${pct(skillResult.modifiers[troop].attack_damage_up)}</td><td>${pct(skillResult.modifiers[troop].lethality_up)}</td><td>${pct(skillResult.modifiers[troop].damage_taken_down)}</td></tr>`).join('')}</tbody>
+      </table></div>
+      <div class="list">${skillResult.breakdown.map((item) => `<div class="list-item"><strong>${item.source}:</strong> ${item.hero} - ${item.skill} <span class="warn">${item.dataSource}, ${item.confidence}</span></div>`).join('')}</div>`;
   }
-
   function render() {
-    const errors = validate();
     const leaderHeroes = readLeaderHeroes();
     const joiners = readJoiners();
+    joiners.forEach((joiner, index) => { $(`joiner-${index + 1}-skill`).textContent = skillText(joiner.captain); });
+    const errors = validate();
+    const skillResult = calculateSkills(leaderHeroes, joiners);
     const totals = formationTotals(joiners);
-    const skill = skillSummary(leaderHeroes, joiners);
     const infPct = totals.total ? totals.infantry / totals.total * 100 : 0;
     const lanPct = totals.total ? totals.lancer / totals.total * 100 : 0;
     const mrkPct = totals.total ? totals.marksman / totals.total * 100 : 0;
-    const balanceNotes = [
-      infPct < 35 ? '<span class="warn">Infantry front line is light.</span>' : '<span class="good">Infantry coverage is acceptable.</span>',
-      lanPct > 45 ? '<span class="warn">Lancer-heavy setup; confirm that is intentional.</span>' : '<span class="good">Lancer share is controlled.</span>',
-      mrkPct > 45 ? '<span class="warn">Marksman-heavy setup; watch front-line durability.</span>' : '<span class="good">Marksman share is controlled.</span>',
-    ];
+    const avgDamage = troops.reduce((sum, troop) => sum + skillResult.modifiers[troop].damage_up + skillResult.modifiers[troop].attack_damage_up, 0) / 3;
+    const avgAttack = troops.reduce((sum, troop) => sum + skillResult.modifiers[troop].attack_up, 0) / 3;
+    const power = totals.total * (1 + avgDamage + avgAttack * .35);
+    const corrections = [];
+    if (infPct < 40) corrections.push('Your rally is Infantry-light. Consider increasing Infantry share to improve frontline survival.');
+    if (mrkPct > 45) corrections.push('Marksman share is high. Make sure Infantry can survive long enough for back row damage.');
+    if (!corrections.length) corrections.push('Formation balance looks usable. Compare against scout stats before launching.');
+    renderSkillSummary(skillResult);
     lastPlan = [
       `Rally Organizer - ${$('leader-name').value.trim() || 'Rally Leader'}`,
-      `Rally type: ${$('rally-type').value}`,
+      `Battle type: ${$('rally-type').value || 'missing'}`,
       `Total troops: ${fmt(totals.total)}`,
       `Formation: Infantry ${infPct.toFixed(1)}%, Lancer ${lanPct.toFixed(1)}%, Marksman ${mrkPct.toFixed(1)}%`,
-      `Leader heroes: ${leaderHeroes.map((h) => `${h.name} (${h.type}, ${h.stars} star, widget ${h.widget})`).join(', ')}`,
+      `Leader heroes: ${leaderHeroes.map((h) => `${h.name} (${h.hero_type}, widget ${h.widget_level})`).join(', ')}`,
       `Joiner captains: ${joiners.map((j) => `${j.name}: ${j.captain ? j.captain.name : 'missing'} (${fmt(j.troops)} troops)`).join('; ')}`,
-      `Skill note: ${skill.appliedNote}`,
+      `Average damage modifiers: ${(avgDamage * 100).toFixed(1)}%; average attack modifiers: ${(avgAttack * 100).toFixed(1)}%`,
+      `Correction: ${corrections.join(' ')}`,
     ].join('\n');
     $('output').innerHTML = `
       <div class="output-grid">
@@ -352,34 +297,45 @@
         <div class="metric"><span>Marksman</span><strong>${fmt(totals.marksman)} (${mrkPct.toFixed(1)}%)</strong></div>
       </div>
       <div class="list">
-        <div class="list-item"><strong>Leader Hero Expedition Totals:</strong> Attack +${skill.leaderAttack.toFixed(2)}%, Defense +${skill.leaderDefense.toFixed(2)}%</div>
-        <div class="list-item"><strong>Joiner Captain Slots:</strong> ${skill.captainCount}/4 selected. ${skill.appliedNote}</div>
-        <div class="list-item"><strong>Formation Summary:</strong> ${balanceNotes.join(' ')}</div>
-        <div class="list-item"><strong>Rally Status:</strong> ${errors.length ? '<span class="bad">Needs fixes before sharing.</span>' : '<span class="good">Ready to share.</span>'}</div>
+        <div class="list-item"><strong>Rally power estimate:</strong> ${fmt(power)} <span class="warn">transparent estimate, not hidden WOS formula precision</span></div>
+        <div class="list-item"><strong>Effective damage modifiers:</strong> average +${(avgDamage * 100).toFixed(1)}%</div>
+        <div class="list-item"><strong>Effective attack modifiers:</strong> average +${(avgAttack * 100).toFixed(1)}%</div>
+        <div class="list-item"><strong>Strengths:</strong> ${topStrength(skillResult.modifiers)}</div>
+        <div class="list-item"><strong>Weaknesses:</strong> ${errors.length ? 'Input is incomplete or invalid.' : weakestNote(skillResult.modifiers)}</div>
+        <div class="list-item"><strong>Recommended correction:</strong> ${corrections.join(' ')}</div>
       </div>`;
   }
-
+  function pct(value) { return `${(value * 100).toFixed(1)}%`; }
+  function topStrength(modifiers) {
+    const rows = troops.map((troop) => [troop, modifiers[troop].damage_up + modifiers[troop].attack_damage_up + modifiers[troop].attack_up]);
+    rows.sort((a,b) => b[1] - a[1]);
+    return `${label(rows[0][0])} has the strongest configured modifier stack at +${(rows[0][1] * 100).toFixed(1)}%.`;
+  }
+  function weakestNote(modifiers) {
+    const rows = troops.map((troop) => [troop, modifiers[troop].damage_up + modifiers[troop].attack_damage_up + modifiers[troop].attack_up]);
+    rows.sort((a,b) => a[1] - b[1]);
+    return `${label(rows[0][0])} has the lowest configured modifier support.`;
+  }
+  function savePreset() {
+    const presets = JSON.parse(localStorage.getItem('wos-rally-presets') || '[]');
+    presets.unshift({ id: crypto.randomUUID(), created_at:new Date().toISOString(), plan:lastPlan });
+    localStorage.setItem('wos-rally-presets', JSON.stringify(presets.slice(0,20)));
+    toast('Rally preset saved.');
+  }
   function clear() {
-    document.querySelectorAll('input').forEach((input) => {
-      if (input.type === 'number') input.value = input.id.includes('troops') ? '0' : '1';
-      else input.value = '';
-    });
+    document.querySelectorAll('input').forEach((input) => { input.value = input.type === 'number' ? (input.id.includes('troops') ? '0' : '1') : ''; });
     document.querySelectorAll('select').forEach((select) => { select.selectedIndex = 0; });
-    $('leader-form-infantry').value = 50;
-    $('leader-form-lancer').value = 20;
-    $('leader-form-marksman').value = 30;
+    $('leader-form-infantry').value = 50; $('leader-form-lancer').value = 20; $('leader-form-marksman').value = 30;
     render();
   }
-
   function toast(message) {
-    $('toast').textContent = message;
-    $('toast').style.display = 'block';
+    $('toast').textContent = message; $('toast').style.display = 'block';
     setTimeout(() => { $('toast').style.display = 'none'; }, 2200);
   }
-
   document.addEventListener('input', render);
   document.addEventListener('change', render);
   $('copy-plan').addEventListener('click', () => navigator.clipboard.writeText(lastPlan).then(() => toast('Rally setup copied.')));
+  $('save-preset').addEventListener('click', savePreset);
   $('clear-plan').addEventListener('click', clear);
   buildLeaderHeroes();
   buildJoiners();
