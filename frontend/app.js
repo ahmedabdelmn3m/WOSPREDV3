@@ -25,6 +25,8 @@ const fallbackHeroes = [
   { id: 'norah', name: 'Norah', type: 'lancer', specialty: 'lancer', generation: 5 },
   { id: 'gwen', name: 'Gwen', type: 'marksman', specialty: 'marksman', generation: 5 },
 ];
+const attackFormations = [[50, 20, 30], [55, 20, 25]];
+const defenseFormations = [[60, 20, 20], [60, 40, 0]];
 const state = { heroes: fallbackHeroes, lastPrediction: null, lastFormation: null, lastDecisionText: '' };
 
 const $ = (id) => document.getElementById(id);
@@ -69,8 +71,10 @@ function buildStats(side) {
 
 function buildHeroRows(side) {
   $(`${side}-heroes`).innerHTML = troops.map((troop) => {
+    const availableHeroes = heroesByType(troop);
+    const typedHeroes = availableHeroes.length ? availableHeroes : fallbackHeroes.filter((hero) => heroType(hero) === troop);
     const options = [`<option value="">Select ${label(troop)} hero</option>`]
-      .concat(heroesByType(troop).map((h) => `<option value="${h.id}">${h.name} - Gen ${h.generation}</option>`))
+      .concat(typedHeroes.map((h) => `<option value="${h.id}">${h.name} - Gen ${h.generation}</option>`))
       .join('');
     return `
       <div class="hero-row" data-required-type="${troop}">
@@ -298,8 +302,8 @@ function applyParsedStats(side, parsed) {
 }
 
 function fillTestPredictor() {
-  const ownFormation = randomItem([[50, 20, 30], [60, 40, 0], [60, 20, 20], [55, 20, 25]]);
-  const enemyFormation = randomItem([[50, 20, 30], [60, 40, 0], [60, 20, 20], [55, 20, 25]]);
+  const ownFormation = randomItem(attackFormations);
+  const enemyFormation = randomItem(defenseFormations);
   $('battle-type').value = 'solo_attack';
   fillTestSide('own', ownFormation, 1.06);
   fillTestSide('enemy', enemyFormation, 0.98);
@@ -318,8 +322,12 @@ function fillTestSide(side, formation, strengthMultiplier) {
       const base = key === 'health_pct' || key === 'defense_pct' ? randomInt(850, 1650) : randomInt(950, 1850);
       $(`${side}-${troop}-${key}`).value = Math.round(base * strengthMultiplier);
     });
-    const hero = randomItem(heroesByType(troop).slice(-3)) || heroesByType(troop)[0];
-    if (hero) $(`${side}-hero-${troop}`).value = hero.id;
+    const fallbackIds = { infantry: 'hector', lancer: 'norah', marksman: 'gwen' };
+    const select = $(`${side}-hero-${troop}`);
+    const preferred = heroesByType(troop).slice(-3);
+    const hero = randomItem(preferred.length ? preferred : heroesByType(troop));
+    const targetId = optionExists(select, fallbackIds[troop]) ? fallbackIds[troop] : hero?.id || firstOptionValue(select);
+    if (targetId) select.value = targetId;
     $(`${side}-hero-stars-${troop}`).value = 5;
     $(`${side}-hero-widget-${troop}`).value = randomInt(4, 10);
   });
@@ -563,8 +571,11 @@ async function checkApi() {
   };
   try {
     await api('/health');
-    const heroes = await api('/hero-definitions');
-    state.heroes = normalizeHeroes(heroes.heroes || fallbackHeroes);
+    let heroes = await api('/rally-hero-definitions');
+    if (!Array.isArray(heroes.heroes) || heroes.heroes.length === 0) {
+      heroes = await api('/hero-definitions');
+    }
+    state.heroes = normalizeHeroes((heroes.heroes || []).length ? heroes.heroes : fallbackHeroes);
   } catch (err) {
     console.warn('Prediction service is unavailable:', err.message);
     state.heroes = fallbackHeroes;
@@ -707,7 +718,7 @@ function heroesByType(type) {
 }
 
 function heroType(hero = {}) {
-  return hero.type || hero.specialty || '';
+  return hero.type || hero.specialty || hero.hero_type || '';
 }
 
 function normalizeHeroes(heroes) {
@@ -745,6 +756,8 @@ function format(value) { return Number(value || 0).toLocaleString(); }
 function round(value) { return Math.round(Number(value || 0) * 10) / 10; }
 function randomInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
 function randomItem(items) { return items[Math.floor(Math.random() * items.length)]; }
+function optionExists(select, value) { return !!select && Array.from(select.options).some((option) => option.value === value); }
+function firstOptionValue(select) { return select ? Array.from(select.options).map((option) => option.value).find(Boolean) : ''; }
 function label(value) { return value.charAt(0).toUpperCase() + value.slice(1); }
 function sideLabel(side) { return side === 'own' ? 'Own march' : 'Enemy march'; }
 function escapeHtml(value) {
