@@ -25,6 +25,8 @@ const fallbackHeroes = [
   { id: 'norah', name: 'Norah', type: 'lancer', specialty: 'lancer', generation: 5 },
   { id: 'gwen', name: 'Gwen', type: 'marksman', specialty: 'marksman', generation: 5 },
 ];
+const attackFormations = [[50, 20, 30], [55, 20, 25]];
+const defenseFormations = [[60, 20, 20], [60, 40, 0]];
 const state = { heroes: fallbackHeroes, lastPrediction: null, lastFormation: null, lastDecisionText: '' };
 
 const $ = (id) => document.getElementById(id);
@@ -300,8 +302,8 @@ function applyParsedStats(side, parsed) {
 }
 
 function fillTestPredictor() {
-  const ownFormation = randomItem([[50, 20, 30], [60, 40, 0], [60, 20, 20], [55, 20, 25]]);
-  const enemyFormation = randomItem([[50, 20, 30], [60, 40, 0], [60, 20, 20], [55, 20, 25]]);
+  const ownFormation = randomItem(attackFormations);
+  const enemyFormation = randomItem(defenseFormations);
   $('battle-type').value = 'solo_attack';
   fillTestSide('own', ownFormation, 1.06);
   fillTestSide('enemy', enemyFormation, 0.98);
@@ -569,8 +571,11 @@ async function checkApi() {
   };
   try {
     await api('/health');
-    const heroes = await api('/hero-definitions');
-    state.heroes = normalizeHeroes(heroes.heroes || fallbackHeroes);
+    let heroes = await api('/rally-hero-definitions');
+    if (!Array.isArray(heroes.heroes) || heroes.heroes.length === 0) {
+      heroes = await api('/hero-definitions');
+    }
+    state.heroes = normalizeHeroes((heroes.heroes || []).length ? heroes.heroes : fallbackHeroes);
   } catch (err) {
     console.warn('Prediction service is unavailable:', err.message);
     state.heroes = fallbackHeroes;
