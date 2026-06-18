@@ -1,10 +1,10 @@
 """
-BattleSimulator — runs a complete round-based battle between two ArmyStats objects.
+BattleSimulator â€” runs a complete round-based battle between two ArmyStats objects.
 
 Rules (matches spec):
 - Both sides strike simultaneously each round.
 - Battle ends when one side hits 0 troops, OR max_rounds is reached.
-- Deep copies are used — original ArmyStats objects are never mutated.
+- Deep copies are used â€” original ArmyStats objects are never mutated.
 - simulate_full() returns the complete result dict used by the API.
 """
 
@@ -27,9 +27,9 @@ class BattleSimulator:
             skill_engine=skill_engine,
         )
 
-    # ─────────────────────────────────────────────────────────────────────
+    # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     #  Core simulation loop
-    # ─────────────────────────────────────────────────────────────────────
+    # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     def simulate(
         self,
@@ -39,9 +39,9 @@ class BattleSimulator:
     ) -> Tuple[str, List[dict]]:
         """
         Run the battle.  Returns (winner, round_history).
-        winner ∈ { "attacker", "defender", "draw" }
+        winner âˆˆ { "attacker", "defender", "draw" }
         """
-        # Work on deep copies — never mutate the caller's data
+        # Work on deep copies â€” never mutate the caller's data
         atk = copy.deepcopy(attacker)
         dfn = copy.deepcopy(defender)
 
@@ -49,17 +49,17 @@ class BattleSimulator:
 
         for round_num in range(1, max_rounds + 1):
             # Snapshot troop counts BEFORE the round fires
-            # (combat is simultaneous — both strikes land even if one side dies)
+            # (combat is simultaneous â€” both strikes land even if one side dies)
             atk_before = atk.troop_count
             dfn_before = dfn.troop_count
 
             round_result = self.resolver.resolve_turn(atk, dfn, round_num)
             history.append(round_result)
 
-            # ── Elimination checks ────────────────────────────────────────
+            # â”€â”€ Elimination checks â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             both_dead = atk.troop_count <= 0 and dfn.troop_count <= 0
             if both_dead:
-                # Simultaneous elimination → whoever started the round with
+                # Simultaneous elimination â†’ whoever started the round with
                 # more troops "wins" (they inflicted the killing blow first)
                 winner = "attacker" if atk_before >= dfn_before else "defender"
                 return winner, history
@@ -70,7 +70,7 @@ class BattleSimulator:
             if atk.troop_count <= 0:
                 return "defender", history
 
-        # ── Max rounds hit — compare survivors ───────────────────────────
+        # â”€â”€ Max rounds hit â€” compare survivors â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         if atk.troop_count > dfn.troop_count:
             return "attacker", history
         elif dfn.troop_count > atk.troop_count:
@@ -78,9 +78,9 @@ class BattleSimulator:
         else:
             return "draw", history
 
-    # ─────────────────────────────────────────────────────────────────────
+    # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     #  Full result (used by CombatEngine / API)
-    # ─────────────────────────────────────────────────────────────────────
+    # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     def simulate_full(
         self,
@@ -112,6 +112,15 @@ class BattleSimulator:
         # Sum casualties across all rounds
         atk_casualties = sum(r["attacker"]["casualties"] for r in history)
         dfn_casualties = sum(r["defender"]["casualties"] for r in history)
+
+        # A battle ends when one side is out of troops. If the summary winner
+        # is decided by elimination, the losing side cannot keep survivors.
+        if winner == "attacker":
+            dfn_remaining = 0
+            dfn_casualties = dfn_initial
+        elif winner == "defender":
+            atk_remaining = 0
+            atk_casualties = atk_initial
 
         return {
             "winner":        winner,
