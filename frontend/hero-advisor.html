@@ -11,7 +11,7 @@
   <header class="topbar">
     <div>
       <strong>Rally Leader Hero Advisor</strong>
-      <span>Compare rally leader heroes, replacements, investment, and source confidence</span>
+      <span>Compare rally leader hero formations by real hero stats, skills, widgets, and combat goal.</span>
     </div>
   </header>
 
@@ -35,6 +35,13 @@
     </section>
 
     <section class="advisor-section">
+      <h2>Choose Rally Goal</h2>
+      <label>Rally goal
+        <select id="rally-goal"></select>
+      </label>
+    </section>
+
+    <section class="advisor-section">
       <div class="section-head">
         <h2>Your Current Rally Heroes</h2>
         <span class="hint">All 3 rally leader heroes are scored.</span>
@@ -45,7 +52,11 @@
     <section class="advisor-section">
       <div class="section-head">
         <h2>Heroes to Compare</h2>
-        <button id="add-comparison" type="button">Add comparison hero</button>
+        <div class="action-row">
+          <button data-add-comparison="infantry" type="button">Add Infantry comparison</button>
+          <button data-add-comparison="lancer" type="button">Add Lancer comparison</button>
+          <button data-add-comparison="marksman" type="button">Add Marksman comparison</button>
+        </div>
       </div>
       <div class="preset-buttons">
         <button data-preset="1">Preset 1</button>
@@ -63,6 +74,7 @@
   </main>
 
   <script src="src/data/heroDatabase.js"></script>
+  <script src="src/formationProfileCalculator.js"></script>
   <script src="src/heroAdvisorRules.js"></script>
   <script src="heroAdvisor.js"></script>
 </body>
