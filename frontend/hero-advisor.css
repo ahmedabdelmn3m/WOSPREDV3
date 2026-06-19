@@ -72,13 +72,17 @@
 .advisor-fields,
 .comparison-fields {
   display: grid;
-  grid-template-columns: 1.5fr .7fr .8fr 1fr;
+  grid-template-columns: 1.5fr .7fr .8fr .8fr .8fr .8fr;
   gap: 8px;
   align-items: end;
 }
 
 .comparison-fields {
-  grid-template-columns: 1.3fr .8fr .7fr .8fr 1fr auto;
+  grid-template-columns: 1.3fr .8fr .7fr .8fr .8fr .8fr .8fr auto;
+}
+
+.mini-actions {
+  margin-top: 8px;
 }
 
 .source-list {
