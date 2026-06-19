@@ -1,204 +1,216 @@
 (function () {
-  const SCORING_CONFIG = {
-    weights: {
-      generationScore: 0.25,
-      starScore: 0.20,
-      widgetScore: 0.20,
-      expeditionSkillScore: 0.15,
-      rallyLeaderRoleScore: 0.15,
-      dataConfidenceScore: 0.05,
-    },
-    generationScores: {
-      1: 30,
-      2: 40,
-      3: 50,
-      4: 60,
-      5: 70,
-      6: 80,
-      7: 90,
-    },
-    confidenceScores: {
-      wiki: 90,
-      community: 75,
-      manual: 60,
-      unverified: 40,
-    },
+  const goals = {
+    balanced: 'Balanced rally',
+    damage: 'More damage',
+    survival: 'More survival',
+    antiHealth: 'Counter high-health enemy',
+    antiDefense: 'Counter high-defense enemy',
+    antiLethality: 'Counter high-lethality enemy',
+    reduceLosses: 'Reduce wounded/losses',
+    aggressive: 'Aggressive rally against weaker enemy',
+    safer: 'Safer rally against stronger enemy',
   };
 
-  function normalizeStar(level) {
-    return Math.max(0, Math.min(5, Number(level || 0))) * 20;
-  }
+  function analyzeRallySetup(currentFormation, comparisonHeroes, selectedGoal, heroDb) {
+    const combinations = generateFormationCombinations(currentFormation, comparisonHeroes);
+    const profiles = combinations.map((formation) => {
+      const profile = window.WOS_FORMATION_PROFILE.calculateFormationProfile(formation, heroDb);
+      const categoryScores = scoreProfile(profile);
+      return {
+        formation,
+        profile,
+        categoryScores,
+        goalScore: scoreForGoal(categoryScores, selectedGoal),
+      };
+    }).sort((a, b) => b.goalScore - a.goalScore);
 
-  function normalizeWidget(level) {
-    return Math.max(0, Math.min(10, Number(level || 0))) * 10;
-  }
+    const selectedBest = profiles[0];
+    const bestBalanced = bestBy(profiles, 'balanced');
+    const bestDamage = bestBy(profiles, 'damage');
+    const bestSurvival = bestBy(profiles, 'survival');
+    const bestAntiHealth = bestBy(profiles, 'antiHealth');
+    const bestAntiDefense = bestBy(profiles, 'antiDefense');
+    const bestAntiLethality = bestBy(profiles, 'antiLethality');
+    const current = profiles.find((item) => sameFormation(item.formation, currentFormation)) || profiles[profiles.length - 1];
+    const deltaProfile = diffProfiles(current?.profile, selectedBest?.profile);
+    const explanation = generateRecommendationExplanation(currentFormation, selectedBest?.formation || [], deltaProfile, selectedGoal, selectedBest?.profile);
 
-  function normalizeGeneration(generation) {
-    const gen = Number(generation || 0);
-    if (gen >= 8) return 100;
-    return SCORING_CONFIG.generationScores[gen] || 20;
-  }
-
-  function normalizeSkill(level) {
-    if (level === 'unknown' || level === undefined || level === null || level === '') return 50;
-    return Math.max(1, Math.min(5, Number(level || 1))) * 20;
-  }
-
-  function confidenceScore(confidence) {
-    return SCORING_CONFIG.confidenceScores[confidence] || 40;
-  }
-
-  function effectiveRoleRating(hero) {
-    const override = hero.manualOverrides?.roleRatings?.rallyLeader;
-    const calibrated = hero.reportCalibration?.adjustedRallyLeaderRating;
-    if (Number.isFinite(calibrated)) return calibrated;
-    if (Number.isFinite(override)) return override;
-    if (Number.isFinite(hero.roleRatings?.rallyLeader)) return hero.roleRatings.rallyLeader;
-
-    let inferred = normalizeGeneration(hero.generation) * 0.45;
-    inferred += hero.subClass === 'combat' ? 20 : 8;
-    const text = [
-      hero.widget?.rallyLeaderEffect,
-      hero.widget?.description,
-      hero.skills?.expeditionSkill1?.description,
-      hero.skills?.expeditionSkill2?.description,
-      hero.skills?.expeditionSkill3?.description,
-    ].join(' ').toLowerCase();
-    if (/rallied|rally/.test(text)) inferred += 20;
-    if (/damage|attack|defense|health|lethality|taken/.test(text)) inferred += 10;
-    return Math.max(0, Math.min(100, Math.round(inferred)));
-  }
-
-  function scoreHero(selection) {
-    const hero = selection.hero;
-    const parts = {
-      generationScore: normalizeGeneration(hero.generation),
-      starScore: normalizeStar(selection.stars),
-      widgetScore: normalizeWidget(selection.widgetLevel),
-      expeditionSkillScore: normalizeSkill(selection.skillLevel),
-      rallyLeaderRoleScore: effectiveRoleRating(hero),
-      dataConfidenceScore: confidenceScore(hero.dataConfidence),
-    };
-    const total = Object.entries(SCORING_CONFIG.weights).reduce((sum, [key, weight]) => sum + parts[key] * weight, 0);
     return {
-      total: Math.round(total * 10) / 10,
-      parts,
+      selectedGoal,
+      combinations: profiles,
+      selectedBest,
+      current,
+      categoryWinners: {
+        balanced: bestBalanced,
+        damage: bestDamage,
+        survival: bestSurvival,
+        antiHealth: bestAntiHealth,
+        antiDefense: bestAntiDefense,
+        antiLethality: bestAntiLethality,
+      },
+      explanation,
     };
   }
 
-  function analyzeRallySetup(current, comparisons) {
-    const warnings = [
-      'This MVP does not include troop count, chief gear, charms, pets, buffs, formation, enemy stats, or full battle simulation.',
-      'Wiki/community hero data is the baseline. Future battle report calibration can adjust ratings without deleting source values.',
-    ];
-    const replacements = [];
-    const keep = [];
-    const recommended = [];
-    const allByType = { infantry: [], lancer: [], marksman: [] };
-
-    [...current, ...comparisons].forEach((selection) => {
+  function generateFormationCombinations(currentFormation, comparisonHeroes) {
+    const bySlot = { infantry: [], lancer: [], marksman: [] };
+    [...currentFormation, ...comparisonHeroes].forEach((selection) => {
       if (!selection?.hero) return;
-      const scored = { ...selection, score: scoreHero(selection) };
-      const type = selection.slotType || selection.hero.troopType;
-      if (allByType[type]) allByType[type].push(scored);
-      if (selection.hero.troopType !== type) {
-        warnings.push(`${selection.hero.name} is ${selection.hero.troopType}, so using them in a ${type} slot is cross-type and experimental.`);
-      }
-      if (selection.hero.dataConfidence === 'unverified') {
-        warnings.push(`${selection.hero.name} has unverified data and should be checked before making expensive upgrade decisions.`);
-      }
-      if (hasMissingCoreData(selection.hero)) {
-        warnings.push(`${selection.hero.name} has incomplete skill/widget/stat data. Recommendation leans more on generation and investment.`);
-      }
+      const slot = selection.slotType || selection.hero.troopType;
+      if (!bySlot[slot]) return;
+      const sameType = selection.hero.troopType === slot;
+      bySlot[slot].push({ ...selection, crossType: !sameType });
     });
-
-    ['infantry', 'lancer', 'marksman'].forEach((type) => {
-      const currentHero = current.find((item) => item.slotType === type);
-      const currentScored = currentHero ? { ...currentHero, score: scoreHero(currentHero) } : null;
-      const sameTypeCandidates = allByType[type].filter((item) => item.hero.troopType === type);
-      const best = sameTypeCandidates.sort((a, b) => b.score.total - a.score.total)[0] || currentScored;
-      if (!best) return;
-      recommended.push(best);
-      if (currentScored && best.hero.id !== currentScored.hero.id && best.score.total > currentScored.score.total + 2) {
-        replacements.push({
-          from: currentScored,
-          to: best,
-          reason: replacementReason(currentScored, best),
-        });
-      } else if (currentScored) {
-        keep.push({
-          hero: currentScored,
-          reason: keepReason(currentScored, best),
-        });
-      }
+    Object.keys(bySlot).forEach((slot) => {
+      const unique = new Map();
+      bySlot[slot].filter((item) => !item.crossType).forEach((item) => unique.set(item.hero.id, item));
+      if (!unique.size) bySlot[slot].forEach((item) => unique.set(item.hero.id, item));
+      bySlot[slot] = Array.from(unique.values());
     });
+    const combos = [];
+    bySlot.infantry.forEach((infantry) => bySlot.lancer.forEach((lancer) => bySlot.marksman.forEach((marksman) => {
+      combos.push([infantry, lancer, marksman]);
+    })));
+    return combos;
+  }
 
-    const currentScore = average(current.map((item) => scoreHero(item).total));
-    const recommendedScore = average(recommended.map((item) => item.score.total));
-    const confidence = confidenceLevel(current, comparisons, warnings, replacements);
-
+  function scoreProfile(profile) {
+    const r = profile.rawStats;
+    const e = profile.combatEffects;
+    const attack = r.infantryAttack + r.lancerAttack + r.marksmanAttack + r.allTroopsAttack * 3;
+    const defense = r.infantryDefense + r.lancerDefense + r.marksmanDefense + r.allTroopsDefense * 3;
+    const health = r.infantryHealth + r.lancerHealth + r.marksmanHealth + r.allTroopsHealth * 3;
+    const lethality = r.infantryLethality + r.lancerLethality + r.marksmanLethality + r.allTroopsLethality * 3;
+    const damage = attack * 0.35 + lethality * 0.45 + e.damageDealtUp * 0.45 + e.enemyDamageTakenUp * 0.55 + e.extraDamageChance * 0.35 + e.extraAttackChance * 0.35 + e.roundBasedEffects * 0.2;
+    const survival = health * 0.4 + defense * 0.35 + e.damageTakenDown * 0.75 + e.enemyDamageDealtDown * 0.6 + e.dodgeChance * 0.45 + r.infantryHealth * 0.2 + r.infantryDefense * 0.2;
+    const antiHealth = lethality * 0.6 + e.damageDealtUp * 0.4 + e.enemyHealthDown * 0.75 + e.roundBasedEffects * 0.35 + e.extraDamageChance * 0.25;
+    const antiDefense = lethality * 0.55 + attack * 0.25 + e.enemyDefenseDown * 0.8 + e.damageDealtUp * 0.35 + e.enemyDamageTakenUp * 0.35;
+    const antiLethality = health * 0.45 + defense * 0.35 + e.damageTakenDown * 0.8 + e.enemyDamageDealtDown * 0.7 + r.infantryHealth * 0.2;
     return {
-      currentScore,
-      recommendedScore,
-      recommended,
-      replacements,
-      keep,
-      confidence,
-      warnings: unique(warnings),
-      scoringConfig: SCORING_CONFIG,
+      balanced: round((damage + survival) / 2),
+      damage: round(damage),
+      survival: round(survival),
+      antiHealth: round(antiHealth),
+      antiDefense: round(antiDefense),
+      antiLethality: round(antiLethality),
+      reduceLosses: round(survival * 0.75 + antiLethality * 0.25),
+      aggressive: round(damage * 0.8 + antiDefense * 0.2),
+      safer: round(survival * 0.65 + damage * 0.2 + antiLethality * 0.15),
     };
   }
 
-  function hasMissingCoreData(hero) {
-    return !hero.sourceUrl || hero.dataConfidence === 'unverified' || !hero.skills?.expeditionSkill1?.name || !hero.widget?.name;
+  function scoreForGoal(scores, goal) {
+    return scores[goal] ?? scores.balanced;
   }
 
-  function replacementReason(current, next) {
-    const reasons = [];
-    if (current.hero.troopType === next.hero.troopType) reasons.push(`${next.hero.name} is a same-type ${next.hero.troopType} replacement.`);
-    if ((next.hero.generation || 0) > (current.hero.generation || 0)) reasons.push(`${next.hero.name} is later generation (${next.hero.generation}) than ${current.hero.name} (${current.hero.generation}).`);
-    if (next.score.parts.starScore >= current.score.parts.starScore) reasons.push('Star investment is equal or better.');
-    if (next.score.parts.widgetScore >= current.score.parts.widgetScore) reasons.push('Widget investment is equal or better.');
-    if (next.hero.widget?.rallyLeaderEffect) reasons.push(`Widget note: ${next.hero.widget.rallyLeaderEffect}.`);
-    reasons.push('For PvP rally leaders, all 3 selected heroes matter; this is not rally joiner first-skill-only logic.');
-    return reasons.join(' ');
+  function bestBy(profiles, key) {
+    return profiles.slice().sort((a, b) => (b.categoryScores[key] || 0) - (a.categoryScores[key] || 0))[0];
   }
 
-  function keepReason(current, best) {
-    if (best && best.hero.id !== current.hero.id) {
-      return `Keep ${current.hero.name} for now because ${best.hero.name} does not beat the current investment by enough to recommend a swap.`;
+  function diffProfiles(currentProfile, recommendedProfile) {
+    const diff = { rawStats: {}, combatEffects: {} };
+    if (!currentProfile || !recommendedProfile) return diff;
+    Object.keys(recommendedProfile.rawStats).forEach((key) => {
+      diff.rawStats[key] = round((recommendedProfile.rawStats[key] || 0) - (currentProfile.rawStats[key] || 0));
+    });
+    Object.keys(recommendedProfile.combatEffects).forEach((key) => {
+      diff.combatEffects[key] = round((recommendedProfile.combatEffects[key] || 0) - (currentProfile.combatEffects[key] || 0));
+    });
+    return diff;
+  }
+
+  function generateRecommendationExplanation(currentFormation, recommendedFormation, deltaProfile, selectedGoal, profile) {
+    const replacements = [];
+    ['infantry', 'lancer', 'marksman'].forEach((slot, index) => {
+      const current = currentFormation.find((item) => item.slotType === slot) || currentFormation[index];
+      const recommended = recommendedFormation.find((item) => item.slotType === slot) || recommendedFormation[index];
+      if (!current || !recommended || current.hero.id === recommended.hero.id) return;
+      replacements.push({
+        from: current.hero.name,
+        to: recommended.hero.name,
+        slot,
+        reason: replacementReason(current, recommended, selectedGoal),
+      });
+    });
+    const missing = profile?.missingData || [];
+    return {
+      summary: `Recommended formation for ${goals[selectedGoal] || goals.balanced}: ${formationName(recommendedFormation)}.`,
+      replacements,
+      useWhen: useWhen(selectedGoal),
+      doNotUseWhen: [
+        'Older current heroes have much higher stars, widget, or active skill levels than the tested replacements.',
+        'You are joining a rally instead of leading it; joiner logic is different.',
+        'You need Bear Trap, Crazy Joe, or garrison optimization instead of PvP rally leading.',
+        'The recommendation depends on a hero with missing skill/widget data you have not verified.',
+      ],
+      confidence: confidenceFor(recommendedFormation, missing),
+      missingData: missing,
+      deltaProfile,
+    };
+  }
+
+  function replacementReason(current, recommended, goal) {
+    const investmentGap = investmentScore(recommended) - investmentScore(current);
+    if (investmentGap < -25) {
+      return `Keep caution: ${recommended.hero.name} has a better profile candidate path, but ${current.hero.name} has much higher current investment. Upgrade ${recommended.hero.name} before replacing.`;
     }
-    return `Keep ${current.hero.name}; no same-type comparison hero clearly improves this slot.`;
+    const parts = [
+      `${recommended.hero.name} is a same-type ${recommended.hero.troopType} replacement for ${current.hero.name}.`,
+    ];
+    if ((recommended.hero.generation || 0) > (current.hero.generation || 0)) parts.push(`It is later generation (${recommended.hero.generation} vs ${current.hero.generation}).`);
+    if (goal === 'damage' || goal === 'aggressive') parts.push('The selected goal values Attack, Lethality, Damage Dealt, and extra damage effects.');
+    if (goal === 'survival' || goal === 'safer' || goal === 'reduceLosses') parts.push('The selected goal values Health, Defense, Damage Taken reduction, and frontline durability.');
+    parts.push('For rally leaders, all 3 selected heroes matter.');
+    return parts.join(' ');
   }
 
-  function confidenceLevel(current, comparisons, warnings, replacements) {
-    const pool = [...current, ...comparisons].filter((item) => item?.hero);
-    const sameTypeOnly = comparisons.every((item) => item.hero?.troopType === item.slotType);
-    const completeInputs = pool.every((item) => item.stars !== '' && item.widgetLevel !== '' && item.skillLevel !== '');
-    const trustedData = pool.every((item) => ['wiki', 'community'].includes(item.hero.dataConfidence) && item.hero.sourceUrl);
-    const missingWarnings = warnings.some((warning) => /incomplete|unverified|cross-type/i.test(warning));
-    if (sameTypeOnly && completeInputs && trustedData && !missingWarnings) return 'High';
-    if (sameTypeOnly && trustedData && replacements.length >= 0) return 'Medium';
-    return 'Low';
+  function useWhen(goal) {
+    const common = ['You are starting PvP rallies as the rally leader.', 'The tested replacement heroes have similar star/widget/skill investment.'];
+    const map = {
+      balanced: ['You want a general rally profile without overcommitting to damage or survival.'],
+      damage: ['You need more damage pressure, lethality, extra damage, or enemy damage taken pressure.'],
+      survival: ['You are facing stronger targets and need more Health, Defense, and damage reduction.'],
+      antiHealth: ['The enemy has high Health and you need lethality or sustained damage pressure.'],
+      antiDefense: ['The enemy has high Defense and you need lethality, Attack, or enemy-defense pressure.'],
+      antiLethality: ['The enemy has high Lethality and you need safer frontline durability.'],
+      reduceLosses: ['You want to reduce wounded/losses more than maximize damage.'],
+      aggressive: ['The enemy is weaker and you want faster pressure.'],
+      safer: ['The enemy is stronger and you want a safer rally profile.'],
+    };
+    return common.concat(map[goal] || map.balanced);
   }
 
-  function average(values) {
-    const valid = values.filter((value) => Number.isFinite(value));
-    if (!valid.length) return 0;
-    return Math.round((valid.reduce((sum, value) => sum + value, 0) / valid.length) * 10) / 10;
+  function confidenceFor(formation, missing) {
+    if (formation.some((item) => item.crossType) || missing.length > 6) return 'Low';
+    if (missing.length > 0 || formation.some((item) => item.hero.dataConfidence === 'unverified')) return 'Medium';
+    return 'High';
   }
 
-  function unique(values) {
-    return Array.from(new Set(values));
+  function investmentScore(selection) {
+    const stars = Number(selection.starLevel ?? selection.stars ?? 0) * 20;
+    const widget = Number(selection.widgetLevel ?? 0) * 10;
+    const skills = Object.values(selection.expeditionSkillLevels || {}).reduce((sum, level) => sum + (level === 'unknown' ? 50 : Number(level) * 20), 0) / 3;
+    return stars * 0.45 + widget * 0.35 + skills * 0.2;
+  }
+
+  function sameFormation(a, b) {
+    return formationName(a) === formationName(b);
+  }
+
+  function formationName(formation) {
+    return (formation || []).map((item) => item.hero?.name || 'Unknown').join(' / ');
+  }
+
+  function round(value) {
+    return Math.round(Number(value || 0) * 10) / 10;
   }
 
   window.WOS_HERO_ADVISOR_RULES = {
-    SCORING_CONFIG,
-    scoreHero,
+    goals,
     analyzeRallySetup,
-    normalizeStar,
-    normalizeWidget,
-    normalizeGeneration,
-    normalizeSkill,
+    generateFormationCombinations,
+    scoreProfile,
+    generateRecommendationExplanation,
+    formationName,
   };
 })();
