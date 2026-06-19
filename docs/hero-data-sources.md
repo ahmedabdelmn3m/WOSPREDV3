@@ -5,59 +5,62 @@ Last checked: 2026-06-18
 Primary MVP source:
 - h5joy Whiteout Survival Hero Database: https://wos.h5joy-games.com/heroes/
 - Confidence label used in app: `community`
-- Reason: public, structured hero pages expose generation, troop type, subclass, exploration stats, expedition stats, skill text, and exclusive gear sections. The site states it is community-driven and fan-made, so this is not marked as official/wiki-verified.
+- Reason: h5joy exposes public hero generation pages and individual hero pages with troop type, subclass, exploration stats, expedition stats, skills, and exclusive gear/widget sections. It is community-driven, so the data is not marked as official.
 
-Source policy:
-- Store original source fields in `frontend/src/data/heroDatabase.js`.
-- Store manual corrections separately in `manualOverrides`.
-- Store future battle report changes separately in `reportCalibration`.
-- Do not delete source values when calibration or admin corrections are added.
+Implementation policy:
+- Missing values remain `null`.
+- Source values are stored in `frontend/src/data/heroDatabase.js`.
+- Future manual corrections go under `manualOverrides`.
+- Future battle-report calibration goes under `reportCalibration`.
+- Source values should not be deleted when overrides/calibration are added.
 
-## Source Summary
+## MVP Heroes
 
-| Hero | Source URL | Extracted | Missing | Confidence |
+| Hero | Source URL | Populated | Missing / Notes | Confidence |
 | --- | --- | --- | --- | --- |
-| Sergey | https://wos.h5joy-games.com/heroes/ | Name, provisional troop type | Exact page, stats, skills, widget | unverified |
-| Natalia | https://wos.h5joy-games.com/heroes/s1/natalia/ | Generation/type from Gen 1 list | Exact skills/widget not extracted | community |
-| Jeronimo | https://wos.h5joy-games.com/heroes/s1/jeronimo/ | Generation, infantry type, combat subclass, exploration stats, expedition attack/defense, skills, widget name/effects | Full backend-calibrated role rating | community |
-| Flint | https://wos.h5joy-games.com/heroes/s2/flint/ | Generation/type from Gen 2 list | Exact skills/widget not extracted | community |
-| Logan | https://wos.h5joy-games.com/heroes/s3/logan/ | Generation/type from Gen 3 list | Exact skills/widget not extracted | community |
-| Ahmose | https://wos.h5joy-games.com/heroes/s4/ahmose/ | Generation/type from Gen 4 list | Exact skills/widget not extracted | community |
-| Hector | https://wos.h5joy-games.com/heroes/s5/hector/ | Generation, infantry type, combat subclass, exploration stats, expedition attack/defense, skill names/text/values, widget name/effects | Battle-report calibration | community |
-| Jessie | https://wos.h5joy-games.com/heroes/ | Name, provisional lancer use | Exact page/type/stats/skills/widget | unverified |
-| Jasser | https://wos.h5joy-games.com/heroes/ | Name, provisional lancer use | Exact page/type/stats/skills/widget | unverified |
-| Molly | https://wos.h5joy-games.com/heroes/s1/molly/ | Generation/type from Gen 1 list | Exact skills/widget not extracted | community |
-| Mia | https://wos.h5joy-games.com/heroes/s3/mia/ | Generation/type from Gen 3 list | Exact skills/widget not extracted | community |
-| Reina | https://wos.h5joy-games.com/heroes/s4/reina/ | Generation, lancer type, combat subclass, exploration stats, expedition attack/defense, skill names/text/values, widget name/effects | Battle-report calibration | community |
-| Wayne | https://wos.h5joy-games.com/heroes/s6/wayne/ | Generation, marksman type, combat subclass, exploration stats, expedition attack/defense, skill names/text/values, widget name/effects | Prompt listed Wayne as a lancer comparison, but source identifies marksman | community |
-| Zinman | https://wos.h5joy-games.com/heroes/s1/zinman/ | Generation/type from Gen 1 list | Exact skills/widget not extracted | community |
-| Bahiti | https://wos.h5joy-games.com/heroes/ | Name, provisional marksman use | Exact page, stats, skills, widget | unverified |
-| Gina | https://wos.h5joy-games.com/heroes/ | Name, provisional marksman use | Exact page, stats, skills, widget | unverified |
-| Alonso | https://wos.h5joy-games.com/heroes/s2/alonso/ | Generation/type from Gen 2 list | Exact skills/widget not extracted | community |
-| Greg | https://wos.h5joy-games.com/heroes/s3/greg/ | Generation/type from Gen 3 list | Exact skills/widget not extracted | community |
-| Lynn | https://wos.h5joy-games.com/heroes/s4/lynn/ | Generation/type from Gen 4 list | Exact skills/widget not extracted | community |
-| Gwen | https://wos.h5joy-games.com/heroes/s5/gwen/ | Generation/type from Gen 5 list | Exact skills/widget not extracted | community |
+| Jeronimo | https://wos.h5joy-games.com/heroes/s1/jeronimo/ | Gen 1, infantry, combat, 5-star/max visible expedition stats, skill text/values, widget notes | Exact base stats by stars 0-4 | community |
+| Flint | https://wos.h5joy-games.com/heroes/s2/flint/ | Gen 2, infantry, combat, visible expedition stats, skills, widget notes | Exact base stats by stars 0-4 | community |
+| Logan | https://wos.h5joy-games.com/heroes/s3/logan/ | Gen 3 infantry identity | Detailed skill/widget values still need extraction | community |
+| Ahmose | https://wos.h5joy-games.com/heroes/s4/ahmose/ | Gen 4 infantry identity | Detailed skill/widget values still need extraction | community |
+| Hector | https://wos.h5joy-games.com/heroes/s5/hector/ | Gen 5, infantry, combat, visible expedition stats, skills, widget notes | Exact base stats by stars 0-4 | community |
+| Molly | https://wos.h5joy-games.com/heroes/s1/molly/ | Gen 1 lancer identity | Detailed skill/widget values still need extraction | community |
+| Mia | https://wos.h5joy-games.com/heroes/s3/mia/ | Gen 3, lancer, combat, visible expedition stats, skills, widget notes | Exact base stats by stars 0-4 | community |
+| Reina | https://wos.h5joy-games.com/heroes/s4/reina/ | Gen 4, lancer, combat, visible expedition stats, skills, widget notes | Exact base stats by stars 0-4 | community |
+| Norah / Nora | https://wos.h5joy-games.com/heroes/s5/norah/ | Gen 5, lancer, combat, visible expedition stats, skills, widget notes, `Nora` alias | Exact base stats by stars 0-4 | community |
+| Wayne | https://wos.h5joy-games.com/heroes/s6/wayne/ | Gen 6, visible stats, skills, widget notes | Source labels Wayne as marksmen, while prompt requests Wayne in Lancer MVP list. App keeps this ambiguity documented. | community |
+| Bahiti | https://wos.h5joy-games.com/heroes/ | Marksman MVP slot placeholder | Detailed page data needs verification | unverified |
+| Alonso | https://wos.h5joy-games.com/heroes/s2/alonso/ | Gen 2 marksman identity | Detailed skill/widget values still need extraction | community |
+| Greg | https://wos.h5joy-games.com/heroes/s3/greg/ | Gen 3 marksman identity | Detailed skill/widget values still need extraction | community |
+| Lynn | https://wos.h5joy-games.com/heroes/s4/lynn/ | Gen 4 marksman identity | Detailed skill/widget values still need extraction | community |
+| Gwen | https://wos.h5joy-games.com/heroes/s5/gwen/ | Gen 5, marksman, combat, visible expedition stats, skills, widget notes | Exact base stats by stars 0-4 | community |
 
-## Notes
+## Norah / Nora Spelling
 
-- h5joy's hero list documents generation groupings from Gen 1 through Gen 16 and links individual hero pages.
-- Individual checked pages for Jeronimo, Hector, Reina, and Wayne expose the detailed fields currently populated in the MVP database.
-- Fields not extracted are intentionally `null` or documented in `calibrationNotes`; no hidden percentages were invented.
-- Wayne is stored as Marksman because the checked source page labels Wayne as marksmen.
-- Zinman is stored as Marksman, not Lancer, pending any source that proves otherwise.
+The source page uses `Norah`. The app stores `aliases: ["Nora"]`, so user-facing matching can support both spellings.
 
-## Future Calibration Plan
+## Jessie Exclusion
 
-Battle report calibration should not overwrite source data. It should update:
+Jessie is excluded from Rally Leader MVP because she is mainly useful in Rally Joiner mode, not as a primary rally-leading lancer candidate. She can be added later to the Rally Joiner Advisor mode.
 
+## Formation Profile Notes
+
+The app calculates separate profile fields:
+- raw troop stats: attack, defense, health, lethality by troop type and all-troops fields
+- combat effects: damage dealt up, damage taken down, enemy damage changes, extra damage/attack chance, dodge, normal attack effects, round-based effects, conditional effects
+
+The app compares formations by goal-specific profile indicators. These are comparative indicators, not battle results.
+
+## Future Calibration
+
+Battle report calibration should update:
 - `reportCalibration.sampleSize`
-- `reportCalibration.adjustedRallyLeaderRating`
+- `reportCalibration.adjustedProfiles`
 - `reportCalibration.confidence`
 - `reportCalibration.notes`
 
 Manual admin corrections should update:
-
-- `manualOverrides.roleRatings`
+- `manualOverrides.enabled`
 - `manualOverrides.notes`
+- `manualOverrides.overriddenFields`
 
-The advisor rule engine should prefer battle-report calibration first, manual overrides second, then the original source-based role ratings.
+Future logic should keep the baseline source data and layer calibrated assumptions on top.
