@@ -97,7 +97,7 @@ def _cors_origin_regex() -> str | None:
     raw = os.getenv("CORS_ORIGIN_REGEX")
     if raw is not None:
         return raw.strip() or None
-    return r"https://wospredv3(?:-[a-z0-9-]+)?\.vercel\.app"
+    return r"https://wospredv-?3(?:-[a-z0-9-]+)?\.vercel\.app"
 
 # ── App ──────────────────────────────────────────────────────────────────────
 app = FastAPI(

@@ -29,7 +29,7 @@ The QA page also has a URL input for quick testing. It uses the same `localStora
 
 ## Railway CORS
 
-The backend allows localhost for development and the `wospredv3*.vercel.app` Vercel domain family by default. For a custom domain or a renamed Vercel project, set this Railway variable to the exact allowed frontend origins:
+The backend allows localhost for development and the `wospredv3*.vercel.app` / `wospredv-3*.vercel.app` Vercel domain family by default. For a custom domain or a renamed Vercel project, set this Railway variable to the exact allowed frontend origins:
 
 ```text
 CORS_ORIGINS=https://your-vercel-domain.vercel.app,https://your-custom-domain.com
