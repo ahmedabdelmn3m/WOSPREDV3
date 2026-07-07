@@ -92,6 +92,13 @@ def _cors_origins() -> list[str]:
         ]
     return [origin.strip() for origin in raw.split(",") if origin.strip()]
 
+
+def _cors_origin_regex() -> str | None:
+    raw = os.getenv("CORS_ORIGIN_REGEX")
+    if raw is not None:
+        return raw.strip() or None
+    return r"https://wospredv3(?:-[a-z0-9-]+)?\.vercel\.app"
+
 # ── App ──────────────────────────────────────────────────────────────────────
 app = FastAPI(
     title="WOS Battle Intelligence API",
@@ -102,6 +109,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_origins(),
+    allow_origin_regex=_cors_origin_regex(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

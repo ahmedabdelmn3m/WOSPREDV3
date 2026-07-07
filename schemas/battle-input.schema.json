@@ -1,0 +1,142 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/battle-input.schema.json",
+  "title": "Battle Prediction Input",
+  "type": "object",
+  "required": ["battleMode", "attacker", "defender", "march"],
+  "properties": {
+    "battleMode": {
+      "type": "string",
+      "enum": ["solo_city_attack", "city_rally", "tile_hit", "facility_fight", "defense"]
+    },
+    "attacker": { "$ref": "#/$defs/side" },
+    "defender": { "$ref": "#/$defs/side" },
+    "march": {
+      "type": "object",
+      "required": ["heroes", "troops", "formation"],
+      "properties": {
+        "heroes": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 3,
+          "items": { "$ref": "#/$defs/hero" }
+        },
+        "troops": { "$ref": "#/$defs/troopMix" },
+        "formation": {
+          "type": "string",
+          "enum": [
+            "balanced",
+            "infantry_heavy",
+            "lancer_heavy",
+            "marksman_heavy",
+            "defensive",
+            "burst",
+            "cleanup"
+          ]
+        },
+        "marchCapacity": { "type": "integer", "minimum": 0 },
+        "rallyCapacity": { "type": "integer", "minimum": 0 },
+        "targetLandingTime": { "type": "string", "format": "date-time" }
+      }
+    },
+    "context": {
+      "type": "object",
+      "properties": {
+        "serverAgeDays": { "type": "integer", "minimum": 0 },
+        "availableHeroGeneration": { "type": "integer", "minimum": 1 },
+        "hasCityBuff": { "type": "boolean" },
+        "hasAttackBuff": { "type": "boolean" },
+        "hasDefenseBuff": { "type": "boolean" },
+        "notes": { "type": "string" }
+      }
+    }
+  },
+  "$defs": {
+    "side": {
+      "type": "object",
+      "required": ["name", "stats", "troops"],
+      "properties": {
+        "name": { "type": "string" },
+        "furnaceLevel": { "type": "string" },
+        "profilePower": { "type": "integer", "minimum": 0 },
+        "sourceType": {
+          "type": "string",
+          "enum": ["manual", "ocr", "city_scout", "tile_scout", "battle_report", "estimated"]
+        },
+        "sourceConfidence": {
+          "type": "string",
+          "enum": ["high", "medium", "low"]
+        },
+        "stats": { "$ref": "#/$defs/combatStats" },
+        "troops": { "$ref": "#/$defs/troopMix" },
+        "heroes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/hero" }
+        },
+        "unknowns": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "research",
+              "chief_gear",
+              "chief_charms",
+              "hero_gear",
+              "pets",
+              "alliance_tech",
+              "temporary_buffs",
+              "reinforcements",
+              "skins",
+              "city_bonuses"
+            ]
+          }
+        }
+      }
+    },
+    "combatStats": {
+      "type": "object",
+      "properties": {
+        "infantryAttack": { "type": "number" },
+        "infantryDefense": { "type": "number" },
+        "infantryHealth": { "type": "number" },
+        "infantryLethality": { "type": "number" },
+        "lancerAttack": { "type": "number" },
+        "lancerDefense": { "type": "number" },
+        "lancerHealth": { "type": "number" },
+        "lancerLethality": { "type": "number" },
+        "marksmanAttack": { "type": "number" },
+        "marksmanDefense": { "type": "number" },
+        "marksmanHealth": { "type": "number" },
+        "marksmanLethality": { "type": "number" }
+      }
+    },
+    "troopMix": {
+      "type": "object",
+      "properties": {
+        "infantry": { "type": "integer", "minimum": 0 },
+        "lancer": { "type": "integer", "minimum": 0 },
+        "marksman": { "type": "integer", "minimum": 0 },
+        "highestTier": { "type": "string" }
+      }
+    },
+    "hero": {
+      "type": "object",
+      "required": ["name", "type"],
+      "properties": {
+        "name": { "type": "string" },
+        "type": { "type": "string", "enum": ["infantry", "lancer", "marksman"] },
+        "generation": { "type": "integer", "minimum": 1 },
+        "level": { "type": "integer", "minimum": 1 },
+        "stars": { "type": "number", "minimum": 0 },
+        "skillLevels": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 0 }
+        },
+        "role": {
+          "type": "string",
+          "enum": ["leader", "joiner", "defender", "replacement"]
+        }
+      }
+    }
+  }
+}

@@ -12,6 +12,12 @@
       <strong>WOS Battle Predictor</strong>
       <span>Scout stats, formation, heroes, prediction, calibration</span>
     </div>
+    <div class="topbar-actions">
+      <span id="version-label" class="version-label">WOSPREDV3 strategy-update-v1</span>
+      <button id="api-settings-button" type="button">API Settings</button>
+      <a class="qa-link" href="strategy-guide.html">Strategy Guide</a>
+      <a class="qa-link" href="qa.html">Live QA</a>
+    </div>
   </header>
 
   <nav class="tabs" aria-label="Main sections">
@@ -20,7 +26,24 @@
     <button class="tab" data-view="logs">Battle Logs</button>
     <a class="tab link-tab" href="rally-organizer.html">Rally Organizer</a>
     <a class="tab link-tab" href="hero-advisor.html">Hero Advisor</a>
+    <a class="tab link-tab" href="strategy-guide.html">Strategy Guide</a>
+    <a class="tab link-tab" href="qa.html">Live QA</a>
   </nav>
+
+  <div id="api-settings-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="api-settings-title">
+    <div>
+      <h2 id="api-settings-title">API Settings</h2>
+      <label>Railway API URL
+        <input id="api-url-input" type="url" placeholder="https://wospredv3-production.up.railway.app" />
+      </label>
+      <div id="api-url-current" class="hint"></div>
+      <div class="action-row modal-actions">
+        <button id="save-api-url" class="primary" type="button">Save & Reconnect</button>
+        <button id="reset-api-url" type="button">Use Default</button>
+        <button id="close-api-settings" type="button">Cancel</button>
+      </div>
+    </div>
+  </div>
 
   <main>
     <section id="predictor" class="view active">

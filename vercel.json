@@ -1,7 +1,4 @@
 {
   "version": 2,
-  "name": "wospredv3",
-  "rewrites": [
-    { "source": "/api/(.*)", "destination": "https://wospredv3.up.railway.app/$1" }
-  ]
+  "name": "wospredv3"
 }

@@ -30,7 +30,7 @@ const defenseFormations = [[60, 20, 20], [60, 40, 0]];
 const state = { heroes: fallbackHeroes, lastPrediction: null, lastFormation: null, lastDecisionText: '' };
 
 const $ = (id) => document.getElementById(id);
-const apiBase = () => (window.WOS_API_URL || 'http://localhost:8080').replace(/\/$/, '');
+const apiBase = () => (window.WOS_API_URL || window.WOS_DEFAULT_API_URL || 'https://wospredv3-production.up.railway.app').replace(/\/$/, '');
 const number = (id) => Number($(id)?.value || 0);
 const rawNumber = (id) => $(id)?.value ?? '';
 const text = (id) => ($(id)?.value || '').trim();
@@ -624,6 +624,75 @@ function bindEvents() {
   $('save-enemy-preset').addEventListener('click', () => saveLocalPreset('enemy'));
 }
 
+function bindSettingsModal() {
+  const modal = $('api-settings-modal');
+  const input = $('api-url-input');
+  if (!modal || !input) return;
+
+  const openModal = () => {
+    input.value = apiBase();
+    renderApiSettingsStatus();
+    modal.classList.remove('hidden');
+    input.focus();
+  };
+  const closeModal = () => modal.classList.add('hidden');
+
+  $('api-settings-button')?.addEventListener('click', openModal);
+  $('close-api-settings')?.addEventListener('click', closeModal);
+  modal.addEventListener('click', (event) => {
+    if (event.target === modal) closeModal();
+  });
+  $('save-api-url')?.addEventListener('click', () => {
+    const nextUrl = normalizeApiUrl(input.value);
+    if (!/^https?:\/\//i.test(nextUrl)) {
+      notice('api-url-current', 'Enter a full URL that starts with http:// or https://.');
+      return;
+    }
+    try {
+      localStorage.setItem(window.WOS_API_STORAGE_KEY || 'wos_api_url', nextUrl);
+    } catch {
+      notice('api-url-current', 'This browser blocked localStorage. The URL was not saved.');
+      return;
+    }
+    window.WOS_API_URL = nextUrl;
+    window.WOS_CONFIG = { ...(window.WOS_CONFIG || {}), apiUrl: nextUrl };
+    renderVersionLabel();
+    closeModal();
+    checkApi();
+    loadLogs();
+    renderToast('API URL saved.');
+  });
+  $('reset-api-url')?.addEventListener('click', () => {
+    try {
+      localStorage.removeItem(window.WOS_API_STORAGE_KEY || 'wos_api_url');
+    } catch {
+      // Ignore storage failures; the in-memory default still applies for this page load.
+    }
+    window.WOS_API_URL = window.WOS_DEFAULT_API_URL || 'https://wospredv3-production.up.railway.app';
+    window.WOS_CONFIG = { ...(window.WOS_CONFIG || {}), apiUrl: window.WOS_API_URL };
+    input.value = window.WOS_API_URL;
+    renderVersionLabel();
+    renderApiSettingsStatus();
+    checkApi();
+    loadLogs();
+  });
+}
+
+function renderVersionLabel() {
+  const version = window.WOS_APP_VERSION || {};
+  const label = version.label || 'WOSPREDV3 strategy-update-v1';
+  const commit = version.commit ? ` (${version.commit})` : '';
+  if ($('version-label')) $('version-label').textContent = `${label}${commit}`;
+  renderApiSettingsStatus();
+}
+
+function renderApiSettingsStatus() {
+  const target = $('api-url-current');
+  if (!target) return;
+  const override = safeStoredApiUrl();
+  target.textContent = `Current API: ${apiBase()}${override ? ' (browser override)' : ' (default)'}`;
+}
+
 function statAdvantages(own, enemy, meta = {}) {
   const rows = [];
   troops.forEach((troop) => stats.forEach(([key, name]) => {
@@ -748,6 +817,14 @@ function formationTotal(side) {
 function jsonOptions(body) {
   return { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
 }
+function normalizeApiUrl(value) { return String(value || '').trim().replace(/\/+$/, ''); }
+function safeStoredApiUrl() {
+  try {
+    return normalizeApiUrl(localStorage.getItem(window.WOS_API_STORAGE_KEY || 'wos_api_url'));
+  } catch {
+    return '';
+  }
+}
 function renderLoading(message) { $('prediction-output').innerHTML = `<div class="empty">${message}</div>`; }
 function renderError(message) { $('prediction-output').innerHTML = `<div class="warning">${message}</div>`; }
 function renderToast(message) { $('prediction-output').insertAdjacentHTML('afterbegin', `<div class="warning">${message}</div>`); }
@@ -769,6 +846,8 @@ function init() {
   ['own', 'enemy'].forEach(buildHeroRows);
   ['own', 'enemy'].forEach(updateFormation);
   bindEvents();
+  bindSettingsModal();
+  renderVersionLabel();
   loadPresets();
   loadLogs();
   checkApi();

@@ -1,0 +1,111 @@
+{
+  "battleMode": "solo_city_attack",
+  "attacker": {
+    "name": "Our Player",
+    "furnaceLevel": "FC5",
+    "profilePower": 180000000,
+    "sourceType": "manual",
+    "sourceConfidence": "high",
+    "stats": {
+      "infantryAttack": 820,
+      "infantryDefense": 880,
+      "infantryHealth": 790,
+      "infantryLethality": 760,
+      "lancerAttack": 850,
+      "lancerDefense": 810,
+      "lancerHealth": 760,
+      "lancerLethality": 800,
+      "marksmanAttack": 890,
+      "marksmanDefense": 780,
+      "marksmanHealth": 740,
+      "marksmanLethality": 870
+    },
+    "troops": {
+      "infantry": 900000,
+      "lancer": 800000,
+      "marksman": 800000,
+      "highestTier": "T10"
+    },
+    "heroes": []
+  },
+  "defender": {
+    "name": "Enemy Player",
+    "furnaceLevel": "FC4",
+    "profilePower": 150000000,
+    "sourceType": "city_scout",
+    "sourceConfidence": "medium",
+    "stats": {
+      "infantryAttack": 650,
+      "infantryDefense": 700,
+      "infantryHealth": 650,
+      "infantryLethality": 610,
+      "lancerAttack": 660,
+      "lancerDefense": 660,
+      "lancerHealth": 630,
+      "lancerLethality": 630,
+      "marksmanAttack": 690,
+      "marksmanDefense": 640,
+      "marksmanHealth": 610,
+      "marksmanLethality": 690
+    },
+    "troops": {
+      "infantry": 550000,
+      "lancer": 500000,
+      "marksman": 500000,
+      "highestTier": "T10"
+    },
+    "heroes": [],
+    "unknowns": [
+      "research",
+      "chief_gear",
+      "chief_charms",
+      "hero_gear",
+      "temporary_buffs",
+      "reinforcements"
+    ]
+  },
+  "march": {
+    "heroes": [
+      {
+        "name": "Infantry Leader",
+        "type": "infantry",
+        "generation": 8,
+        "level": 80,
+        "stars": 5,
+        "skillLevels": [5, 5, 5],
+        "role": "leader"
+      },
+      {
+        "name": "Lancer Support",
+        "type": "lancer",
+        "generation": 8,
+        "level": 80,
+        "stars": 4.5,
+        "skillLevels": [5, 4, 5]
+      },
+      {
+        "name": "Marksman Damage",
+        "type": "marksman",
+        "generation": 8,
+        "level": 80,
+        "stars": 4.5,
+        "skillLevels": [5, 5, 4]
+      }
+    ],
+    "troops": {
+      "infantry": 120000,
+      "lancer": 90000,
+      "marksman": 90000,
+      "highestTier": "T10"
+    },
+    "formation": "balanced",
+    "marchCapacity": 300000
+  },
+  "context": {
+    "serverAgeDays": 260,
+    "availableHeroGeneration": 8,
+    "hasAttackBuff": true,
+    "hasDefenseBuff": false,
+    "notes": "City scout used. Hidden defender stats are not confirmed."
+  }
+}

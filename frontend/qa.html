@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WOSPREDV3 Live QA</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <strong>WOSPREDV3 Live QA</strong>
+      <span>Connection checks for the active /frontend Vercel app</span>
+    </div>
+    <div class="topbar-actions">
+      <span id="qa-version" class="version-label">WOSPREDV3 strategy-update-v1</span>
+      <a class="qa-link" href="strategy-guide.html">Strategy Guide</a>
+      <a class="qa-link" href="index.html">Battle Predictor</a>
+    </div>
+  </header>
+
+  <main class="qa-shell">
+    <div class="qa-header">
+      <div>
+        <h1>Live QA / Connection Check</h1>
+        <p>Run this after every Codex change and after every Vercel deploy.</p>
+      </div>
+      <button id="run-checks" class="primary" type="button">Run Checks</button>
+    </div>
+
+    <section class="panel">
+      <div class="qa-controls">
+        <label>Railway API URL
+          <input id="qa-api-url" type="url" />
+        </label>
+        <button id="save-qa-api-url" type="button">Save URL</button>
+        <button id="reset-qa-api-url" type="button">Use Default</button>
+      </div>
+      <div id="qa-summary" class="hint"></div>
+    </section>
+
+    <section id="qa-results" class="qa-grid" aria-live="polite">
+      <article class="qa-check" data-check="frontend">
+        <span class="qa-status">WAIT</span>
+        <div>
+          <div class="qa-title">Current frontend version/source</div>
+          <div class="qa-detail">Not run yet.</div>
+        </div>
+      </article>
+      <article class="qa-check" data-check="api-url">
+        <span class="qa-status">WAIT</span>
+        <div>
+          <div class="qa-title">Current API URL</div>
+          <div class="qa-detail">Not run yet.</div>
+        </div>
+      </article>
+      <article class="qa-check" data-check="root">
+        <span class="qa-status">WAIT</span>
+        <div>
+          <div class="qa-title">GET /</div>
+          <div class="qa-detail">Not run yet.</div>
+        </div>
+      </article>
+      <article class="qa-check" data-check="accuracy">
+        <span class="qa-status">WAIT</span>
+        <div>
+          <div class="qa-title">GET /model-accuracy</div>
+          <div class="qa-detail">Not run yet.</div>
+        </div>
+      </article>
+      <article class="qa-check" data-check="predict">
+        <span class="qa-status">WAIT</span>
+        <div>
+          <div class="qa-title">POST /predict-outcome</div>
+          <div class="qa-detail">Not run yet.</div>
+        </div>
+      </article>
+      <article class="qa-check" data-check="reverse">
+        <span class="qa-status">WAIT</span>
+        <div>
+          <div class="qa-title">POST /reverse-optimize</div>
+          <div class="qa-detail">Not run yet.</div>
+        </div>
+      </article>
+      <article class="qa-check" data-check="formation">
+        <span class="qa-status">WAIT</span>
+        <div>
+          <div class="qa-title">POST /formation/optimize</div>
+          <div class="qa-detail">Not run yet.</div>
+        </div>
+      </article>
+      <article class="qa-check" data-check="cors">
+        <span class="qa-status">WAIT</span>
+        <div>
+          <div class="qa-title">CORS/API reachability errors</div>
+          <div class="qa-detail">Not run yet.</div>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <script src="config.js"></script>
+  <script>
+    const networkFailures = [];
+
+    const sampleStats = {
+      attack_pct: 150,
+      defense_pct: 120,
+      health_pct: 180,
+      lethality_pct: 80,
+    };
+
+    function sampleArmy(name, troopCount) {
+      return {
+        name,
+        infantry: { ...sampleStats },
+        lancer: { ...sampleStats },
+        marksman: { ...sampleStats },
+        formation: { infantry: 0.5, lancer: 0.2, marksman: 0.3 },
+        troop_count: troopCount,
+        heroes: [
+          { id: 'flint', name: 'Flint', type: 'infantry', stars: 5, widget_level: 5 },
+          { id: 'philly', name: 'Philly', type: 'lancer', stars: 5, widget_level: 5 },
+          { id: 'alonso', name: 'Alonso', type: 'marksman', stars: 5, widget_level: 5 },
+        ],
+      };
+    }
+
+    function apiBase() {
+      return String(window.WOS_API_URL || window.WOS_DEFAULT_API_URL || '').replace(/\/$/, '');
+    }
+
+    function normalizeUrl(value) {
+      return String(value || '').trim().replace(/\/+$/, '');
+    }
+
+    function setCheck(id, status, detail) {
+      const row = document.querySelector(`[data-check="${id}"]`);
+      const pill = row.querySelector('.qa-status');
+      const body = row.querySelector('.qa-detail');
+      pill.className = `qa-status ${status}`;
+      pill.textContent = status === 'pass' ? 'PASS' : status === 'fail' ? 'FAIL' : 'RUN';
+      body.textContent = detail;
+    }
+
+    function endpoint(path) {
+      return `${apiBase()}${path}`;
+    }
+
+    async function fetchJson(path, options = {}) {
+      const startedAt = Date.now();
+      const res = await fetch(endpoint(path), options);
+      const text = await res.text();
+      let data = {};
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch {
+        data = { raw: text };
+      }
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${JSON.stringify(data).slice(0, 240)}`);
+      }
+      return { data, ms: Date.now() - startedAt };
+    }
+
+    function jsonOptions(body) {
+      return {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      };
+    }
+
+    function recordNetworkFailure(path, err) {
+      if (err instanceof TypeError || /Failed to fetch|NetworkError|CORS/i.test(String(err.message))) {
+        networkFailures.push(`${path}: ${err.message || err}`);
+      }
+    }
+
+    async function runEndpointCheck(id, path, options, validate, successText) {
+      setCheck(id, 'running', `Calling ${endpoint(path)} ...`);
+      try {
+        const { data, ms } = await fetchJson(path, options);
+        if (!validate(data)) {
+          throw new Error(`Response did not include the expected fields: ${JSON.stringify(data).slice(0, 240)}`);
+        }
+        setCheck(id, 'pass', `${successText} (${ms} ms)`);
+      } catch (err) {
+        recordNetworkFailure(path, err);
+        setCheck(id, 'fail', err.message || String(err));
+      }
+    }
+
+    async function runChecks() {
+      networkFailures.length = 0;
+      document.getElementById('qa-summary').textContent = `Checking ${apiBase()} from ${window.location.origin || 'local file'} ...`;
+
+      const version = window.WOS_APP_VERSION || {};
+      document.getElementById('qa-version').textContent = `${version.label || 'WOSPREDV3 strategy-update-v1'}${version.commit ? ` (${version.commit})` : ''}`;
+        if (version.source === '/frontend' && /strategy-update-v1/.test(version.label || '')) {
+        setCheck('frontend', 'pass', `${version.label} | source ${version.source} | commit ${version.commit || 'n/a'} | build ${version.buildTime || 'n/a'}`);
+      } else {
+        setCheck('frontend', 'fail', `Unexpected frontend metadata: ${JSON.stringify(version)}`);
+      }
+
+      try {
+        const parsed = new URL(apiBase());
+        const override = localStorage.getItem(window.WOS_API_STORAGE_KEY || 'wos_api_url');
+        setCheck('api-url', 'pass', `${parsed.href.replace(/\/$/, '')}${override ? ' (browser override)' : ' (default)'}`);
+      } catch {
+        setCheck('api-url', 'fail', `Invalid API URL: ${apiBase()}`);
+      }
+
+      const attacker = sampleArmy('QA Own', 150000);
+      const defender = sampleArmy('QA Enemy', 90000);
+      const battlePayload = { attacker, defender, max_rounds: 12, simulation_mode: 'expected_value' };
+      const optimizerPayload = { own_army: attacker, enemy_army: defender, max_rounds: 12 };
+
+      await runEndpointCheck(
+        'root',
+        '/',
+        {},
+        (data) => data && data.service && data.endpoints,
+        'API root returned service metadata'
+      );
+      await runEndpointCheck(
+        'accuracy',
+        '/model-accuracy',
+        {},
+        (data) => data && ('reports_used' in data || 'note' in data),
+        'Model accuracy endpoint returned status'
+      );
+      await runEndpointCheck(
+        'predict',
+        '/predict-outcome',
+        jsonOptions(battlePayload),
+        (data) => data && typeof data.win_probability === 'number' && data.winner,
+        'Prediction endpoint accepted the QA payload'
+      );
+      await runEndpointCheck(
+        'reverse',
+        '/reverse-optimize',
+        jsonOptions({ ...optimizerPayload, target_win_probability: 0.51 }),
+        (data) => data && typeof data.current_win_probability === 'number',
+        'Reverse optimizer accepted the QA payload'
+      );
+      await runEndpointCheck(
+        'formation',
+        '/formation/optimize',
+        jsonOptions(optimizerPayload),
+        (data) => data && data.best_formation && Array.isArray(data.all_results),
+        'Formation optimizer accepted the QA payload'
+      );
+
+      if (networkFailures.length) {
+        setCheck('cors', 'fail', `Browser fetch failed before a readable HTTP response. Possible CORS, wrong Railway URL, or sleeping API. ${networkFailures.join(' | ')}`);
+      } else {
+        setCheck('cors', 'pass', 'No browser-level CORS or network reachability errors were detected during these checks.');
+      }
+      document.getElementById('qa-summary').textContent = 'Live QA run finished.';
+    }
+
+    function saveApiUrl() {
+      const nextUrl = normalizeUrl(document.getElementById('qa-api-url').value);
+      if (!/^https?:\/\//i.test(nextUrl)) {
+        document.getElementById('qa-summary').textContent = 'Enter a full URL that starts with http:// or https://.';
+        return;
+      }
+      localStorage.setItem(window.WOS_API_STORAGE_KEY || 'wos_api_url', nextUrl);
+      window.WOS_API_URL = nextUrl;
+      window.WOS_CONFIG = { ...(window.WOS_CONFIG || {}), apiUrl: nextUrl };
+      document.getElementById('qa-summary').textContent = `Saved API URL: ${nextUrl}`;
+    }
+
+    function resetApiUrl() {
+      localStorage.removeItem(window.WOS_API_STORAGE_KEY || 'wos_api_url');
+      window.WOS_API_URL = window.WOS_DEFAULT_API_URL;
+      document.getElementById('qa-api-url').value = window.WOS_API_URL;
+      document.getElementById('qa-summary').textContent = `Using default API URL: ${window.WOS_API_URL}`;
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('qa-api-url').value = apiBase();
+      document.getElementById('run-checks').addEventListener('click', runChecks);
+      document.getElementById('save-qa-api-url').addEventListener('click', saveApiUrl);
+      document.getElementById('reset-qa-api-url').addEventListener('click', resetApiUrl);
+      runChecks();
+    });
+  </script>
+</body>
+</html>

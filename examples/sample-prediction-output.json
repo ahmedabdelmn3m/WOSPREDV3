@@ -1,0 +1,20 @@
+{
+  "outcome": "risky",
+  "winChanceBand": "34-70%",
+  "confidence": "low",
+  "attackScore": 1290422,
+  "defenseScore": 1382050,
+  "riskReasons": [
+    "Enemy hidden stats not confirmed: research, chief_gear, chief_charms, hero_gear, temporary_buffs, reinforcements.",
+    "City scout is useful, but research, gear, buffs, pets, and reinforcement changes may still be hidden.",
+    "Prediction confidence is reduced because invisible enemy strength can change the result."
+  ],
+  "advantages": [
+    "Leader hero is explicitly selected, so hero scoring can be more reliable."
+  ],
+  "recommendations": [
+    "Do not solo with this setup; use rally support or change target.",
+    "Collect profile screenshots or previous battle reports before committing important troops.",
+    "Test infantry-heavy and burst variants; compare outcome bands before attacking."
+  ]
+}

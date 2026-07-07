@@ -1,5 +1,22 @@
 # WOSPREDV3 — Battle Intelligence Platform
 
+## Strategy Update v1
+
+This repo now includes the War Decision Machine strategy package:
+
+- `frontend/strategy-guide.html` exposes the scout-evidence strategy live in the active frontend.
+- `docs/war-decision-machine/` stores the feature plan, scout concept, integration notes, and reference TypeScript starter engine.
+- `schemas/battle-input.schema.json` and `schemas/ocr-capture.schema.json` define future battle-input and OCR capture shapes.
+- `examples/` includes sample battle input and prediction output.
+
+This update does not change battle formulas, hero mechanics, troop tier logic, or existing API payloads. It makes the strategy guide visible and reviewable before any future engine conversion.
+
+Live test paths after Vercel deploy:
+
+- `/strategy-guide.html`
+- `/qa.html`
+- `/`
+
 Combat simulation and prediction engine for **Whiteout Survival**.
 
 ---
@@ -147,7 +164,7 @@ In Railway → your service → **Variables** tab, set:
 ### 3d. Verify deployment
 
 1. Railway → your service → **Deployments** → watch logs
-2. Once green, click the generated domain (e.g., `wospredv3.up.railway.app`)
+2. Once green, click the generated domain (e.g., `wospredv3-production.up.railway.app`)
 3. You should see the API info JSON:
 ```json
 { "service": "WOS Battle Intelligence API", "version": "2.0.0", ... }
@@ -170,18 +187,37 @@ In Railway → your service → **Variables** tab, set:
    - **Output Directory**: `.`
 4. Click **Deploy**
 
+Production frontend note:
+- `frontend/` is the active Vercel frontend.
+- Root-level `index.html`, `app.js`, and `config.js` are older duplicated files and should not be treated as production unless Vercel is deliberately reconfigured.
+- The active browser API config is `frontend/config.js`.
+- Live QA is available at `/qa.html` after deployment. Use it after every Codex change.
+
 ### 4b. Connect frontend to backend
 
-After Vercel deploys, open your Vercel URL in a browser.
-You'll see the red **⬤ Offline** pill in the header.
+The default API URL in `frontend/config.js` is:
 
-**To connect:**
-1. Click the **⚙ Settings** button (top right)
-2. Paste your Railway URL (e.g., `https://wospredv3.up.railway.app`)
-3. Click **Save & Reconnect**
-4. The pill turns green: **⬤ Online**
+```text
+https://wospredv3-production.up.railway.app
+```
 
-This URL is stored in your browser's localStorage — you only need to set it once per device.
+To change it from the browser:
+1. Open the Vercel app.
+2. Click **API Settings**.
+3. Paste the Railway URL.
+4. Click **Save & Reconnect**.
+
+This URL is stored in browser `localStorage` under `wos_api_url`.
+
+### 4c. Live QA after changes
+
+After every Codex change and Vercel deploy:
+1. Open the Vercel app.
+2. Open **Live QA** in the header or visit `/qa.html`.
+3. Confirm every core API check shows `PASS`.
+4. Return to the Battle Predictor and run the normal prediction and formation actions.
+
+More detail: `docs/live-qa.md`.
 
 ---
 
@@ -210,7 +246,7 @@ Open `frontend/index.html` in a browser, or serve it with:
 cd frontend && python -m http.server 3000
 ```
 
-The default API URL is `http://localhost:8080` — no settings change needed.
+The default frontend API URL is the live Railway URL. To test a local backend, open **API Settings** in the browser and save `http://localhost:8080`.
 
 ### 5b. Docker Compose (with database)
 

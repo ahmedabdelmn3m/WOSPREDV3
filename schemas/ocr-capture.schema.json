@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/ocr-capture.schema.json",
+  "title": "OCR Capture",
+  "type": "object",
+  "required": ["captureId", "sourceType", "fields"],
+  "properties": {
+    "captureId": { "type": "string" },
+    "sourceType": {
+      "type": "string",
+      "enum": [
+        "own_stats",
+        "enemy_city_scout",
+        "enemy_tile_scout",
+        "hero_lineup",
+        "march_formation",
+        "battle_report",
+        "profile"
+      ]
+    },
+    "imageName": { "type": "string" },
+    "capturedAt": { "type": "string", "format": "date-time" },
+    "ocrEngine": { "type": "string" },
+    "fields": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["key", "rawText", "confidence"],
+        "properties": {
+          "key": { "type": "string" },
+          "rawText": { "type": "string" },
+          "normalizedValue": {},
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+          "needsReview": { "type": "boolean", "default": false },
+          "boundingBox": {
+            "type": "object",
+            "properties": {
+              "x": { "type": "number" },
+              "y": { "type": "number" },
+              "width": { "type": "number" },
+              "height": { "type": "number" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

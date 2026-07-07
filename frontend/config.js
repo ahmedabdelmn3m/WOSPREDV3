@@ -1,6 +1,35 @@
 (function () {
-  const stored = localStorage.getItem('wos_api_url');
-  const isLocal = ['localhost', '127.0.0.1', ''].includes(window.location.hostname);
-  const defaultUrl = isLocal ? 'http://localhost:8080' : 'https://wospredv3-production.up.railway.app';
-  window.WOS_API_URL = isLocal && stored && stored.trim() ? stored.trim() : defaultUrl;
+  const DEFAULT_API_URL = 'https://wospredv3-production.up.railway.app';
+  const STORAGE_KEY = 'wos_api_url';
+  const VERSION = {
+    label: 'WOSPREDV3 strategy-update-v1',
+    source: '/frontend',
+    commit: 'd446433',
+    buildTime: '2026-07-07 strategy package',
+  };
+
+  function normalizeUrl(value) {
+    return String(value || '').trim().replace(/\/+$/, '');
+  }
+
+  function readStoredUrl() {
+    try {
+      return normalizeUrl(localStorage.getItem(STORAGE_KEY));
+    } catch {
+      return '';
+    }
+  }
+
+  const apiUrl = readStoredUrl() || DEFAULT_API_URL;
+
+  window.WOS_DEFAULT_API_URL = DEFAULT_API_URL;
+  window.WOS_API_URL = apiUrl;
+  window.WOS_API_STORAGE_KEY = STORAGE_KEY;
+  window.WOS_APP_VERSION = VERSION;
+  window.WOS_CONFIG = {
+    apiUrl,
+    defaultApiUrl: DEFAULT_API_URL,
+    storageKey: STORAGE_KEY,
+    version: VERSION,
+  };
 })();

@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WOSPREDV3 Strategy Guide</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <strong>Strategy Guide</strong>
+      <span>Scout evidence, hidden risk, OCR review, and war-decision output rules</span>
+    </div>
+    <div class="topbar-actions">
+      <span id="version-label" class="version-label">WOSPREDV3 strategy-update-v1</span>
+      <a class="qa-link" href="index.html">Battle Predictor</a>
+      <a class="qa-link" href="qa.html">Live QA</a>
+    </div>
+  </header>
+
+  <nav class="tabs" aria-label="Main sections">
+    <a class="tab link-tab" href="index.html">Battle Predictor</a>
+    <a class="tab link-tab active" href="strategy-guide.html">Strategy Guide</a>
+    <a class="tab link-tab" href="hero-advisor.html">Hero Advisor</a>
+    <a class="tab link-tab" href="rally-organizer.html">Rally Organizer</a>
+    <a class="tab link-tab" href="qa.html">Live QA</a>
+  </nav>
+
+  <main class="guide-shell">
+    <section class="guide-hero">
+      <div>
+        <h1>War Decision Machine</h1>
+        <p>
+          The next predictor layer treats scout screenshots as evidence, not perfect truth.
+          The app should record what is visible, what OCR guessed, what you confirmed, and
+          what remains hidden before recommending a hit, rally, hero swap, or avoid call.
+        </p>
+      </div>
+      <div class="guide-version">
+        <span>Frontend source</span>
+        <strong>/frontend</strong>
+        <span>Update</span>
+        <strong>strategy-update-v1</strong>
+      </div>
+    </section>
+
+    <section class="guide-grid">
+      <article class="guide-panel">
+        <h2>Main Flow</h2>
+        <ol>
+          <li>Upload own stats, enemy scout, hero lineup, formation, and optional battle report screenshots.</li>
+          <li>Run OCR and capture values with confidence scores.</li>
+          <li>Review uncertain or high-impact fields before prediction.</li>
+          <li>Build battle input from visible stats, confirmed values, and hidden-risk assumptions.</li>
+          <li>Show an outcome band, confidence level, main risks, and recommended action.</li>
+        </ol>
+      </article>
+
+      <article class="guide-panel">
+        <h2>Scout Types</h2>
+        <div class="guide-list">
+          <div><strong>City scout</strong><span>Use for city hits, city rallies, zeroing decisions, trap checks, and reinforcement checks.</span></div>
+          <div><strong>Tile scout</strong><span>Use only for exposed march or tile-hit decisions, not full city-defense prediction.</span></div>
+          <div><strong>Battle report</strong><span>Best for calibration because it shows real performance after hidden stats apply.</span></div>
+        </div>
+      </article>
+
+      <article class="guide-panel">
+        <h2>Hidden Risk</h2>
+        <p>Scout reports can miss research, chief gear, charms, hero gear, pets, alliance tech, city bonuses, skins, temporary buffs, and reinforcements.</p>
+        <p>The predictor should reduce confidence when these unknowns can swing the fight.</p>
+      </article>
+
+      <article class="guide-panel">
+        <h2>OCR Review Rules</h2>
+        <p>Any OCR field below 0.85 confidence should be reviewed. High-impact fields should be reviewed even when OCR confidence looks high.</p>
+        <div class="chip-row">
+          <span>Troop counts</span>
+          <span>Troop tier</span>
+          <span>Stats</span>
+          <span>Hero names</span>
+          <span>Hero stars</span>
+          <span>Scout type</span>
+          <span>Reinforcements</span>
+        </div>
+      </article>
+    </section>
+
+    <section class="guide-panel">
+      <h2>Decision Output Standard</h2>
+      <div class="decision-preview">
+        <div>
+          <span>Outcome</span>
+          <strong>Risky</strong>
+        </div>
+        <div>
+          <span>Win Chance Band</span>
+          <strong>34-70%</strong>
+        </div>
+        <div>
+          <span>Confidence</span>
+          <strong>Low</strong>
+        </div>
+      </div>
+      <div class="guide-list">
+        <div><strong>Main reason</strong><span>Enemy hidden stats are not confirmed, and invisible defender strength may swing the result.</span></div>
+        <div><strong>Recommended action</strong><span>Do not solo with this setup; use rally support, improve evidence, or change target.</span></div>
+        <div><strong>Formation note</strong><span>Test infantry-heavy and burst variants, then compare outcome bands before committing.</span></div>
+      </div>
+    </section>
+
+    <section class="guide-panel">
+      <h2>Implementation Status</h2>
+      <div class="status-table">
+        <div><span>Docs and schemas</span><strong>Added to repo</strong></div>
+        <div><span>Frontend visibility</span><strong>Connected here</strong></div>
+        <div><span>Prediction formulas</span><strong>Unchanged</strong></div>
+        <div><span>Hero mechanics</span><strong>Unchanged</strong></div>
+        <div><span>Next build step</span><strong>Convert rules into Python/API only after review</strong></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="guide-footer">
+    Strategy package source: docs/war-decision-machine. Schemas: schemas/battle-input.schema.json and schemas/ocr-capture.schema.json.
+  </footer>
+</body>
+</html>
