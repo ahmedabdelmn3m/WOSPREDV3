@@ -4,8 +4,8 @@
   const VERSION = {
     label: 'WOSPREDV3 strategy-update-v1',
     source: '/frontend',
-    commit: 'd446433',
-    buildTime: '2026-07-07 strategy package',
+    commit: '',
+    buildTime: '2026-07-07 deployed',
   };
 
   function normalizeUrl(value) {
