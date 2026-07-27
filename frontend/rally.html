@@ -611,52 +611,74 @@ function copyMsg(el) {
 function onSlider(el) {
   const types  = ['inf','lan','mrk'];
   const others = types.filter(t => t !== el.id);
-  let otherSum = others.reduce((s,t) => s + parseInt(document.getElementById(t).value), 0);
+  let otherSum = others.reduce((s,t) => s + parseInt(document.getElementById(t)?.value || 0), 0);
   let max      = 100 - otherSum;
   if (parseInt(el.value) > max) el.value = max;
-  document.getElementById(el.id + 'Val').textContent = el.value;
+  const valueEl = document.getElementById(el.id + 'Val');
+  if (valueEl) valueEl.textContent = el.value;
   calcTroops();
   saveTroops();
 }
 
 function calcTroops() {
-  const total = parseInt(document.getElementById('totalTroops').value) || 0;
+  const totalInput = document.getElementById('totalTroops');
+  if (!totalInput) return;
+  const total = parseInt(totalInput.value) || 0;
   ['inf','lan','mrk'].forEach(t => {
-    const pct = parseInt(document.getElementById(t).value);
-    document.getElementById(t + 'Val').textContent = pct;
-    document.getElementById(t + 'Result').textContent = fmt(Math.round(total * pct / 100));
+    const input = document.getElementById(t);
+    const valueEl = document.getElementById(t + 'Val');
+    const resultEl = document.getElementById(t + 'Result');
+    if (!input || !valueEl || !resultEl) return;
+    const pct = parseInt(input.value);
+    valueEl.textContent = pct;
+    resultEl.textContent = fmt(Math.round(total * pct / 100));
   });
 }
 
 function saveTroops() {
+  const totalInput = document.getElementById('totalTroops');
+  const infInput = document.getElementById('inf');
+  const lanInput = document.getElementById('lan');
+  const mrkInput = document.getElementById('mrk');
+  if (!totalInput || !infInput || !lanInput || !mrkInput) return;
   ls.set('troops', {
-    total: document.getElementById('totalTroops').value,
-    inf:   document.getElementById('inf').value,
-    lan:   document.getElementById('lan').value,
-    mrk:   document.getElementById('mrk').value,
+    total: totalInput.value,
+    inf:   infInput.value,
+    lan:   lanInput.value,
+    mrk:   mrkInput.value,
   });
 }
 
 function loadTroops() {
+  const totalInput = document.getElementById('totalTroops');
+  const infInput = document.getElementById('inf');
+  const lanInput = document.getElementById('lan');
+  const mrkInput = document.getElementById('mrk');
+  if (!totalInput || !infInput || !lanInput || !mrkInput) return;
   const d = ls.get('troops') || { total:500000, inf:50, lan:20, mrk:30 };
-  document.getElementById('totalTroops').value = d.total;
-  document.getElementById('inf').value = d.inf;
-  document.getElementById('lan').value = d.lan;
-  document.getElementById('mrk').value = d.mrk;
+  totalInput.value = d.total;
+  infInput.value = d.inf;
+  lanInput.value = d.lan;
+  mrkInput.value = d.mrk;
   calcTroops();
 }
 
 // ── Settings ──────────────────────────────────────────────────
 function adjustOffset(ms) {
   const inp = document.getElementById('timeOffset');
+  if (!inp) return;
   inp.value = (parseInt(inp.value) || 0) + ms;
   saveOffset();
 }
 function saveOffset() {
-  ls.set('timeOffset', parseInt(document.getElementById('timeOffset').value) || 0);
+  const inp = document.getElementById('timeOffset');
+  if (!inp) return;
+  ls.set('timeOffset', parseInt(inp.value) || 0);
 }
 function resetOffset() {
-  document.getElementById('timeOffset').value = 0;
+  const inp = document.getElementById('timeOffset');
+  if (!inp) return;
+  inp.value = 0;
   saveOffset();
 }
 
@@ -686,7 +708,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const offset = ls.get('timeOffset') || 0;
   document.getElementById('delaySlider').value   = delay;
   document.getElementById('delayVal').textContent = delay;
-  document.getElementById('timeOffset').value    = offset;
+  const offsetInput = document.getElementById('timeOffset');
+  if (offsetInput) offsetInput.value = offset;
   if (parseInt(delay) > 5) document.getElementById('delayWarn').style.display = 'block';
 
   // No impact time to restore
