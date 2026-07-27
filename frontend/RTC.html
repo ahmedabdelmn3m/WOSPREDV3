@@ -3,545 +3,1003 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Whiteout Survival multi-alliance rally timing calculator with relative launch instructions." />
-  <title>WOS Rally Timeline Coordinator — Odin</title>
+  <meta name="description" content="Whiteout Survival live multi-alliance rally timeline coordinator with relative launch instructions." />
+  <title>WOS Rally Timeline Coordinator</title>
   <style>
     :root {
       --bg:#07090f; --surface:#0d1421; --card:#111c2e; --input:#0a1220;
-      --border:#1e3a5f; --border-hi:#2a4a6f; --ice:#00c8ff; --ice-dim:#007fa8;
-      --fire:#ff6b35; --green:#2ecc71; --red:#e74c3c; --warn:#f39c12;
-      --purple:#b78cff; --text:#d4e8f0; --dim:#7a99b8; --hi:#fff;
-      --radius:10px; --shadow:0 10px 32px rgba(0,0,0,.45);
+      --border:#1e3a5f; --border-hi:#2a4a6f; --ice:#00c8ff; --a:#00c8ff;
+      --b:#b78cff; --enemy:#ff6b35; --green:#2ecc71; --red:#e74c3c;
+      --warn:#f39c12; --txt:#d4e8f0; --dim:#7a99b8; --hi:#fff;
+      --shadow:0 10px 32px rgba(0,0,0,.45); --radius:8px;
     }
     [data-theme="light"] {
       --bg:#e8f0f8; --surface:#fff; --card:#f0f6ff; --input:#fff;
-      --border:#b0c8e0; --border-hi:#80a8c8; --text:#1a2a3a; --dim:#4a6a8a; --hi:#000;
+      --border:#b0c8e0; --border-hi:#80a8c8; --txt:#1a2a3a; --dim:#4a6a8a; --hi:#000;
       --shadow:0 10px 30px rgba(44,75,105,.16);
     }
     * { box-sizing:border-box; margin:0; padding:0; }
-    body { min-height:100vh; padding:16px; background:var(--bg); color:var(--text); font:14px/1.45 "Segoe UI",system-ui,sans-serif; }
-    button,input,select { font:inherit; }
-    .wrap { max-width:1280px; margin:0 auto; }
-    .header { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:14px 18px; margin-bottom:14px; border:1px solid var(--border); border-radius:var(--radius); background:linear-gradient(90deg,#060c18,#0d1a30); }
-    [data-theme="light"] .header { background:linear-gradient(90deg,#c8e0f8,#e0eeff); }
-    .brand { display:flex; gap:11px; align-items:center; }
-    .brand-icon { font-size:26px; }
-    .title { color:var(--ice); font-size:17px; font-weight:800; letter-spacing:1.6px; }
-    .sub { color:var(--dim); font-size:11px; letter-spacing:.6px; }
-    .theme { padding:7px 12px; border:1px solid var(--border-hi); border-radius:8px; background:transparent; color:var(--dim); cursor:pointer; }
-    .theme:hover { color:var(--ice); border-color:var(--ice); }
-    .notice { margin-bottom:12px; padding:11px 14px; border:1px solid rgba(0,200,255,.25); border-radius:var(--radius); background:rgba(0,200,255,.07); color:var(--text); }
-    .notice strong { color:var(--ice); }
-    .card { padding:16px; margin-bottom:12px; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface); }
-    .card-head { display:flex; justify-content:space-between; gap:12px; align-items:flex-start; margin-bottom:12px; }
-    .section-title { color:var(--hi); font-weight:800; font-size:14px; }
-    .section-help { margin-top:2px; color:var(--dim); font-size:12px; }
-    .toolbar { display:flex; flex-wrap:wrap; gap:8px; }
-    .btn { border:1px solid var(--border); border-radius:8px; padding:8px 13px; font-weight:700; cursor:pointer; transition:.18s ease; }
-    .btn:hover { transform:translateY(-1px); box-shadow:var(--shadow); }
-    .btn-primary { color:var(--ice); border-color:rgba(0,200,255,.35); background:rgba(0,200,255,.13); }
+    body { min-height:100vh; background:var(--bg); color:var(--txt); font:14px/1.45 "Segoe UI",system-ui,sans-serif; padding:14px; }
+    button,input,select,textarea { font:inherit; }
+    button { min-height:40px; }
+    .wrap { max-width:1320px; margin:0 auto; }
+    .app-header { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:12px 16px; margin-bottom:10px; border:1px solid var(--border); border-radius:var(--radius); background:linear-gradient(90deg,#060c18,#0d1a30); }
+    [data-theme="light"] .app-header { background:linear-gradient(90deg,#c8e0f8,#e0eeff); }
+    .brand { display:flex; align-items:center; gap:10px; min-width:0; }
+    .brand-icon { font-size:24px; }
+    .title { color:var(--ice); font-size:17px; font-weight:800; letter-spacing:1.4px; }
+    .sub { color:var(--dim); font-size:11px; letter-spacing:.5px; }
+    .header-actions,.toolbar,.row-actions { display:flex; gap:7px; flex-wrap:wrap; align-items:center; }
+    .page-nav { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px; }
+    .nav-link,.btn,.icon-btn { border:1px solid var(--border); border-radius:var(--radius); background:transparent; color:var(--txt); cursor:pointer; text-decoration:none; transition:.16s ease; }
+    .nav-link { padding:7px 11px; color:var(--dim); font-size:12px; font-weight:700; }
+    .nav-link:hover,.nav-link.current { color:var(--ice); border-color:var(--ice); background:rgba(0,200,255,.08); }
+    .btn { padding:8px 12px; font-weight:800; }
+    .btn:hover,.icon-btn:hover { transform:translateY(-1px); border-color:var(--border-hi); box-shadow:var(--shadow); }
+    .btn-primary { color:var(--ice); border-color:rgba(0,200,255,.35); background:rgba(0,200,255,.12); }
     .btn-green { color:var(--green); border-color:rgba(46,204,113,.35); background:rgba(46,204,113,.12); }
-    .btn-fire { color:var(--fire); border-color:rgba(255,107,53,.35); background:rgba(255,107,53,.12); }
-    .btn-ghost { color:var(--dim); background:transparent; }
+    .btn-fire { color:var(--enemy); border-color:rgba(255,107,53,.35); background:rgba(255,107,53,.12); }
+    .btn-warn { color:var(--warn); border-color:rgba(243,156,18,.35); background:rgba(243,156,18,.12); }
     .btn-danger { color:var(--red); border-color:rgba(231,76,60,.35); background:rgba(231,76,60,.1); }
+    .btn-ghost { color:var(--dim); }
+    .icon-btn { width:38px; padding:0; color:var(--dim); font-weight:900; }
+    .mode-strip { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin-bottom:10px; }
+    .mode-card { padding:12px; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface); }
+    .mode-card label { display:flex; gap:8px; align-items:center; color:var(--hi); font-weight:800; cursor:pointer; }
+    .mode-card span { display:block; margin-top:4px; color:var(--dim); font-size:12px; }
+    .grid { display:grid; grid-template-columns:1.05fr .95fr; gap:10px; align-items:start; }
+    .grid > *, .card, .table-wrap, .outputs > * { min-width:0; }
+    .card { border:1px solid var(--border); border-radius:var(--radius); background:var(--surface); padding:14px; margin-bottom:10px; }
+    .card-head { display:flex; justify-content:space-between; gap:10px; align-items:flex-start; margin-bottom:11px; }
+    .section-title { color:var(--hi); font-weight:900; font-size:13px; text-transform:uppercase; letter-spacing:.75px; }
+    .section-help { color:var(--dim); font-size:12px; margin-top:2px; }
+    .field-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; }
+    .field-grid.three { grid-template-columns:repeat(3,minmax(0,1fr)); }
+    .field { display:flex; flex-direction:column; gap:5px; min-width:0; }
+    label,.mini-label { color:var(--dim); font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.55px; }
+    input,select,textarea { width:100%; color:var(--hi); background:var(--input); border:1px solid var(--border); border-radius:7px; padding:8px 9px; min-height:38px; }
+    textarea { resize:vertical; min-height:38px; }
+    input:focus,select:focus,textarea:focus { outline:none; border-color:var(--ice); }
+    input[type="checkbox"],input[type="radio"] { width:auto; min-height:auto; accent-color:var(--ice); }
     .table-wrap { overflow-x:auto; border:1px solid var(--border); border-radius:var(--radius); }
-    table { width:100%; min-width:1040px; border-collapse:collapse; }
-    th { position:sticky; top:0; z-index:1; padding:10px 8px; background:var(--card); color:var(--dim); text-align:left; font-size:10px; text-transform:uppercase; letter-spacing:.6px; }
-    td { padding:8px; border-top:1px solid var(--border); vertical-align:middle; }
-    tr:hover td { background:rgba(0,200,255,.025); }
-    input,select { width:100%; padding:8px 9px; border:1px solid var(--border); border-radius:7px; background:var(--input); color:var(--hi); }
-    input:focus,select:focus { outline:none; border-color:var(--ice); }
-    .small { width:90px; }
-    .tiny { width:76px; }
-    .type-pill { display:inline-flex; align-items:center; justify-content:center; min-width:72px; padding:4px 7px; border-radius:999px; font-size:10px; font-weight:800; }
-    .ours { color:var(--green); background:rgba(46,204,113,.12); border:1px solid rgba(46,204,113,.28); }
-    .enemy { color:var(--red); background:rgba(231,76,60,.11); border:1px solid rgba(231,76,60,.28); }
-    .row-actions { display:flex; gap:5px; }
-    .icon-btn { width:31px; height:31px; border:1px solid var(--border); border-radius:7px; background:transparent; color:var(--dim); cursor:pointer; }
-    .icon-btn:hover { color:var(--hi); border-color:var(--border-hi); }
-    .settings-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
-    .field { display:flex; flex-direction:column; gap:5px; }
-    label { color:var(--dim); font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.55px; }
-    .outputs { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    table { width:100%; min-width:980px; border-collapse:collapse; }
+    th { padding:9px 7px; text-align:left; color:var(--dim); background:var(--card); font-size:10px; text-transform:uppercase; letter-spacing:.55px; position:sticky; top:0; z-index:1; }
+    td { padding:7px; border-top:1px solid var(--border); vertical-align:middle; }
+    tr.disabled td { opacity:.52; }
+    .wide-table { min-width:1180px; }
+    .pill { display:inline-flex; align-items:center; justify-content:center; padding:3px 7px; min-width:52px; border-radius:999px; font-size:10px; font-weight:900; text-transform:uppercase; white-space:nowrap; }
+    .pill-a { color:var(--a); background:rgba(0,200,255,.13); border:1px solid rgba(0,200,255,.25); }
+    .pill-b { color:var(--b); background:rgba(183,140,255,.15); border:1px solid rgba(183,140,255,.27); }
+    .pill-enemy { color:var(--enemy); background:rgba(255,107,53,.13); border:1px solid rgba(255,107,53,.27); }
+    .pill-warn { color:var(--warn); background:rgba(243,156,18,.13); border:1px solid rgba(243,156,18,.3); }
+    .status { min-height:20px; color:var(--dim); font-size:11px; }
+    .status.bad { color:#ffd9d4; }
+    .status.good { color:var(--green); }
+    .error-box { display:none; margin-bottom:10px; padding:10px 12px; color:#ffd9d4; background:rgba(231,76,60,.13); border:1px solid rgba(231,76,60,.35); border-radius:var(--radius); }
+    .snapshot-bar { display:grid; grid-template-columns:1fr auto; gap:8px; align-items:center; padding:10px; border:1px solid rgba(0,200,255,.24); border-radius:var(--radius); background:rgba(0,200,255,.06); margin-bottom:9px; }
+    .snapshot-meta { color:var(--dim); font-size:12px; }
+    .outputs { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
     .result-list { display:flex; flex-direction:column; gap:7px; }
-    .result { display:grid; grid-template-columns:42px minmax(130px,.8fr) 1fr auto; gap:10px; align-items:center; padding:10px 12px; border:1px solid var(--border); border-radius:9px; background:var(--card); }
+    .result { display:grid; grid-template-columns:38px minmax(120px,.8fr) 1fr auto; gap:9px; align-items:center; padding:10px 11px; border:1px solid var(--border); border-radius:var(--radius); background:var(--card); }
     .result.first { border-color:var(--warn); box-shadow:inset 3px 0 0 var(--warn); }
+    .result.warning { border-color:rgba(243,156,18,.52); background:rgba(243,156,18,.08); }
     .num { color:var(--ice); font-weight:900; text-align:center; }
-    .rname { color:var(--hi); font-weight:800; }
+    .rname { color:var(--hi); font-weight:900; overflow-wrap:anywhere; }
     .rmeta { color:var(--dim); font-size:11px; }
-    .instruction { color:var(--text); }
     .instruction strong { color:var(--warn); }
-    .hit strong { color:var(--ice); }
-    .badge { padding:3px 7px; border-radius:5px; font-size:9px; font-weight:900; text-transform:uppercase; white-space:nowrap; }
-    .badge-a { background:rgba(0,200,255,.15); color:var(--ice); }
-    .badge-b { background:rgba(183,140,255,.16); color:var(--purple); }
-    .badge-c { background:rgba(255,107,53,.14); color:var(--fire); }
-    .badge-d { background:rgba(231,76,60,.14); color:var(--red); }
-    .copy-box { margin-top:12px; padding:13px; border:1px dashed var(--border-hi); border-radius:9px; background:var(--input); white-space:pre-wrap; font-family:Consolas,monospace; color:var(--text); max-height:360px; overflow:auto; }
-    .empty { padding:24px; text-align:center; color:var(--dim); border:1px dashed var(--border); border-radius:9px; }
-    .error-box { display:none; margin-bottom:12px; padding:10px 12px; color:#ffd8d4; background:rgba(231,76,60,.13); border:1px solid rgba(231,76,60,.36); border-radius:8px; }
-    .footer { padding:12px; text-align:center; color:var(--dim); font-size:11px; }
-    .footer strong { color:var(--ice); }
-    .hidden { display:none !important; }
-    @media (max-width:900px) { .outputs { grid-template-columns:1fr; } .settings-grid { grid-template-columns:1fr 1fr; } }
-    @media (max-width:640px) {
-      body { padding:9px; }
-      .header,.card-head { align-items:stretch; flex-direction:column; }
-      .settings-grid { grid-template-columns:1fr; }
-      .result { grid-template-columns:34px 1fr; }
-      .instruction,.badge { grid-column:2; }
-      .toolbar .btn { flex:1 1 auto; }
+    .warning-text { color:var(--warn); font-size:11px; margin-top:4px; }
+    .copy-box { margin-top:10px; padding:12px; border:1px dashed var(--border-hi); border-radius:var(--radius); background:var(--input); white-space:pre-wrap; font-family:Consolas,monospace; font-size:12px; line-height:1.55; max-height:340px; overflow:auto; }
+    .help details { border:1px solid var(--border); border-radius:var(--radius); background:var(--surface); padding:10px 12px; }
+    .help summary { cursor:pointer; color:var(--ice); font-weight:900; }
+    .help-content { margin-top:10px; color:var(--txt); display:grid; gap:8px; }
+    .help-content p { color:var(--dim); }
+    .toast { position:fixed; left:50%; bottom:22px; transform:translateX(-50%); padding:10px 18px; border-radius:999px; background:var(--green); color:#051008; font-weight:900; box-shadow:var(--shadow); display:none; z-index:999; }
+    .compact .library-extra,.compact .help,.compact .data-actions,.compact .notes-col,.compact .role-col,.compact .mode-strip,.compact .page-nav { display:none; }
+    .compact .grid { grid-template-columns:1fr; }
+    .compact .card { padding:12px; }
+    .compact table { min-width:760px; }
+    .compact .wide-table { min-width:980px; }
+    @media (max-width:1060px) {
+      .grid,.outputs { grid-template-columns:1fr; }
+      .mode-strip { grid-template-columns:1fr 1fr; }
+    }
+    @media (max-width:680px) {
+      body { padding:8px; font-size:13px; }
+      .app-header,.card-head,.snapshot-bar { grid-template-columns:1fr; flex-direction:column; align-items:stretch; }
+      .header-actions .btn,.toolbar .btn { flex:1 1 auto; }
+      .mode-strip,.field-grid,.field-grid.three { grid-template-columns:1fr; }
+      .result { grid-template-columns:30px 1fr; }
+      .instruction,.result .pill,.warning-text { grid-column:2; }
+      .title { font-size:15px; }
     }
   </style>
 </head>
 <body>
-<div class="wrap">
-  <header class="header">
+<div class="wrap" id="app">
+  <header class="app-header">
     <div class="brand">
       <div class="brand-icon">⚔️</div>
       <div>
         <div class="title">RALLY TIMELINE COORDINATOR</div>
-        <div class="sub">Multi-alliance castle attack & defense planner · Odin</div>
+        <div class="sub">Live castle war response planner · no UTC launch calls</div>
       </div>
     </div>
-    <button class="theme" id="themeBtn" type="button">☀ Light</button>
+    <div class="header-actions">
+      <button class="btn btn-ghost" id="compactBtn" type="button">Compact War Mode</button>
+      <button class="btn btn-ghost" id="themeBtn" type="button">☀ Light</button>
+    </div>
   </header>
 
-  <div class="notice">
-    <strong>No UTC clock is used.</strong> The calculator works out the hidden timing, then tells each friendly leader how many seconds after the previous leader to launch.
+  <nav class="page-nav">
+    <a class="nav-link" href="index.html">⚔️ Battle Predictor</a>
+    <a class="nav-link" href="rally.html">🎯 Rally Timing</a>
+    <a class="nav-link current" href="RTC.html">⚔️ Rally Coordinator</a>
+  </nav>
+
+  <div class="mode-strip">
+    <div class="mode-card">
+      <label><input type="radio" name="battleMode" value="defense" checked /> Defense Mode</label>
+      <span>Alliance A holds. Enemy waves hit first; B counters and A/B recovers.</span>
+    </div>
+    <div class="mode-card">
+      <label><input type="radio" name="battleMode" value="attack" /> Attack Mode</label>
+      <span>Enemy holds. Alliance A attacks, enemy counters, B answers.</span>
+    </div>
+    <div class="mode-card">
+      <label><input type="radio" name="planningState" value="preplanned" checked /> Preplanned Rally</label>
+      <span>Build the sequence before launches begin.</span>
+    </div>
+    <div class="mode-card">
+      <label><input type="radio" name="planningState" value="live" /> Live Rally Already in Progress</label>
+      <span>Flag rallies that are too late from the snapshot moment.</span>
+    </div>
   </div>
 
-  <section class="card">
-    <div class="card-head">
-      <div>
-        <div class="section-title">1. Load or Build the Battle Sequence</div>
-        <div class="section-help">Enemy rows are timing anchors only. Friendly rows receive launch instructions.</div>
-      </div>
-      <div class="toolbar">
-        <button class="btn btn-fire" id="attackPreset" type="button">⚔ Attack Preset</button>
-        <button class="btn btn-green" id="defensePreset" type="button">🛡 Defense Preset</button>
-        <button class="btn btn-primary" id="addRow" type="button">＋ Add Rally</button>
-        <button class="btn btn-ghost" id="clearRows" type="button">Clear</button>
-      </div>
+  <div class="error-box" id="errorBox"></div>
+
+  <div class="grid">
+    <div>
+      <section class="card" id="librarySection">
+        <div class="card-head">
+          <div>
+            <div class="section-title">1. Friendly Leader Library</div>
+            <div class="section-help library-extra">Saved leaders for Alliance A and B. Example values are editable.</div>
+          </div>
+          <div class="toolbar">
+            <button class="btn btn-primary" id="addLeaderBtn" type="button">＋ Leader</button>
+            <button class="btn btn-ghost library-extra" id="sampleLeadersBtn" type="button">Sample Data</button>
+            <button class="btn btn-ghost library-extra" id="saveLibraryBtn" type="button">Save Library</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:54px">Use</th>
+                <th style="width:86px">Alliance</th>
+                <th>Leader</th>
+                <th style="width:110px">March</th>
+                <th style="width:112px">Gather</th>
+                <th class="role-col">Role</th>
+                <th style="width:128px">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="leaderRows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <div class="section-title">2. Live Enemy Wave Capture</div>
+            <div class="section-help">Enter countdowns from one observation snapshot. The earliest countdown hits first.</div>
+          </div>
+          <div class="toolbar">
+            <button class="btn btn-fire" id="addEnemyBtn" type="button">＋ Enemy</button>
+            <button class="btn btn-warn" id="freezeBtn" type="button">Freeze Current Snapshot</button>
+          </div>
+        </div>
+        <div class="snapshot-bar">
+          <div>
+            <div class="section-title">Snapshot Status</div>
+            <div class="snapshot-meta" id="snapshotMeta">Not frozen yet. Countdown values still calculate as the common snapshot.</div>
+          </div>
+          <button class="btn btn-ghost" id="sortEnemiesBtn" type="button">Sort Enemy Hits</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Enemy Alliance</th>
+                <th>Enemy Leader</th>
+                <th style="width:124px">Impact In</th>
+                <th style="width:170px">Label</th>
+                <th class="notes-col">Notes</th>
+                <th style="width:128px">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="enemyRows"></tbody>
+          </table>
+        </div>
+      </section>
     </div>
 
-    <div id="errorBox" class="error-box"></div>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th style="width:105px">Side</th>
-            <th style="width:90px">Alliance</th>
-            <th style="width:150px">Leader</th>
-            <th>Purpose / Role</th>
-            <th style="width:115px">Hit Offset</th>
-            <th style="width:115px">March Time</th>
-            <th style="width:115px">Gathering</th>
-            <th style="width:78px">Actions</th>
-          </tr>
-        </thead>
-        <tbody id="rows"></tbody>
-      </table>
+    <div>
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <div class="section-title">3. Friendly Response Builder</div>
+            <div class="section-help">Add friendly hits and optional planned enemy final counters. Presets only populate editable rows.</div>
+          </div>
+          <div class="toolbar">
+            <button class="btn btn-green" id="defensePresetBtn" type="button">Defense Preset</button>
+            <button class="btn btn-fire" id="attackPresetBtn" type="button">Attack Preset</button>
+            <button class="btn btn-primary" id="addResponseBtn" type="button">＋ Response</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="wide-table">
+            <thead>
+              <tr>
+                <th style="width:120px">Type</th>
+                <th style="width:100px">Alliance</th>
+                <th>Leader / Enemy</th>
+                <th style="width:170px">Purpose</th>
+                <th style="width:170px">Hit Relative To</th>
+                <th style="width:92px">Offset</th>
+                <th style="width:142px">Rally State</th>
+                <th style="width:112px">Remaining</th>
+                <th style="width:128px">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="responseRows"></tbody>
+          </table>
+        </div>
+        <div class="toolbar" style="margin-top:10px">
+          <button class="btn btn-green" id="calculateBtn" type="button">✓ Calculate</button>
+          <button class="btn btn-primary" id="copyBtn" type="button">Copy Chat Output</button>
+          <button class="btn btn-ghost data-actions" id="savePlanBtn" type="button">Save Plan</button>
+          <button class="btn btn-ghost data-actions" id="restorePlanBtn" type="button">Restore Plan</button>
+          <button class="btn btn-warn data-actions" id="resetBattleBtn" type="button">Reset Current Battle</button>
+          <button class="btn btn-danger data-actions" id="resetEverythingBtn" type="button">Reset Everything</button>
+        </div>
+      </section>
+
+      <section class="card" id="resultsCard">
+        <div class="card-head">
+          <div>
+            <div class="section-title">Battle Output</div>
+            <div class="section-help">Only relative seconds. The first friendly launcher is the trigger.</div>
+          </div>
+        </div>
+        <div class="outputs">
+          <div>
+            <div class="section-title" style="margin-bottom:8px">🚀 Friendly Launch Sequence</div>
+            <div class="result-list" id="launchResults"></div>
+          </div>
+          <div>
+            <div class="section-title" style="margin-bottom:8px">💥 Full Hit Sequence</div>
+            <div class="result-list" id="hitResults"></div>
+          </div>
+        </div>
+        <div class="section-title" style="margin-top:13px">Alliance Chat Copy</div>
+        <div class="copy-box" id="chatOutput"></div>
+      </section>
     </div>
+  </div>
+
+  <section class="help">
+    <details>
+      <summary>How the timing model works</summary>
+      <div class="help-content">
+        <p>Enemy countdowns share one snapshot. A 22 second enemy rally hits before a 24 second enemy rally, even if it was entered second.</p>
+        <p>Friendly launch point = desired hit point - rally gathering duration - leader march time. Friendly launch points are sorted, then shown as LAUNCH FIRST and relative delays after the previous friendly launcher.</p>
+        <p>Live mode checks whether a not-launched, gathering, or marching rally can still hit the desired point. Impossible timing is shown as a warning instead of being hidden.</p>
+      </div>
+    </details>
   </section>
 
-  <section class="card">
-    <div class="card-head">
-      <div>
-        <div class="section-title">2. Calculation Settings</div>
-        <div class="section-help">Hit offsets are measured from the first castle hit in the plan.</div>
-      </div>
-    </div>
-    <div class="settings-grid">
-      <div class="field">
-        <label for="planName">Plan Name</label>
-        <input id="planName" type="text" value="Castle Battle Plan" />
-      </div>
-      <div class="field">
-        <label for="defaultGap">Default Gap for New Rows (seconds)</label>
-        <input id="defaultGap" type="number" min="0" step="1" value="1" />
-      </div>
-      <div class="field">
-        <label for="instructionStyle">Launch Instruction Style</label>
-        <select id="instructionStyle">
-          <option value="after">Seconds AFTER previous leader</option>
-          <option value="cumulative">Seconds AFTER first leader</option>
-        </select>
-      </div>
-    </div>
-    <div class="toolbar" style="margin-top:12px">
-      <button class="btn btn-green" id="calculate" type="button">✓ Calculate Sequence</button>
-      <button class="btn btn-primary" id="copy" type="button">📋 Copy Chat Plan</button>
-      <button class="btn btn-ghost" id="save" type="button">💾 Save Locally</button>
-      <button class="btn btn-ghost" id="restore" type="button">↻ Restore Saved</button>
-    </div>
-  </section>
-
-  <section id="resultsCard" class="card hidden">
-    <div class="card-head">
-      <div>
-        <div class="section-title">3. Coordinated Battle Output</div>
-        <div class="section-help">Launch order is calculated separately from hit order because leaders have different march and gathering times.</div>
-      </div>
-    </div>
-    <div class="outputs">
-      <div>
-        <div class="section-title" style="margin-bottom:9px">🚀 Friendly Launch Sequence</div>
-        <div id="launchResults" class="result-list"></div>
-      </div>
-      <div>
-        <div class="section-title" style="margin-bottom:9px">💥 Full Hit Sequence</div>
-        <div id="hitResults" class="result-list"></div>
-      </div>
-    </div>
-    <div class="section-title" style="margin-top:16px">Alliance Chat Copy</div>
-    <div id="chatOutput" class="copy-box"></div>
-  </section>
-
-  <footer class="footer">Generated for WOSPREDV3 · <strong>Odin</strong></footer>
+  <div class="toast" id="toast"></div>
 </div>
 
 <script>
 (() => {
   'use strict';
 
-  const $ = (id) => document.getElementById(id);
-  const rowsEl = $('rows');
-  const errorBox = $('errorBox');
-  let rowId = 0;
-  let lastPlan = null;
-
-  const presets = {
-    attack: [
-      { side:'ours', alliance:'A', leader:'Leader A1', role:'Main attack 1', hit:0, march:'0:42', gather:5 },
-      { side:'ours', alliance:'A', leader:'Leader A2', role:'Main attack 2', hit:1, march:'0:32', gather:5 },
-      { side:'enemy', alliance:'D', leader:'Enemy D1', role:'Enemy counter 1', hit:4, march:'', gather:5 },
-      { side:'ours', alliance:'B', leader:'Leader B1', role:'Counter their counter 1', hit:5, march:'0:44', gather:5 },
-      { side:'enemy', alliance:'D', leader:'Enemy D2', role:'Enemy counter 2', hit:7, march:'', gather:5 },
-      { side:'ours', alliance:'B', leader:'Leader B2', role:'Counter their counter 2', hit:8, march:'0:36', gather:5 }
-    ],
-    defense: [
-      { side:'enemy', alliance:'C', leader:'Enemy C1', role:'Enemy main attack 1', hit:0, march:'', gather:5 },
-      { side:'enemy', alliance:'C', leader:'Enemy C2', role:'Enemy main attack 2', hit:2, march:'', gather:5 },
-      { side:'ours', alliance:'B', leader:'Leader B1', role:'Mid-wave recovery 1', hit:3, march:'0:36', gather:5 },
-      { side:'enemy', alliance:'C', leader:'Enemy C3', role:'Enemy main attack 3', hit:5, march:'', gather:5 },
-      { side:'ours', alliance:'B', leader:'Leader B2', role:'Mid-wave recovery 2', hit:6, march:'0:39', gather:5 },
-      { side:'enemy', alliance:'D', leader:'Enemy D1', role:'Enemy counter', hit:8, march:'', gather:5 },
-      { side:'ours', alliance:'B', leader:'Leader B3', role:'Counter enemy counter', hit:9, march:'0:34', gather:5 },
-      { side:'enemy', alliance:'D', leader:'Enemy D2', role:'Enemy final counter', hit:11, march:'', gather:5 },
-      { side:'ours', alliance:'A', leader:'Leader A1', role:'Final high-damage recovery', hit:12, march:'0:32', gather:10 }
-    ]
+  const STORAGE = {
+    leaders:'rtc-leaders-v2',
+    wave:'rtc-enemy-wave-v2',
+    plan:'rtc-response-plan-v2',
+    prefs:'rtc-prefs-v2'
   };
+  const ids = { leader:0, enemy:0, response:0 };
+  const $ = (id) => document.getElementById(id);
+  const state = { leaders:[], enemies:[], responses:[], prefs:{ mode:'defense', planning:'preplanned', theme:'dark', compact:false }, last:null };
+
+  const roleOptions = ['Main attack','Counter attack','Recovery rally','Final hit','Reinforcement','Custom'];
+  const enemyLabels = ['Main enemy attack','Enemy counter','Enemy final counter','Custom'];
+
+  function uid(prefix) {
+    ids[prefix] += 1;
+    return `${prefix}-${Date.now().toString(36)}-${ids[prefix]}`;
+  }
 
   function esc(value) {
-    return String(value ?? '').replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
+    return String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
   }
 
-  function addRow(data = {}) {
-    const id = ++rowId;
-    const side = data.side || 'ours';
-    const alliance = data.alliance || (side === 'ours' ? 'A' : 'C');
-    const leader = data.leader || `Leader ${alliance}${id}`;
-    const role = data.role || '';
-    const hit = Number.isFinite(Number(data.hit)) ? Number(data.hit) : nextHitOffset();
-    const march = data.march ?? (side === 'ours' ? '0:30' : '');
-    const gather = Number(data.gather) === 10 ? 10 : 5;
-
-    const tr = document.createElement('tr');
-    tr.dataset.id = id;
-    tr.innerHTML = `
-      <td>
-        <select class="side-select" aria-label="Rally side">
-          <option value="ours" ${side === 'ours' ? 'selected' : ''}>Our rally</option>
-          <option value="enemy" ${side === 'enemy' ? 'selected' : ''}>Enemy anchor</option>
-        </select>
-      </td>
-      <td>
-        <select class="alliance-select" aria-label="Alliance">
-          ${['A','B','C','D'].map(a => `<option value="${a}" ${a === alliance ? 'selected' : ''}>Alliance ${a}</option>`).join('')}
-        </select>
-      </td>
-      <td><input class="leader-input" type="text" value="${esc(leader)}" placeholder="Leader name" /></td>
-      <td><input class="role-input" type="text" value="${esc(role)}" placeholder="e.g. Counter D1" /></td>
-      <td><input class="hit-input small" type="number" min="0" step="1" value="${hit}" title="Seconds after the first hit" /></td>
-      <td><input class="march-input small" type="text" value="${esc(march)}" placeholder="m:ss" ${side === 'enemy' ? 'disabled' : ''} /></td>
-      <td>
-        <select class="gather-select tiny" ${side === 'enemy' ? 'disabled' : ''}>
-          <option value="5" ${gather === 5 ? 'selected' : ''}>5 min</option>
-          <option value="10" ${gather === 10 ? 'selected' : ''}>10 min</option>
-        </select>
-      </td>
-      <td>
-        <div class="row-actions">
-          <button class="icon-btn move-up" type="button" title="Move up">↑</button>
-          <button class="icon-btn remove" type="button" title="Remove">×</button>
-        </div>
-      </td>`;
-
-    rowsEl.appendChild(tr);
-    wireRow(tr);
+  function readJSON(key, fallback) {
+    try {
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
+    } catch {
+      return fallback;
+    }
   }
 
-  function wireRow(tr) {
-    tr.querySelector('.side-select').addEventListener('change', (e) => {
-      const enemy = e.target.value === 'enemy';
-      tr.querySelector('.march-input').disabled = enemy;
-      tr.querySelector('.gather-select').disabled = enemy;
-      if (enemy) tr.querySelector('.march-input').value = '';
-    });
-    tr.querySelector('.remove').addEventListener('click', () => tr.remove());
-    tr.querySelector('.move-up').addEventListener('click', () => {
-      const prev = tr.previousElementSibling;
-      if (prev) rowsEl.insertBefore(tr, prev);
-    });
+  function writeJSON(key, value) {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+      return true;
+    } catch {
+      return false;
+    }
   }
 
-  function nextHitOffset() {
-    const existing = [...rowsEl.querySelectorAll('.hit-input')].map(el => Number(el.value)).filter(Number.isFinite);
-    const gap = Math.max(0, Number($('defaultGap').value) || 1);
-    return existing.length ? Math.max(...existing) + gap : 0;
+  function removeKey(key) {
+    try { localStorage.removeItem(key); } catch {}
   }
 
-  function loadPreset(name) {
-    rowsEl.innerHTML = '';
-    rowId = 0;
-    presets[name].forEach(addRow);
-    $('planName').value = name === 'attack' ? 'Castle Attack — Capture & Hold' : 'Castle Defense — Recover & Hold';
-    calculate();
-  }
-
-  function parseMarch(value) {
-    const text = String(value).trim();
-    const match = text.match(/^(\d{1,2}):(\d{2})$/);
+  function parseDuration(value) {
+    const text = String(value ?? '').trim();
+    if (!text) return null;
+    if (/^\d+$/.test(text)) return Number(text);
+    const match = text.match(/^(\d+):(\d{2})$/);
     if (!match) return null;
-    const min = Number(match[1]);
-    const sec = Number(match[2]);
-    if (sec > 59) return null;
-    return min * 60 + sec;
+    const minutes = Number(match[1]);
+    const seconds = Number(match[2]);
+    if (seconds > 59) return null;
+    return minutes * 60 + seconds;
   }
 
-  function readRows() {
-    const errors = [];
-    const entries = [...rowsEl.querySelectorAll('tr')].map((tr, index) => {
-      const side = tr.querySelector('.side-select').value;
-      const alliance = tr.querySelector('.alliance-select').value;
-      const leader = tr.querySelector('.leader-input').value.trim() || `Leader ${index + 1}`;
-      const role = tr.querySelector('.role-input').value.trim() || (side === 'ours' ? 'Friendly rally' : 'Enemy rally');
-      const hit = Number(tr.querySelector('.hit-input').value);
-      const gather = Number(tr.querySelector('.gather-select').value || 5);
-      let marchSecs = null;
-      const marchText = tr.querySelector('.march-input').value.trim();
+  function secondsLabel(value, compact = false) {
+    const rounded = Math.round(value * 10) / 10;
+    if (compact) return `${rounded}s`;
+    return `${rounded} ${rounded === 1 ? 'second' : 'seconds'}`;
+  }
 
-      if (!Number.isFinite(hit) || hit < 0) errors.push(`${leader}: hit offset must be zero or higher.`);
-      if (side === 'ours') {
-        marchSecs = parseMarch(marchText);
-        if (marchSecs === null) errors.push(`${leader}: use march time m:ss, for example 0:32.`);
+  function gatherSeconds(gather) {
+    return Number(gather) === 10 ? 600 : 300;
+  }
+
+  function sampleLeaders() {
+    return [
+      { id:uid('leader'), enabled:true, alliance:'A', name:'Leader A1', march:'0:32', gather:5, role:'Main attack' },
+      { id:uid('leader'), enabled:true, alliance:'A', name:'Leader A2', march:'0:41', gather:5, role:'Recovery rally' },
+      { id:uid('leader'), enabled:true, alliance:'A', name:'Leader A3', march:'0:55', gather:10, role:'Final hit' },
+      { id:uid('leader'), enabled:true, alliance:'B', name:'Leader B1', march:'0:36', gather:5, role:'Counter attack' },
+      { id:uid('leader'), enabled:true, alliance:'B', name:'Leader B2', march:'0:28', gather:5, role:'Counter attack' },
+      { id:uid('leader'), enabled:true, alliance:'B', name:'Leader B3', march:'0:49', gather:10, role:'Reinforcement' }
+    ];
+  }
+
+  function sampleEnemies() {
+    return [
+      { id:uid('enemy'), alliance:'Enemy', leader:'Enemy Rally 1', countdown:'24', label:'Main enemy attack', notes:'' },
+      { id:uid('enemy'), alliance:'Enemy', leader:'Enemy Rally 2', countdown:'22', label:'Main enemy attack', notes:'' }
+    ];
+  }
+
+  function defenseResponses() {
+    const b1 = firstLeader('B');
+    const a1 = firstLeader('A');
+    return [
+      { id:uid('response'), type:'friendly', alliance:'B', leaderId:b1?.id || '', enemyAlliance:'Enemy', enemyLeader:'', purpose:'Counter attack', anchor:'finalEnemy', offset:'1', manualTarget:'', liveState:'not-launched', remaining:'' },
+      { id:uid('response'), type:'enemy', alliance:'Enemy', leaderId:'', enemyAlliance:'Enemy', enemyLeader:'Enemy Final Counter', purpose:'Enemy final counter', anchor:'previousFriendly', offset:'3', manualTarget:'', liveState:'not-launched', remaining:'' },
+      { id:uid('response'), type:'friendly', alliance:a1?.alliance || 'A', leaderId:a1?.id || '', enemyAlliance:'Enemy', enemyLeader:'', purpose:'Final recovery rally', anchor:'enemyFinalCounter', offset:'1', manualTarget:'', liveState:'not-launched', remaining:'' }
+    ];
+  }
+
+  function attackResponses() {
+    const a1 = firstLeader('A');
+    const b1 = firstLeader('B');
+    return [
+      { id:uid('response'), type:'friendly', alliance:a1?.alliance || 'A', leaderId:a1?.id || '', enemyAlliance:'Enemy', enemyLeader:'', purpose:'Main attack', anchor:'firstEnemy', offset:'1', manualTarget:'', liveState:'not-launched', remaining:'' },
+      { id:uid('response'), type:'enemy', alliance:'Enemy', leaderId:'', enemyAlliance:'Enemy', enemyLeader:'Enemy Counter', purpose:'Enemy counter', anchor:'previousFriendly', offset:'3', manualTarget:'', liveState:'not-launched', remaining:'' },
+      { id:uid('response'), type:'friendly', alliance:b1?.alliance || 'B', leaderId:b1?.id || '', enemyAlliance:'Enemy', enemyLeader:'', purpose:'Counter attack', anchor:'previousEnemy', offset:'1', manualTarget:'', liveState:'not-launched', remaining:'' }
+    ];
+  }
+
+  function firstLeader(alliance) {
+    return state.leaders.find(l => l.enabled && l.alliance === alliance) || state.leaders.find(l => l.alliance === alliance);
+  }
+
+  function applyPrefs() {
+    document.documentElement.dataset.theme = state.prefs.theme || 'dark';
+    $('themeBtn').textContent = document.documentElement.dataset.theme === 'dark' ? '☀ Light' : '🌙 Dark';
+    $('app').classList.toggle('compact', !!state.prefs.compact);
+    $('compactBtn').textContent = state.prefs.compact ? 'Full Planning Mode' : 'Compact War Mode';
+    document.querySelectorAll('[name="battleMode"]').forEach(r => { r.checked = r.value === state.prefs.mode; });
+    document.querySelectorAll('[name="planningState"]').forEach(r => { r.checked = r.value === state.prefs.planning; });
+  }
+
+  function savePrefs() {
+    writeJSON(STORAGE.prefs, state.prefs);
+  }
+
+  function leaderOptions(selectedId, allianceFilter = '') {
+    const enabled = state.leaders.filter(l => l.enabled && (!allianceFilter || l.alliance === allianceFilter));
+    const pool = enabled.length ? enabled : state.leaders.filter(l => !allianceFilter || l.alliance === allianceFilter);
+    return ['<option value="">Select leader</option>'].concat(pool.map(l => `<option value="${esc(l.id)}" ${l.id === selectedId ? 'selected' : ''}>[${esc(l.alliance)}] ${esc(l.name || 'Unnamed leader')} - ${esc(l.march || '?')}</option>`)).join('');
+  }
+
+  function renderLeaders() {
+    const rows = $('leaderRows');
+    rows.innerHTML = '';
+    state.leaders.forEach((leader, index) => {
+      const tr = document.createElement('tr');
+      tr.dataset.id = leader.id;
+      tr.className = leader.enabled ? '' : 'disabled';
+      tr.innerHTML = `
+        <td><input class="leader-enabled" type="checkbox" ${leader.enabled ? 'checked' : ''} aria-label="Use leader" /></td>
+        <td><select class="leader-alliance"><option value="A" ${leader.alliance === 'A' ? 'selected' : ''}>A</option><option value="B" ${leader.alliance === 'B' ? 'selected' : ''}>B</option></select></td>
+        <td><input class="leader-name" type="text" value="${esc(leader.name)}" placeholder="Leader A1" /></td>
+        <td><input class="leader-march" type="text" value="${esc(leader.march)}" placeholder="0:32 or 32" /></td>
+        <td><select class="leader-gather"><option value="5" ${Number(leader.gather) !== 10 ? 'selected' : ''}>5 minutes</option><option value="10" ${Number(leader.gather) === 10 ? 'selected' : ''}>10 minutes</option></select></td>
+        <td class="role-col"><select class="leader-role">${roleOptions.map(r => `<option value="${esc(r)}" ${leader.role === r ? 'selected' : ''}>${esc(r)}</option>`).join('')}</select></td>
+        <td><div class="row-actions">
+          <button class="icon-btn move-up" type="button" title="Move up">↑</button>
+          <button class="icon-btn move-down" type="button" title="Move down">↓</button>
+          <button class="icon-btn duplicate" type="button" title="Duplicate">⧉</button>
+          <button class="icon-btn remove" type="button" title="Remove">×</button>
+        </div></td>`;
+      tr.querySelector('.leader-enabled').addEventListener('change', e => { leader.enabled = e.target.checked; persistLibrary(); renderLeaders(); renderResponses(); });
+      tr.querySelector('.leader-alliance').addEventListener('change', e => { leader.alliance = e.target.value; persistLibrary(); renderResponses(); });
+      tr.querySelector('.leader-name').addEventListener('input', e => { leader.name = e.target.value; persistLibrary(); renderResponses(); });
+      tr.querySelector('.leader-march').addEventListener('input', e => { leader.march = e.target.value; persistLibrary(); });
+      tr.querySelector('.leader-gather').addEventListener('change', e => { leader.gather = Number(e.target.value); persistLibrary(); });
+      tr.querySelector('.leader-role').addEventListener('change', e => { leader.role = e.target.value; persistLibrary(); });
+      tr.querySelector('.move-up').addEventListener('click', () => moveItem(state.leaders, index, index - 1, () => { persistLibrary(); renderLeaders(); renderResponses(); }));
+      tr.querySelector('.move-down').addEventListener('click', () => moveItem(state.leaders, index, index + 1, () => { persistLibrary(); renderLeaders(); renderResponses(); }));
+      tr.querySelector('.duplicate').addEventListener('click', () => {
+        const copy = { ...leader, id:uid('leader'), name:`${leader.name || 'Leader'} copy` };
+        state.leaders.splice(index + 1, 0, copy);
+        persistLibrary(); renderLeaders(); renderResponses();
+      });
+      tr.querySelector('.remove').addEventListener('click', () => {
+        state.leaders.splice(index, 1);
+        state.responses.forEach(r => { if (r.leaderId === leader.id) r.leaderId = ''; });
+        persistLibrary(); renderLeaders(); renderResponses();
+      });
+      rows.appendChild(tr);
+    });
+  }
+
+  function renderEnemies() {
+    const rows = $('enemyRows');
+    rows.innerHTML = '';
+    state.enemies.forEach((enemy, index) => {
+      const tr = document.createElement('tr');
+      tr.dataset.id = enemy.id;
+      tr.innerHTML = `
+        <td><input class="enemy-alliance" type="text" value="${esc(enemy.alliance)}" placeholder="Enemy alliance" /></td>
+        <td><input class="enemy-leader" type="text" value="${esc(enemy.leader)}" placeholder="Enemy Rally ${index + 1}" /></td>
+        <td><input class="enemy-countdown" type="text" value="${esc(enemy.countdown)}" placeholder="24 or 1:15" /></td>
+        <td><select class="enemy-label">${enemyLabels.map(x => `<option value="${esc(x)}" ${enemy.label === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></td>
+        <td class="notes-col"><input class="enemy-notes" type="text" value="${esc(enemy.notes)}" placeholder="Optional notes" /></td>
+        <td><div class="row-actions">
+          <button class="icon-btn move-up" type="button" title="Move up">↑</button>
+          <button class="icon-btn move-down" type="button" title="Move down">↓</button>
+          <button class="icon-btn duplicate" type="button" title="Duplicate">⧉</button>
+          <button class="icon-btn remove" type="button" title="Remove">×</button>
+        </div></td>`;
+      tr.querySelector('.enemy-alliance').addEventListener('input', e => { enemy.alliance = e.target.value; persistWave(); });
+      tr.querySelector('.enemy-leader').addEventListener('input', e => { enemy.leader = e.target.value; persistWave(); });
+      tr.querySelector('.enemy-countdown').addEventListener('input', e => { enemy.countdown = e.target.value; persistWave(); });
+      tr.querySelector('.enemy-label').addEventListener('change', e => { enemy.label = e.target.value; persistWave(); });
+      tr.querySelector('.enemy-notes').addEventListener('input', e => { enemy.notes = e.target.value; persistWave(); });
+      tr.querySelector('.move-up').addEventListener('click', () => moveItem(state.enemies, index, index - 1, () => { persistWave(); renderEnemies(); renderResponses(); }));
+      tr.querySelector('.move-down').addEventListener('click', () => moveItem(state.enemies, index, index + 1, () => { persistWave(); renderEnemies(); renderResponses(); }));
+      tr.querySelector('.duplicate').addEventListener('click', () => {
+        state.enemies.splice(index + 1, 0, { ...enemy, id:uid('enemy'), leader:`${enemy.leader || 'Enemy Rally'} copy` });
+        persistWave(); renderEnemies(); renderResponses();
+      });
+      tr.querySelector('.remove').addEventListener('click', () => { state.enemies.splice(index, 1); persistWave(); renderEnemies(); renderResponses(); });
+      rows.appendChild(tr);
+    });
+  }
+
+  function anchorOptions(selected) {
+    const base = [
+      ['firstEnemy','First enemy hit'],
+      ['previousEnemy','Previous enemy hit'],
+      ['finalEnemy','Final enemy hit'],
+      ['previousFriendly','Previous friendly hit'],
+      ['enemyFinalCounter','Enemy final counter'],
+      ['manual','Manually selected rally']
+    ];
+    return base.map(([value,label]) => `<option value="${value}" ${selected === value ? 'selected' : ''}>${label}</option>`).join('');
+  }
+
+  function manualOptions(selected) {
+    const events = previewEvents();
+    const opts = ['<option value="">Select rally</option>'];
+    events.forEach(e => opts.push(`<option value="${esc(e.id)}" ${selected === e.id ? 'selected' : ''}>${esc(e.name)} (${esc(e.sideLabel)})</option>`));
+    return opts.join('');
+  }
+
+  function renderResponses() {
+    const rows = $('responseRows');
+    rows.innerHTML = '';
+    state.responses.forEach((response, index) => {
+      const leader = state.leaders.find(l => l.id === response.leaderId);
+      const alliance = response.type === 'friendly' ? (leader?.alliance || response.alliance || 'A') : (response.enemyAlliance || response.alliance || 'Enemy');
+      response.alliance = alliance;
+      const tr = document.createElement('tr');
+      tr.dataset.id = response.id;
+      tr.innerHTML = `
+        <td><select class="response-type"><option value="friendly" ${response.type !== 'enemy' ? 'selected' : ''}>Friendly response</option><option value="enemy" ${response.type === 'enemy' ? 'selected' : ''}>Enemy final counter</option></select></td>
+        <td>${response.type === 'enemy'
+          ? `<input class="response-enemy-alliance" type="text" value="${esc(response.enemyAlliance || 'Enemy')}" placeholder="Enemy" />`
+          : `<span class="pill ${alliance === 'A' ? 'pill-a' : 'pill-b'}">Alliance ${esc(alliance)}</span>`}</td>
+        <td>${response.type === 'enemy'
+          ? `<input class="response-enemy-leader" type="text" value="${esc(response.enemyLeader || 'Enemy Final Counter')}" placeholder="Enemy Final Counter" />`
+          : `<select class="response-leader">${leaderOptions(response.leaderId, '')}</select>`}</td>
+        <td><input class="response-purpose" type="text" value="${esc(response.purpose)}" placeholder="${response.type === 'enemy' ? 'Enemy final counter' : 'Counter attack'}" /></td>
+        <td><select class="response-anchor">${anchorOptions(response.anchor)}</select><select class="response-manual" style="margin-top:5px;display:${response.anchor === 'manual' ? 'block' : 'none'}">${manualOptions(response.manualTarget)}</select></td>
+        <td><input class="response-offset" type="text" value="${esc(response.offset)}" placeholder="1" /></td>
+        <td><select class="response-live" ${response.type === 'enemy' ? 'disabled' : ''}><option value="not-launched" ${response.liveState !== 'gathering' && response.liveState !== 'marching' ? 'selected' : ''}>Not launched</option><option value="gathering" ${response.liveState === 'gathering' ? 'selected' : ''}>Currently gathering</option><option value="marching" ${response.liveState === 'marching' ? 'selected' : ''}>Already marching</option></select></td>
+        <td><input class="response-remaining" type="text" value="${esc(response.remaining)}" placeholder="remaining" ${response.type === 'enemy' || response.liveState === 'not-launched' ? 'disabled' : ''} /></td>
+        <td><div class="row-actions">
+          <button class="icon-btn move-up" type="button" title="Move up">↑</button>
+          <button class="icon-btn move-down" type="button" title="Move down">↓</button>
+          <button class="icon-btn duplicate" type="button" title="Duplicate">⧉</button>
+          <button class="icon-btn remove" type="button" title="Remove">×</button>
+        </div></td>`;
+      tr.querySelector('.response-type').addEventListener('change', e => { response.type = e.target.value; if (response.type === 'enemy') response.purpose = response.purpose || 'Enemy final counter'; persistPlan(); renderResponses(); });
+      const leaderSelect = tr.querySelector('.response-leader');
+      if (leaderSelect) leaderSelect.addEventListener('change', e => { response.leaderId = e.target.value; const l = state.leaders.find(x => x.id === response.leaderId); response.alliance = l?.alliance || response.alliance; persistPlan(); renderResponses(); });
+      const enemyAlliance = tr.querySelector('.response-enemy-alliance');
+      if (enemyAlliance) enemyAlliance.addEventListener('input', e => { response.enemyAlliance = e.target.value; response.alliance = e.target.value; persistPlan(); });
+      const enemyLeader = tr.querySelector('.response-enemy-leader');
+      if (enemyLeader) enemyLeader.addEventListener('input', e => { response.enemyLeader = e.target.value; persistPlan(); });
+      tr.querySelector('.response-purpose').addEventListener('input', e => { response.purpose = e.target.value; persistPlan(); });
+      tr.querySelector('.response-anchor').addEventListener('change', e => { response.anchor = e.target.value; persistPlan(); renderResponses(); });
+      tr.querySelector('.response-manual').addEventListener('change', e => { response.manualTarget = e.target.value; persistPlan(); });
+      tr.querySelector('.response-offset').addEventListener('input', e => { response.offset = e.target.value; persistPlan(); });
+      tr.querySelector('.response-live').addEventListener('change', e => { response.liveState = e.target.value; persistPlan(); renderResponses(); });
+      tr.querySelector('.response-remaining').addEventListener('input', e => { response.remaining = e.target.value; persistPlan(); });
+      tr.querySelector('.move-up').addEventListener('click', () => moveItem(state.responses, index, index - 1, () => { persistPlan(); renderResponses(); }));
+      tr.querySelector('.move-down').addEventListener('click', () => moveItem(state.responses, index, index + 1, () => { persistPlan(); renderResponses(); }));
+      tr.querySelector('.duplicate').addEventListener('click', () => { state.responses.splice(index + 1, 0, { ...response, id:uid('response') }); persistPlan(); renderResponses(); });
+      tr.querySelector('.remove').addEventListener('click', () => { state.responses.splice(index, 1); persistPlan(); renderResponses(); });
+      rows.appendChild(tr);
+    });
+  }
+
+  function previewEvents() {
+    const events = [];
+    state.enemies.forEach((enemy, i) => {
+      const seconds = parseDuration(enemy.countdown);
+      if (seconds !== null) events.push({ id:enemy.id, side:'enemy', sideLabel:'Enemy', name:enemy.leader || `Enemy Rally ${i + 1}`, hit:seconds, purpose:enemy.label || 'Enemy rally' });
+    });
+    return events.sort((a,b) => a.hit - b.hit);
+  }
+
+  function moveItem(arr, from, to, done) {
+    if (to < 0 || to >= arr.length) return;
+    const [item] = arr.splice(from, 1);
+    arr.splice(to, 0, item);
+    done();
+  }
+
+  function persistLibrary() { writeJSON(STORAGE.leaders, state.leaders); }
+  function persistWave() { writeJSON(STORAGE.wave, { enemies:state.enemies, frozenAt:state.frozenAt || null }); }
+  function persistPlan() { writeJSON(STORAGE.plan, state.responses); }
+
+  function readBaseEnemies(errors) {
+    return state.enemies.map((enemy, index) => {
+      const hit = parseDuration(enemy.countdown);
+      const name = (enemy.leader || '').trim();
+      if (!name) errors.push(`Enemy row ${index + 1}: enter an enemy leader or label.`);
+      if (hit === null || hit < 0) errors.push(`${name || `Enemy row ${index + 1}`}: impact countdown must be seconds or m:ss.`);
+      return {
+        id:enemy.id, side:'enemy', source:'snapshot', alliance:(enemy.alliance || 'Enemy').trim() || 'Enemy',
+        name:name || `Enemy Rally ${index + 1}`, purpose:enemy.label || 'Enemy rally', notes:enemy.notes || '',
+        hit, order:index
+      };
+    }).filter(e => e.hit !== null);
+  }
+
+  function validateLeaders(errors) {
+    const names = new Map();
+    state.leaders.forEach((leader, index) => {
+      if (!leader.enabled) return;
+      const label = leader.name.trim();
+      if (!label) errors.push(`Leader row ${index + 1}: leader name is required.`);
+      const key = label.toLowerCase();
+      if (key && names.has(key)) errors.push(`Duplicate leader name: ${label}.`);
+      names.set(key, true);
+      const march = parseDuration(leader.march);
+      if (march === null || march < 0) errors.push(`${label || `Leader row ${index + 1}`}: march time must be seconds or m:ss.`);
+    });
+  }
+
+  function resolveAnchor(anchor, manualTarget, events, errors, rowName) {
+    const enemies = events.filter(e => e.side === 'enemy').sort((a,b) => a.hit - b.hit);
+    const friendlies = events.filter(e => e.side === 'friendly').sort((a,b) => a.hit - b.hit);
+    let target = null;
+    if (anchor === 'firstEnemy') target = enemies[0];
+    if (anchor === 'previousEnemy') target = enemies[enemies.length - 1];
+    if (anchor === 'finalEnemy') target = enemies[enemies.length - 1];
+    if (anchor === 'previousFriendly') target = friendlies[friendlies.length - 1];
+    if (anchor === 'enemyFinalCounter') target = [...enemies].reverse().find(e => /final/i.test(e.purpose) || /final/i.test(e.name));
+    if (anchor === 'manual') target = events.find(e => e.id === manualTarget);
+    if (!target) errors.push(`${rowName}: missing response anchor (${anchorLabel(anchor)}).`);
+    return target;
+  }
+
+  function anchorLabel(anchor) {
+    return {
+      firstEnemy:'first enemy hit',
+      previousEnemy:'previous enemy hit',
+      finalEnemy:'final enemy hit',
+      previousFriendly:'previous friendly hit',
+      enemyFinalCounter:'enemy final counter',
+      manual:'manual rally'
+    }[anchor] || 'anchor';
+  }
+
+  function calculatePlan() {
+    const errors = [];
+    validateLeaders(errors);
+    const events = readBaseEnemies(errors);
+    if (!events.length) errors.push('Add at least one enemy rally countdown.');
+    const responseEvents = [];
+
+    state.responses.forEach((response, index) => {
+      const rowName = response.type === 'enemy'
+        ? ((response.enemyLeader || '').trim() || `Enemy response ${index + 1}`)
+        : (state.leaders.find(l => l.id === response.leaderId)?.name || `Friendly response ${index + 1}`);
+      const offset = parseDuration(response.offset);
+      if (offset === null) errors.push(`${rowName}: offset must be seconds or m:ss.`);
+      const currentEvents = events.concat(responseEvents);
+      const anchor = resolveAnchor(response.anchor, response.manualTarget, currentEvents, errors, rowName);
+      const hit = anchor && offset !== null ? anchor.hit + offset : null;
+
+      if (response.type === 'enemy') {
+        const enemyName = (response.enemyLeader || '').trim() || 'Enemy Final Counter';
+        const enemyAlliance = (response.enemyAlliance || response.alliance || 'Enemy').trim() || 'Enemy';
+        if (hit !== null) {
+          responseEvents.push({
+            id:response.id, side:'enemy', source:'planned', alliance:enemyAlliance, name:enemyName,
+            purpose:(response.purpose || 'Enemy final counter').trim() || 'Enemy final counter',
+            hit, anchorName:anchor?.name || '', offset, order:index + 100
+          });
+        }
+        return;
       }
 
-      return { index, side, alliance, leader, role, hit, gather, marchSecs, marchText };
+      const leader = state.leaders.find(l => l.id === response.leaderId);
+      if (!leader) errors.push(`${rowName}: choose an enabled friendly leader.`);
+      if (leader && !leader.enabled) errors.push(`${leader.name}: this leader is disabled.`);
+      const marchSecs = leader ? parseDuration(leader.march) : null;
+      if (leader && marchSecs === null) errors.push(`${leader.name}: march time must be seconds or m:ss.`);
+      const purpose = (response.purpose || leader?.role || 'Friendly response').trim() || 'Friendly response';
+      if (leader && hit !== null && marchSecs !== null) {
+        const gatherSecs = gatherSeconds(leader.gather);
+        const launchPoint = hit - gatherSecs - marchSecs;
+        const feasibility = checkFeasibility(response, hit, launchPoint, marchSecs, gatherSecs, errors, leader.name);
+        responseEvents.push({
+          id:response.id, side:'friendly', alliance:leader.alliance, name:leader.name, purpose, hit,
+          leaderId:leader.id, marchSecs, marchText:leader.march, gather:Number(leader.gather) === 10 ? 10 : 5,
+          gatherSecs, launchPoint, actionPoint:feasibility.actionPoint, feasibility, anchorName:anchor?.name || '',
+          offset, order:index + 100
+        });
+      }
     });
-    return { entries, errors };
+
+    if (!responseEvents.some(e => e.side === 'friendly')) errors.push('Add at least one friendly response.');
+    showErrors(errors);
+    if (errors.length) return null;
+
+    const hitRows = events.concat(responseEvents).sort((a,b) => a.hit - b.hit || a.order - b.order);
+    const launchRows = responseEvents.filter(e => e.side === 'friendly').sort((a,b) => a.actionPoint - b.actionPoint || a.hit - b.hit || a.order - b.order);
+    const decoratedLaunch = launchRows.map((row, index) => {
+      const previous = launchRows[index - 1];
+      return { ...row, launchOrder:index + 1, first:index === 0, delta:index === 0 ? 0 : row.actionPoint - previous.actionPoint, previousName:previous?.name || '' };
+    });
+    const decoratedHits = hitRows.map((row, index) => {
+      const previous = hitRows[index - 1];
+      return { ...row, hitOrder:index + 1, first:index === 0, delta:index === 0 ? 0 : row.hit - previous.hit, previousName:previous?.name || '' };
+    });
+    const chat = buildChat(decoratedLaunch, decoratedHits);
+    state.last = { launchRows:decoratedLaunch, hitRows:decoratedHits, chat };
+    renderOutput(state.last);
+    return state.last;
+  }
+
+  function checkFeasibility(response, desiredHit, launchPoint, marchSecs, gatherSecs, errors, leaderName) {
+    const planning = state.prefs.planning || 'preplanned';
+    const liveState = response.liveState || 'not-launched';
+    const remaining = parseDuration(response.remaining);
+    const result = { ok:true, message:'', actionPoint:launchPoint, state:liveState };
+    if (planning !== 'live') return result;
+
+    if (liveState === 'not-launched') {
+      if (launchPoint < 0) {
+        result.ok = false;
+        result.message = `Too late by ${secondsLabel(Math.abs(launchPoint))}. This rally needed to start earlier.`;
+      }
+      return result;
+    }
+
+    if (remaining === null) {
+      result.ok = false;
+      result.message = 'Enter remaining time for this live rally state.';
+      errors.push(`${leaderName}: enter remaining time for ${liveState.replace('-', ' ')}.`);
+      return result;
+    }
+
+    if (liveState === 'gathering') {
+      const earliestImpact = remaining + marchSecs;
+      result.actionPoint = -(gatherSecs - remaining);
+      if (desiredHit < earliestImpact) {
+        result.ok = false;
+        result.message = `Too late by ${secondsLabel(earliestImpact - desiredHit)} from current gathering state.`;
+      } else {
+        result.message = `Already gathering; rally opens in ${secondsLabel(remaining)}.`;
+      }
+    }
+
+    if (liveState === 'marching') {
+      result.actionPoint = -Math.max(0, marchSecs - remaining);
+      if (desiredHit < remaining) {
+        result.ok = false;
+        result.message = `Too late by ${secondsLabel(remaining - desiredHit)} from current march.`;
+      } else {
+        result.message = `Already marching; ${secondsLabel(remaining)} remaining.`;
+      }
+    }
+    return result;
   }
 
   function showErrors(errors) {
+    const box = $('errorBox');
     if (!errors.length) {
-      errorBox.style.display = 'none';
-      errorBox.textContent = '';
+      box.style.display = 'none';
+      box.textContent = '';
       return;
     }
-    errorBox.innerHTML = `<strong>Fix these items:</strong><br>${errors.map(esc).join('<br>')}`;
-    errorBox.style.display = 'block';
+    box.innerHTML = `<strong>Fix these items:</strong><br>${errors.map(esc).join('<br>')}`;
+    box.style.display = 'block';
   }
 
-  function allianceBadge(alliance) {
-    return `<span class="badge badge-${alliance.toLowerCase()}">Alliance ${alliance}</span>`;
+  function alliancePill(alliance, side) {
+    if (side === 'enemy') return `<span class="pill pill-enemy">${esc(alliance || 'Enemy')}</span>`;
+    return `<span class="pill ${alliance === 'A' ? 'pill-a' : 'pill-b'}">Alliance ${esc(alliance)}</span>`;
   }
 
-  function calculate() {
-    const { entries, errors } = readRows();
-    if (!entries.length) errors.push('Add at least one rally.');
-    const friendly = entries.filter(x => x.side === 'ours');
-    if (!friendly.length) errors.push('Add at least one friendly rally to generate launch instructions.');
-    showErrors(errors);
-    if (errors.length) return;
-
-    const launch = friendly.map(x => ({
-      ...x,
-      launchPoint: x.hit - (x.gather * 60) - x.marchSecs
-    })).sort((a,b) => a.launchPoint - b.launchPoint || a.hit - b.hit || a.index - b.index);
-
-    const hits = [...entries].sort((a,b) => a.hit - b.hit || a.index - b.index);
-    const style = $('instructionStyle').value;
-
-    const launchRows = launch.map((x, i) => {
-      const previous = launch[i - 1];
-      const first = launch[0];
-      const delta = i === 0 ? 0 : x.launchPoint - (style === 'cumulative' ? first.launchPoint : previous.launchPoint);
-      const ref = style === 'cumulative' ? first.leader : previous?.leader;
-      return { ...x, order:i + 1, delta, ref, first:i === 0 };
-    });
-
-    const hitRows = hits.map((x, i) => ({
-      ...x,
-      order:i + 1,
-      delta:i === 0 ? 0 : x.hit - hits[i - 1].hit,
-      ref:i === 0 ? null : hits[i - 1].leader,
-      first:i === 0
-    }));
-
-    renderLaunch(launchRows, style);
-    renderHits(hitRows);
-    const chat = buildChat(launchRows, hitRows, style);
-    $('chatOutput').textContent = chat;
-    $('resultsCard').classList.remove('hidden');
-    lastPlan = { launchRows, hitRows, style, chat };
-  }
-
-  function renderLaunch(rows, style) {
-    const el = $('launchResults');
-    el.innerHTML = '';
-    rows.forEach(r => {
+  function renderOutput(plan) {
+    const launchEl = $('launchResults');
+    const hitEl = $('hitResults');
+    launchEl.innerHTML = '';
+    hitEl.innerHTML = '';
+    plan.launchRows.forEach(row => {
       const div = document.createElement('div');
-      div.className = `result${r.first ? ' first' : ''}`;
-      const instruction = r.first
-        ? '<strong>LAUNCH FIRST</strong>'
-        : `Launch <strong>+${formatSeconds(r.delta)}</strong> AFTER ${esc(r.ref)}`;
+      div.className = `result${row.first ? ' first' : ''}${row.feasibility.ok ? '' : ' warning'}`;
+      const instruction = launchInstruction(row);
       div.innerHTML = `
-        <div class="num">${r.order}️⃣</div>
-        <div><div class="rname">${esc(r.leader)}</div><div class="rmeta">${esc(r.role)} · ${r.gather}m + ${esc(r.marchText)}</div></div>
+        <div class="num">${row.launchOrder}️⃣</div>
+        <div><div class="rname">${esc(row.name)}</div><div class="rmeta">${esc(row.purpose)} · ${row.gather}m + ${esc(row.marchText)}</div></div>
+        <div class="instruction">${instruction}${row.feasibility.message ? `<div class="warning-text">${esc(row.feasibility.message)}</div>` : ''}</div>
+        ${alliancePill(row.alliance, 'friendly')}`;
+      launchEl.appendChild(div);
+    });
+    plan.hitRows.forEach(row => {
+      const div = document.createElement('div');
+      div.className = `result${row.first ? ' first' : ''}`;
+      const instruction = row.first ? '<strong>HITS FIRST</strong>' : `Hits <strong>+${secondsLabel(row.delta)}</strong> after ${esc(row.previousName)}`;
+      div.innerHTML = `
+        <div class="num">${row.hitOrder}.</div>
+        <div><div class="rname">${esc(row.name)}</div><div class="rmeta">${row.side === 'friendly' ? 'Friendly' : 'Enemy'} · ${esc(row.purpose)}</div></div>
         <div class="instruction">${instruction}</div>
-        ${allianceBadge(r.alliance)}`;
-      el.appendChild(div);
+        ${alliancePill(row.alliance, row.side)}`;
+      hitEl.appendChild(div);
     });
+    $('chatOutput').textContent = plan.chat;
   }
 
-  function renderHits(rows) {
-    const el = $('hitResults');
-    el.innerHTML = '';
-    rows.forEach(r => {
-      const div = document.createElement('div');
-      div.className = `result${r.first ? ' first' : ''}`;
-      const instruction = r.first
-        ? '<strong>HITS FIRST</strong>'
-        : `Hits <strong>+${formatSeconds(r.delta)}</strong> after ${esc(r.ref)}`;
-      div.innerHTML = `
-        <div class="num">${r.order}.</div>
-        <div><div class="rname">${esc(r.leader)}</div><div class="rmeta">${r.side === 'ours' ? 'Friendly' : 'Enemy anchor'} · ${esc(r.role)}</div></div>
-        <div class="instruction hit">${instruction}</div>
-        ${allianceBadge(r.alliance)}`;
-      el.appendChild(div);
-    });
+  function launchInstruction(row) {
+    if (row.feasibility.state === 'gathering') return `<strong>ALREADY GATHERING</strong>`;
+    if (row.feasibility.state === 'marching') return `<strong>ALREADY MARCHING</strong>`;
+    if (row.first) return '<strong>LAUNCH FIRST</strong>';
+    return `Launch <strong>+${secondsLabel(row.delta)}</strong> AFTER ${esc(row.previousName)}`;
   }
 
-  function formatSeconds(value) {
-    const rounded = Math.round(value * 10) / 10;
-    return `${rounded}${rounded === 1 ? ' second' : ' seconds'}`;
-  }
-
-  function buildChat(launchRows, hitRows, style) {
-    const title = $('planName').value.trim() || 'Castle Battle Plan';
-    const lines = [`⚔️ ${title.toUpperCase()}`, '', '🚀 LAUNCH SEQUENCE:'];
-    launchRows.forEach(r => {
-      if (r.first) lines.push(`${r.order}️⃣ [${r.alliance}] ${r.leader} → LAUNCH FIRST`);
-      else lines.push(`${r.order}️⃣ [${r.alliance}] ${r.leader} → Launch +${formatSeconds(r.delta)} AFTER ${r.ref}`);
+  function buildChat(launchRows, hitRows) {
+    const title = state.prefs.mode === 'attack' ? 'CASTLE ATTACK PLAN' : 'CASTLE DEFENSE PLAN';
+    const lines = [`⚔️ ${title}`, '', '🚀 LAUNCH ORDER:'];
+    launchRows.forEach(row => {
+      const tag = `[${row.alliance}] ${row.name}`;
+      if (row.feasibility.state === 'gathering') lines.push(`${row.launchOrder}️⃣ ${tag} → ALREADY GATHERING${row.feasibility.ok ? '' : ` (${row.feasibility.message})`}`);
+      else if (row.feasibility.state === 'marching') lines.push(`${row.launchOrder}️⃣ ${tag} → ALREADY MARCHING${row.feasibility.ok ? '' : ` (${row.feasibility.message})`}`);
+      else if (row.first) lines.push(`${row.launchOrder}️⃣ ${tag} → LAUNCH FIRST`);
+      else lines.push(`${row.launchOrder}️⃣ ${tag} → Launch +${secondsLabel(row.delta, true)} AFTER ${row.previousName}`);
     });
-    lines.push('', '💥 HIT SEQUENCE:');
-    hitRows.forEach(r => {
-      const side = r.side === 'ours' ? 'OURS' : 'ENEMY';
-      if (r.first) lines.push(`${r.order}. [${r.alliance} · ${side}] ${r.leader} → HITS FIRST (${r.role})`);
-      else lines.push(`${r.order}. [${r.alliance} · ${side}] ${r.leader} → Hits +${formatSeconds(r.delta)} after ${r.ref} (${r.role})`);
+    lines.push('', '💥 HIT ORDER:');
+    hitRows.forEach(row => {
+      const name = row.side === 'friendly' ? `[${row.alliance}] ${row.name}` : row.name;
+      if (row.first) lines.push(`${row.hitOrder}. ${name} → HITS FIRST`);
+      else lines.push(`${row.hitOrder}. ${name} → +${secondsLabel(row.delta, true)}`);
     });
-    lines.push('', '📡 WOSPREDV3 · Rally Timeline Coordinator');
+    const warnings = launchRows.filter(r => !r.feasibility.ok);
+    if (warnings.length) {
+      lines.push('', '⚠ WARNINGS:');
+      warnings.forEach(r => lines.push(`${r.name}: ${r.feasibility.message}`));
+    }
     return lines.join('\n');
   }
 
-  async function copyPlan() {
-    if (!lastPlan) calculate();
-    if (!lastPlan) return;
+  async function copyOutput() {
+    if (!state.last) calculatePlan();
+    if (!state.last) return;
     try {
-      await navigator.clipboard.writeText(lastPlan.chat);
-      toast('✓ Plan copied');
+      await navigator.clipboard.writeText(state.last.chat);
+      toast('Copied battle plan');
     } catch {
       const area = document.createElement('textarea');
-      area.value = lastPlan.chat;
+      area.value = state.last.chat;
       document.body.appendChild(area);
       area.select();
       document.execCommand('copy');
       area.remove();
-      toast('✓ Plan copied');
-    }
-  }
-
-  function serialize() {
-    const { entries } = readRows();
-    return {
-      planName:$('planName').value,
-      defaultGap:$('defaultGap').value,
-      instructionStyle:$('instructionStyle').value,
-      rows:entries.map(x => ({side:x.side, alliance:x.alliance, leader:x.leader, role:x.role, hit:x.hit, march:x.marchText, gather:x.gather}))
-    };
-  }
-
-  function saveLocal() {
-    localStorage.setItem('rtc-plan-v1', JSON.stringify(serialize()));
-    toast('✓ Plan saved on this device');
-  }
-
-  function restoreLocal() {
-    const raw = localStorage.getItem('rtc-plan-v1');
-    if (!raw) return toast('No saved plan found', true);
-    try {
-      const saved = JSON.parse(raw);
-      rowsEl.innerHTML = '';
-      rowId = 0;
-      (saved.rows || []).forEach(addRow);
-      $('planName').value = saved.planName || 'Castle Battle Plan';
-      $('defaultGap').value = saved.defaultGap || 1;
-      $('instructionStyle').value = saved.instructionStyle || 'after';
-      calculate();
-      toast('✓ Saved plan restored');
-    } catch {
-      toast('Saved plan could not be read', true);
+      toast('Copied battle plan');
     }
   }
 
   function toast(message, isError = false) {
-    let el = document.querySelector('.toast');
-    if (!el) {
-      el = document.createElement('div');
-      el.className = 'toast';
-      Object.assign(el.style, {position:'fixed',bottom:'22px',left:'50%',transform:'translateX(-50%)',zIndex:'9999',padding:'10px 18px',borderRadius:'999px',fontWeight:'800',boxShadow:'var(--shadow)'});
-      document.body.appendChild(el);
-    }
+    const el = $('toast');
     el.textContent = message;
     el.style.background = isError ? 'var(--red)' : 'var(--green)';
-    el.style.color = '#07100a';
+    el.style.color = isError ? '#fff' : '#051008';
     el.style.display = 'block';
     clearTimeout(el._timer);
-    el._timer = setTimeout(() => { el.style.display = 'none'; }, 1800);
+    el._timer = setTimeout(() => { el.style.display = 'none'; }, 1900);
   }
 
-  function toggleTheme() {
-    const root = document.documentElement;
-    const next = root.dataset.theme === 'dark' ? 'light' : 'dark';
-    root.dataset.theme = next;
-    $('themeBtn').textContent = next === 'dark' ? '☀ Light' : '🌙 Dark';
-    localStorage.setItem('rtc-theme', next);
+  function sortEnemies() {
+    state.enemies.sort((a,b) => {
+      const av = parseDuration(a.countdown);
+      const bv = parseDuration(b.countdown);
+      return (av ?? Number.POSITIVE_INFINITY) - (bv ?? Number.POSITIVE_INFINITY);
+    });
+    persistWave();
+    renderEnemies();
+    renderResponses();
   }
 
-  $('attackPreset').addEventListener('click', () => loadPreset('attack'));
-  $('defensePreset').addEventListener('click', () => loadPreset('defense'));
-  $('addRow').addEventListener('click', () => addRow());
-  $('clearRows').addEventListener('click', () => { rowsEl.innerHTML=''; rowId=0; $('resultsCard').classList.add('hidden'); lastPlan=null; });
-  $('calculate').addEventListener('click', calculate);
-  $('copy').addEventListener('click', copyPlan);
-  $('save').addEventListener('click', saveLocal);
-  $('restore').addEventListener('click', restoreLocal);
-  $('themeBtn').addEventListener('click', toggleTheme);
+  function freezeSnapshot() {
+    sortEnemies();
+    state.frozenAt = new Date().toISOString();
+    persistWave();
+    $('snapshotMeta').textContent = `Frozen ${new Date(state.frozenAt).toLocaleTimeString()}. Countdown values are treated as one common observation snapshot.`;
+    calculatePlan();
+  }
 
-  document.documentElement.dataset.theme = localStorage.getItem('rtc-theme') || 'dark';
-  $('themeBtn').textContent = document.documentElement.dataset.theme === 'dark' ? '☀ Light' : '🌙 Dark';
-  loadPreset('attack');
+  function savePlan() {
+    const ok = writeJSON(STORAGE.leaders, state.leaders)
+      && writeJSON(STORAGE.wave, { enemies:state.enemies, frozenAt:state.frozenAt || null })
+      && writeJSON(STORAGE.plan, state.responses)
+      && writeJSON(STORAGE.prefs, state.prefs);
+    toast(ok ? 'Plan saved' : 'Plan could not be saved', !ok);
+  }
+
+  function restorePlan() {
+    loadState();
+    renderAll();
+    calculatePlan();
+    toast('Saved plan restored');
+  }
+
+  function resetCurrentBattle() {
+    state.enemies = sampleEnemies();
+    state.responses = defenseResponses();
+    state.frozenAt = null;
+    persistWave();
+    persistPlan();
+    renderAll();
+    calculatePlan();
+    toast('Current battle reset');
+  }
+
+  function resetEverything() {
+    if (!confirm('Reset all saved RTC leader, wave, response, and preference data?')) return;
+    Object.values(STORAGE).forEach(removeKey);
+    state.leaders = sampleLeaders();
+    state.enemies = sampleEnemies();
+    state.responses = defenseResponses();
+    state.prefs = { mode:'defense', planning:'preplanned', theme:'dark', compact:false };
+    state.frozenAt = null;
+    applyPrefs();
+    renderAll();
+    savePlan();
+    calculatePlan();
+    toast('Everything reset');
+  }
+
+  function loadState() {
+    state.prefs = { mode:'defense', planning:'preplanned', theme:'dark', compact:false, ...readJSON(STORAGE.prefs, {}) };
+    state.leaders = readJSON(STORAGE.leaders, null) || sampleLeaders();
+    const wave = readJSON(STORAGE.wave, null);
+    state.enemies = wave?.enemies || sampleEnemies();
+    state.frozenAt = wave?.frozenAt || null;
+    state.responses = readJSON(STORAGE.plan, null) || defenseResponses();
+  }
+
+  function renderAll() {
+    applyPrefs();
+    renderLeaders();
+    renderEnemies();
+    renderResponses();
+    if (state.frozenAt) $('snapshotMeta').textContent = `Frozen ${new Date(state.frozenAt).toLocaleTimeString()}. Countdown values are treated as one common observation snapshot.`;
+    else $('snapshotMeta').textContent = 'Not frozen yet. Countdown values still calculate as the common snapshot.';
+  }
+
+  function addLeader() {
+    state.leaders.push({ id:uid('leader'), enabled:true, alliance:'A', name:'', march:'0:32', gather:5, role:'Custom' });
+    persistLibrary();
+    renderLeaders();
+    renderResponses();
+  }
+
+  function addEnemy() {
+    state.enemies.push({ id:uid('enemy'), alliance:'Enemy', leader:`Enemy Rally ${state.enemies.length + 1}`, countdown:'24', label:'Main enemy attack', notes:'' });
+    persistWave();
+    renderEnemies();
+    renderResponses();
+  }
+
+  function addResponse() {
+    const leader = firstLeader(state.prefs.mode === 'attack' ? 'A' : 'B') || state.leaders[0];
+    state.responses.push({ id:uid('response'), type:'friendly', alliance:leader?.alliance || 'B', leaderId:leader?.id || '', enemyAlliance:'Enemy', enemyLeader:'', purpose:'Counter attack', anchor:'finalEnemy', offset:'1', manualTarget:'', liveState:'not-launched', remaining:'' });
+    persistPlan();
+    renderResponses();
+  }
+
+  function wire() {
+    $('addLeaderBtn').addEventListener('click', addLeader);
+    $('sampleLeadersBtn').addEventListener('click', () => { state.leaders = sampleLeaders(); persistLibrary(); renderLeaders(); renderResponses(); toast('Sample leaders loaded'); });
+    $('saveLibraryBtn').addEventListener('click', () => { persistLibrary(); toast('Leader library saved'); });
+    $('addEnemyBtn').addEventListener('click', addEnemy);
+    $('freezeBtn').addEventListener('click', freezeSnapshot);
+    $('sortEnemiesBtn').addEventListener('click', sortEnemies);
+    $('addResponseBtn').addEventListener('click', addResponse);
+    $('defensePresetBtn').addEventListener('click', () => { state.prefs.mode = 'defense'; state.responses = defenseResponses(); savePrefs(); persistPlan(); renderAll(); calculatePlan(); });
+    $('attackPresetBtn').addEventListener('click', () => { state.prefs.mode = 'attack'; state.responses = attackResponses(); savePrefs(); persistPlan(); renderAll(); calculatePlan(); });
+    $('calculateBtn').addEventListener('click', calculatePlan);
+    $('copyBtn').addEventListener('click', copyOutput);
+    $('savePlanBtn').addEventListener('click', savePlan);
+    $('restorePlanBtn').addEventListener('click', restorePlan);
+    $('resetBattleBtn').addEventListener('click', resetCurrentBattle);
+    $('resetEverythingBtn').addEventListener('click', resetEverything);
+    $('themeBtn').addEventListener('click', () => {
+      state.prefs.theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+      applyPrefs(); savePrefs();
+    });
+    $('compactBtn').addEventListener('click', () => {
+      state.prefs.compact = !state.prefs.compact;
+      applyPrefs(); savePrefs();
+    });
+    document.querySelectorAll('[name="battleMode"]').forEach(r => r.addEventListener('change', e => { state.prefs.mode = e.target.value; savePrefs(); }));
+    document.querySelectorAll('[name="planningState"]').forEach(r => r.addEventListener('change', e => { state.prefs.planning = e.target.value; savePrefs(); calculatePlan(); }));
+  }
+
+  loadState();
+  wire();
+  renderAll();
+  calculatePlan();
 })();
 </script>
 </body>
