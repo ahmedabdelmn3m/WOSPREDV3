@@ -1,4 +1,10 @@
 {
   "version": 2,
-  "name": "wospredv3"
+  "name": "wospredv3",
+  "rewrites": [
+    {
+      "source": "/rtc",
+      "destination": "/RTC.html"
+    }
+  ]
 }

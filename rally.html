@@ -79,6 +79,18 @@
     }
     .dark-toggle:hover { color: var(--ice); border-color: var(--ice); }
 
+    /* ── Page nav ───────────────────────────────────────────── */
+    .page-nav {
+      display:flex; gap:6px; flex-wrap:wrap; padding:6px 0;
+      margin-bottom:10px; align-items:center;
+    }
+    .nav-link-btn {
+      padding:6px 12px; border-radius:var(--radius); font-size:12px;
+      font-weight:700; border:1px solid var(--border); background:transparent;
+      color:var(--txt-dim); cursor:pointer; text-decoration:none; transition:all .2s;
+    }
+    .nav-link-btn:hover, .nav-link-btn.current { color:var(--ice); border-color:var(--ice); background:rgba(0,200,255,.08); }
+
     /* ── Tabs ────────────────────────────────────────────────── */
     .tab-nav {
       display: flex; gap: 4px; padding: 0;
@@ -235,6 +247,12 @@
     <button class="dark-toggle" id="theme-toggle">☀ Light</button>
   </div>
 </header>
+
+<nav class="page-nav">
+  <a href="index.html" class="nav-link-btn">⚔️ Battle Predictor</a>
+  <a href="rally.html" class="nav-link-btn current">🎯 Rally Timing</a>
+  <a href="RTC.html" class="nav-link-btn">⚔️ Rally Coordinator</a>
+</nav>
 
 <!-- ── Tabs ───────────────────────────────────────────────── -->
 <nav class="tab-nav">
