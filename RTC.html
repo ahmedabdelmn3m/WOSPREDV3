@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Whiteout Survival multi-alliance rally timing calculator with relative launch instructions." />
+  <title>WOS Rally Timeline Coordinator — Odin</title>
+  <style>
+    :root {
+      --bg:#07090f; --surface:#0d1421; --card:#111c2e; --input:#0a1220;
+      --border:#1e3a5f; --border-hi:#2a4a6f; --ice:#00c8ff; --ice-dim:#007fa8;
+      --fire:#ff6b35; --green:#2ecc71; --red:#e74c3c; --warn:#f39c12;
+      --purple:#b78cff; --text:#d4e8f0; --dim:#7a99b8; --hi:#fff;
+      --radius:10px; --shadow:0 10px 32px rgba(0,0,0,.45);
+    }
+    [data-theme="light"] {
+      --bg:#e8f0f8; --surface:#fff; --card:#f0f6ff; --input:#fff;
+      --border:#b0c8e0; --border-hi:#80a8c8; --text:#1a2a3a; --dim:#4a6a8a; --hi:#000;
+      --shadow:0 10px 30px rgba(44,75,105,.16);
+    }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { min-height:100vh; padding:16px; background:var(--bg); color:var(--text); font:14px/1.45 "Segoe UI",system-ui,sans-serif; }
+    button,input,select { font:inherit; }
+    .wrap { max-width:1280px; margin:0 auto; }
+    .header { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:14px 18px; margin-bottom:14px; border:1px solid var(--border); border-radius:var(--radius); background:linear-gradient(90deg,#060c18,#0d1a30); }
+    [data-theme="light"] .header { background:linear-gradient(90deg,#c8e0f8,#e0eeff); }
+    .brand { display:flex; gap:11px; align-items:center; }
+    .brand-icon { font-size:26px; }
+    .title { color:var(--ice); font-size:17px; font-weight:800; letter-spacing:1.6px; }
+    .sub { color:var(--dim); font-size:11px; letter-spacing:.6px; }
+    .theme { padding:7px 12px; border:1px solid var(--border-hi); border-radius:8px; background:transparent; color:var(--dim); cursor:pointer; }
+    .theme:hover { color:var(--ice); border-color:var(--ice); }
+    .notice { margin-bottom:12px; padding:11px 14px; border:1px solid rgba(0,200,255,.25); border-radius:var(--radius); background:rgba(0,200,255,.07); color:var(--text); }
+    .notice strong { color:var(--ice); }
+    .card { padding:16px; margin-bottom:12px; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface); }
+    .card-head { display:flex; justify-content:space-between; gap:12px; align-items:flex-start; margin-bottom:12px; }
+    .section-title { color:var(--hi); font-weight:800; font-size:14px; }
+    .section-help { margin-top:2px; color:var(--dim); font-size:12px; }
+    .toolbar { display:flex; flex-wrap:wrap; gap:8px; }
+    .btn { border:1px solid var(--border); border-radius:8px; padding:8px 13px; font-weight:700; cursor:pointer; transition:.18s ease; }
+    .btn:hover { transform:translateY(-1px); box-shadow:var(--shadow); }
+    .btn-primary { color:var(--ice); border-color:rgba(0,200,255,.35); background:rgba(0,200,255,.13); }
+    .btn-green { color:var(--green); border-color:rgba(46,204,113,.35); background:rgba(46,204,113,.12); }
+    .btn-fire { color:var(--fire); border-color:rgba(255,107,53,.35); background:rgba(255,107,53,.12); }
+    .btn-ghost { color:var(--dim); background:transparent; }
+    .btn-danger { color:var(--red); border-color:rgba(231,76,60,.35); background:rgba(231,76,60,.1); }
+    .table-wrap { overflow-x:auto; border:1px solid var(--border); border-radius:var(--radius); }
+    table { width:100%; min-width:1040px; border-collapse:collapse; }
+    th { position:sticky; top:0; z-index:1; padding:10px 8px; background:var(--card); color:var(--dim); text-align:left; font-size:10px; text-transform:uppercase; letter-spacing:.6px; }
+    td { padding:8px; border-top:1px solid var(--border); vertical-align:middle; }
+    tr:hover td { background:rgba(0,200,255,.025); }
+    input,select { width:100%; padding:8px 9px; border:1px solid var(--border); border-radius:7px; background:var(--input); color:var(--hi); }
+    input:focus,select:focus { outline:none; border-color:var(--ice); }
+    .small { width:90px; }
+    .tiny { width:76px; }
+    .type-pill { display:inline-flex; align-items:center; justify-content:center; min-width:72px; padding:4px 7px; border-radius:999px; font-size:10px; font-weight:800; }
+    .ours { color:var(--green); background:rgba(46,204,113,.12); border:1px solid rgba(46,204,113,.28); }
+    .enemy { color:var(--red); background:rgba(231,76,60,.11); border:1px solid rgba(231,76,60,.28); }
+    .row-actions { display:flex; gap:5px; }
+    .icon-btn { width:31px; height:31px; border:1px solid var(--border); border-radius:7px; background:transparent; color:var(--dim); cursor:pointer; }
+    .icon-btn:hover { color:var(--hi); border-color:var(--border-hi); }
+    .settings-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
+    .field { display:flex; flex-direction:column; gap:5px; }
+    label { color:var(--dim); font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.55px; }
+    .outputs { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .result-list { display:flex; flex-direction:column; gap:7px; }
+    .result { display:grid; grid-template-columns:42px minmax(130px,.8fr) 1fr auto; gap:10px; align-items:center; padding:10px 12px; border:1px solid var(--border); border-radius:9px; background:var(--card); }
+    .result.first { border-color:var(--warn); box-shadow:inset 3px 0 0 var(--warn); }
+    .num { color:var(--ice); font-weight:900; text-align:center; }
+    .rname { color:var(--hi); font-weight:800; }
+    .rmeta { color:var(--dim); font-size:11px; }
+    .instruction { color:var(--text); }
+    .instruction strong { color:var(--warn); }
+    .hit strong { color:var(--ice); }
+    .badge { padding:3px 7px; border-radius:5px; font-size:9px; font-weight:900; text-transform:uppercase; white-space:nowrap; }
+    .badge-a { background:rgba(0,200,255,.15); color:var(--ice); }
+    .badge-b { background:rgba(183,140,255,.16); color:var(--purple); }
+    .badge-c { background:rgba(255,107,53,.14); color:var(--fire); }
+    .badge-d { background:rgba(231,76,60,.14); color:var(--red); }
+    .copy-box { margin-top:12px; padding:13px; border:1px dashed var(--border-hi); border-radius:9px; background:var(--input); white-space:pre-wrap; font-family:Consolas,monospace; color:var(--text); max-height:360px; overflow:auto; }
+    .empty { padding:24px; text-align:center; color:var(--dim); border:1px dashed var(--border); border-radius:9px; }
+    .error-box { display:none; margin-bottom:12px; padding:10px 12px; color:#ffd8d4; background:rgba(231,76,60,.13); border:1px solid rgba(231,76,60,.36); border-radius:8px; }
+    .footer { padding:12px; text-align:center; color:var(--dim); font-size:11px; }
+    .footer strong { color:var(--ice); }
+    .hidden { display:none !important; }
+    @media (max-width:900px) { .outputs { grid-template-columns:1fr; } .settings-grid { grid-template-columns:1fr 1fr; } }
+    @media (max-width:640px) {
+      body { padding:9px; }
+      .header,.card-head { align-items:stretch; flex-direction:column; }
+      .settings-grid { grid-template-columns:1fr; }
+      .result { grid-template-columns:34px 1fr; }
+      .instruction,.badge { grid-column:2; }
+      .toolbar .btn { flex:1 1 auto; }
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <header class="header">
+    <div class="brand">
+      <div class="brand-icon">⚔️</div>
+      <div>
+        <div class="title">RALLY TIMELINE COORDINATOR</div>
+        <div class="sub">Multi-alliance castle attack & defense planner · Odin</div>
+      </div>
+    </div>
+    <button class="theme" id="themeBtn" type="button">☀ Light</button>
+  </header>
+
+  <div class="notice">
+    <strong>No UTC clock is used.</strong> The calculator works out the hidden timing, then tells each friendly leader how many seconds after the previous leader to launch.
+  </div>
+
+  <section class="card">
+    <div class="card-head">
+      <div>
+        <div class="section-title">1. Load or Build the Battle Sequence</div>
+        <div class="section-help">Enemy rows are timing anchors only. Friendly rows receive launch instructions.</div>
+      </div>
+      <div class="toolbar">
+        <button class="btn btn-fire" id="attackPreset" type="button">⚔ Attack Preset</button>
+        <button class="btn btn-green" id="defensePreset" type="button">🛡 Defense Preset</button>
+        <button class="btn btn-primary" id="addRow" type="button">＋ Add Rally</button>
+        <button class="btn btn-ghost" id="clearRows" type="button">Clear</button>
+      </div>
+    </div>
+
+    <div id="errorBox" class="error-box"></div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:105px">Side</th>
+            <th style="width:90px">Alliance</th>
+            <th style="width:150px">Leader</th>
+            <th>Purpose / Role</th>
+            <th style="width:115px">Hit Offset</th>
+            <th style="width:115px">March Time</th>
+            <th style="width:115px">Gathering</th>
+            <th style="width:78px">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <div>
+        <div class="section-title">2. Calculation Settings</div>
+        <div class="section-help">Hit offsets are measured from the first castle hit in the plan.</div>
+      </div>
+    </div>
+    <div class="settings-grid">
+      <div class="field">
+        <label for="planName">Plan Name</label>
+        <input id="planName" type="text" value="Castle Battle Plan" />
+      </div>
+      <div class="field">
+        <label for="defaultGap">Default Gap for New Rows (seconds)</label>
+        <input id="defaultGap" type="number" min="0" step="1" value="1" />
+      </div>
+      <div class="field">
+        <label for="instructionStyle">Launch Instruction Style</label>
+        <select id="instructionStyle">
+          <option value="after">Seconds AFTER previous leader</option>
+          <option value="cumulative">Seconds AFTER first leader</option>
+        </select>
+      </div>
+    </div>
+    <div class="toolbar" style="margin-top:12px">
+      <button class="btn btn-green" id="calculate" type="button">✓ Calculate Sequence</button>
+      <button class="btn btn-primary" id="copy" type="button">📋 Copy Chat Plan</button>
+      <button class="btn btn-ghost" id="save" type="button">💾 Save Locally</button>
+      <button class="btn btn-ghost" id="restore" type="button">↻ Restore Saved</button>
+    </div>
+  </section>
+
+  <section id="resultsCard" class="card hidden">
+    <div class="card-head">
+      <div>
+        <div class="section-title">3. Coordinated Battle Output</div>
+        <div class="section-help">Launch order is calculated separately from hit order because leaders have different march and gathering times.</div>
+      </div>
+    </div>
+    <div class="outputs">
+      <div>
+        <div class="section-title" style="margin-bottom:9px">🚀 Friendly Launch Sequence</div>
+        <div id="launchResults" class="result-list"></div>
+      </div>
+      <div>
+        <div class="section-title" style="margin-bottom:9px">💥 Full Hit Sequence</div>
+        <div id="hitResults" class="result-list"></div>
+      </div>
+    </div>
+    <div class="section-title" style="margin-top:16px">Alliance Chat Copy</div>
+    <div id="chatOutput" class="copy-box"></div>
+  </section>
+
+  <footer class="footer">Generated for WOSPREDV3 · <strong>Odin</strong></footer>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  const $ = (id) => document.getElementById(id);
+  const rowsEl = $('rows');
+  const errorBox = $('errorBox');
+  let rowId = 0;
+  let lastPlan = null;
+
+  const presets = {
+    attack: [
+      { side:'ours', alliance:'A', leader:'Leader A1', role:'Main attack 1', hit:0, march:'0:42', gather:5 },
+      { side:'ours', alliance:'A', leader:'Leader A2', role:'Main attack 2', hit:1, march:'0:32', gather:5 },
+      { side:'enemy', alliance:'D', leader:'Enemy D1', role:'Enemy counter 1', hit:4, march:'', gather:5 },
+      { side:'ours', alliance:'B', leader:'Leader B1', role:'Counter their counter 1', hit:5, march:'0:44', gather:5 },
+      { side:'enemy', alliance:'D', leader:'Enemy D2', role:'Enemy counter 2', hit:7, march:'', gather:5 },
+      { side:'ours', alliance:'B', leader:'Leader B2', role:'Counter their counter 2', hit:8, march:'0:36', gather:5 }
+    ],
+    defense: [
+      { side:'enemy', alliance:'C', leader:'Enemy C1', role:'Enemy main attack 1', hit:0, march:'', gather:5 },
+      { side:'enemy', alliance:'C', leader:'Enemy C2', role:'Enemy main attack 2', hit:2, march:'', gather:5 },
+      { side:'ours', alliance:'B', leader:'Leader B1', role:'Mid-wave recovery 1', hit:3, march:'0:36', gather:5 },
+      { side:'enemy', alliance:'C', leader:'Enemy C3', role:'Enemy main attack 3', hit:5, march:'', gather:5 },
+      { side:'ours', alliance:'B', leader:'Leader B2', role:'Mid-wave recovery 2', hit:6, march:'0:39', gather:5 },
+      { side:'enemy', alliance:'D', leader:'Enemy D1', role:'Enemy counter', hit:8, march:'', gather:5 },
+      { side:'ours', alliance:'B', leader:'Leader B3', role:'Counter enemy counter', hit:9, march:'0:34', gather:5 },
+      { side:'enemy', alliance:'D', leader:'Enemy D2', role:'Enemy final counter', hit:11, march:'', gather:5 },
+      { side:'ours', alliance:'A', leader:'Leader A1', role:'Final high-damage recovery', hit:12, march:'0:32', gather:10 }
+    ]
+  };
+
+  function esc(value) {
+    return String(value ?? '').replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
+  }
+
+  function addRow(data = {}) {
+    const id = ++rowId;
+    const side = data.side || 'ours';
+    const alliance = data.alliance || (side === 'ours' ? 'A' : 'C');
+    const leader = data.leader || `Leader ${alliance}${id}`;
+    const role = data.role || '';
+    const hit = Number.isFinite(Number(data.hit)) ? Number(data.hit) : nextHitOffset();
+    const march = data.march ?? (side === 'ours' ? '0:30' : '');
+    const gather = Number(data.gather) === 10 ? 10 : 5;
+
+    const tr = document.createElement('tr');
+    tr.dataset.id = id;
+    tr.innerHTML = `
+      <td>
+        <select class="side-select" aria-label="Rally side">
+          <option value="ours" ${side === 'ours' ? 'selected' : ''}>Our rally</option>
+          <option value="enemy" ${side === 'enemy' ? 'selected' : ''}>Enemy anchor</option>
+        </select>
+      </td>
+      <td>
+        <select class="alliance-select" aria-label="Alliance">
+          ${['A','B','C','D'].map(a => `<option value="${a}" ${a === alliance ? 'selected' : ''}>Alliance ${a}</option>`).join('')}
+        </select>
+      </td>
+      <td><input class="leader-input" type="text" value="${esc(leader)}" placeholder="Leader name" /></td>
+      <td><input class="role-input" type="text" value="${esc(role)}" placeholder="e.g. Counter D1" /></td>
+      <td><input class="hit-input small" type="number" min="0" step="1" value="${hit}" title="Seconds after the first hit" /></td>
+      <td><input class="march-input small" type="text" value="${esc(march)}" placeholder="m:ss" ${side === 'enemy' ? 'disabled' : ''} /></td>
+      <td>
+        <select class="gather-select tiny" ${side === 'enemy' ? 'disabled' : ''}>
+          <option value="5" ${gather === 5 ? 'selected' : ''}>5 min</option>
+          <option value="10" ${gather === 10 ? 'selected' : ''}>10 min</option>
+        </select>
+      </td>
+      <td>
+        <div class="row-actions">
+          <button class="icon-btn move-up" type="button" title="Move up">↑</button>
+          <button class="icon-btn remove" type="button" title="Remove">×</button>
+        </div>
+      </td>`;
+
+    rowsEl.appendChild(tr);
+    wireRow(tr);
+  }
+
+  function wireRow(tr) {
+    tr.querySelector('.side-select').addEventListener('change', (e) => {
+      const enemy = e.target.value === 'enemy';
+      tr.querySelector('.march-input').disabled = enemy;
+      tr.querySelector('.gather-select').disabled = enemy;
+      if (enemy) tr.querySelector('.march-input').value = '';
+    });
+    tr.querySelector('.remove').addEventListener('click', () => tr.remove());
+    tr.querySelector('.move-up').addEventListener('click', () => {
+      const prev = tr.previousElementSibling;
+      if (prev) rowsEl.insertBefore(tr, prev);
+    });
+  }
+
+  function nextHitOffset() {
+    const existing = [...rowsEl.querySelectorAll('.hit-input')].map(el => Number(el.value)).filter(Number.isFinite);
+    const gap = Math.max(0, Number($('defaultGap').value) || 1);
+    return existing.length ? Math.max(...existing) + gap : 0;
+  }
+
+  function loadPreset(name) {
+    rowsEl.innerHTML = '';
+    rowId = 0;
+    presets[name].forEach(addRow);
+    $('planName').value = name === 'attack' ? 'Castle Attack — Capture & Hold' : 'Castle Defense — Recover & Hold';
+    calculate();
+  }
+
+  function parseMarch(value) {
+    const text = String(value).trim();
+    const match = text.match(/^(\d{1,2}):(\d{2})$/);
+    if (!match) return null;
+    const min = Number(match[1]);
+    const sec = Number(match[2]);
+    if (sec > 59) return null;
+    return min * 60 + sec;
+  }
+
+  function readRows() {
+    const errors = [];
+    const entries = [...rowsEl.querySelectorAll('tr')].map((tr, index) => {
+      const side = tr.querySelector('.side-select').value;
+      const alliance = tr.querySelector('.alliance-select').value;
+      const leader = tr.querySelector('.leader-input').value.trim() || `Leader ${index + 1}`;
+      const role = tr.querySelector('.role-input').value.trim() || (side === 'ours' ? 'Friendly rally' : 'Enemy rally');
+      const hit = Number(tr.querySelector('.hit-input').value);
+      const gather = Number(tr.querySelector('.gather-select').value || 5);
+      let marchSecs = null;
+      const marchText = tr.querySelector('.march-input').value.trim();
+
+      if (!Number.isFinite(hit) || hit < 0) errors.push(`${leader}: hit offset must be zero or higher.`);
+      if (side === 'ours') {
+        marchSecs = parseMarch(marchText);
+        if (marchSecs === null) errors.push(`${leader}: use march time m:ss, for example 0:32.`);
+      }
+
+      return { index, side, alliance, leader, role, hit, gather, marchSecs, marchText };
+    });
+    return { entries, errors };
+  }
+
+  function showErrors(errors) {
+    if (!errors.length) {
+      errorBox.style.display = 'none';
+      errorBox.textContent = '';
+      return;
+    }
+    errorBox.innerHTML = `<strong>Fix these items:</strong><br>${errors.map(esc).join('<br>')}`;
+    errorBox.style.display = 'block';
+  }
+
+  function allianceBadge(alliance) {
+    return `<span class="badge badge-${alliance.toLowerCase()}">Alliance ${alliance}</span>`;
+  }
+
+  function calculate() {
+    const { entries, errors } = readRows();
+    if (!entries.length) errors.push('Add at least one rally.');
+    const friendly = entries.filter(x => x.side === 'ours');
+    if (!friendly.length) errors.push('Add at least one friendly rally to generate launch instructions.');
+    showErrors(errors);
+    if (errors.length) return;
+
+    const launch = friendly.map(x => ({
+      ...x,
+      launchPoint: x.hit - (x.gather * 60) - x.marchSecs
+    })).sort((a,b) => a.launchPoint - b.launchPoint || a.hit - b.hit || a.index - b.index);
+
+    const hits = [...entries].sort((a,b) => a.hit - b.hit || a.index - b.index);
+    const style = $('instructionStyle').value;
+
+    const launchRows = launch.map((x, i) => {
+      const previous = launch[i - 1];
+      const first = launch[0];
+      const delta = i === 0 ? 0 : x.launchPoint - (style === 'cumulative' ? first.launchPoint : previous.launchPoint);
+      const ref = style === 'cumulative' ? first.leader : previous?.leader;
+      return { ...x, order:i + 1, delta, ref, first:i === 0 };
+    });
+
+    const hitRows = hits.map((x, i) => ({
+      ...x,
+      order:i + 1,
+      delta:i === 0 ? 0 : x.hit - hits[i - 1].hit,
+      ref:i === 0 ? null : hits[i - 1].leader,
+      first:i === 0
+    }));
+
+    renderLaunch(launchRows, style);
+    renderHits(hitRows);
+    const chat = buildChat(launchRows, hitRows, style);
+    $('chatOutput').textContent = chat;
+    $('resultsCard').classList.remove('hidden');
+    lastPlan = { launchRows, hitRows, style, chat };
+  }
+
+  function renderLaunch(rows, style) {
+    const el = $('launchResults');
+    el.innerHTML = '';
+    rows.forEach(r => {
+      const div = document.createElement('div');
+      div.className = `result${r.first ? ' first' : ''}`;
+      const instruction = r.first
+        ? '<strong>LAUNCH FIRST</strong>'
+        : `Launch <strong>+${formatSeconds(r.delta)}</strong> AFTER ${esc(r.ref)}`;
+      div.innerHTML = `
+        <div class="num">${r.order}️⃣</div>
+        <div><div class="rname">${esc(r.leader)}</div><div class="rmeta">${esc(r.role)} · ${r.gather}m + ${esc(r.marchText)}</div></div>
+        <div class="instruction">${instruction}</div>
+        ${allianceBadge(r.alliance)}`;
+      el.appendChild(div);
+    });
+  }
+
+  function renderHits(rows) {
+    const el = $('hitResults');
+    el.innerHTML = '';
+    rows.forEach(r => {
+      const div = document.createElement('div');
+      div.className = `result${r.first ? ' first' : ''}`;
+      const instruction = r.first
+        ? '<strong>HITS FIRST</strong>'
+        : `Hits <strong>+${formatSeconds(r.delta)}</strong> after ${esc(r.ref)}`;
+      div.innerHTML = `
+        <div class="num">${r.order}.</div>
+        <div><div class="rname">${esc(r.leader)}</div><div class="rmeta">${r.side === 'ours' ? 'Friendly' : 'Enemy anchor'} · ${esc(r.role)}</div></div>
+        <div class="instruction hit">${instruction}</div>
+        ${allianceBadge(r.alliance)}`;
+      el.appendChild(div);
+    });
+  }
+
+  function formatSeconds(value) {
+    const rounded = Math.round(value * 10) / 10;
+    return `${rounded}${rounded === 1 ? ' second' : ' seconds'}`;
+  }
+
+  function buildChat(launchRows, hitRows, style) {
+    const title = $('planName').value.trim() || 'Castle Battle Plan';
+    const lines = [`⚔️ ${title.toUpperCase()}`, '', '🚀 LAUNCH SEQUENCE:'];
+    launchRows.forEach(r => {
+      if (r.first) lines.push(`${r.order}️⃣ [${r.alliance}] ${r.leader} → LAUNCH FIRST`);
+      else lines.push(`${r.order}️⃣ [${r.alliance}] ${r.leader} → Launch +${formatSeconds(r.delta)} AFTER ${r.ref}`);
+    });
+    lines.push('', '💥 HIT SEQUENCE:');
+    hitRows.forEach(r => {
+      const side = r.side === 'ours' ? 'OURS' : 'ENEMY';
+      if (r.first) lines.push(`${r.order}. [${r.alliance} · ${side}] ${r.leader} → HITS FIRST (${r.role})`);
+      else lines.push(`${r.order}. [${r.alliance} · ${side}] ${r.leader} → Hits +${formatSeconds(r.delta)} after ${r.ref} (${r.role})`);
+    });
+    lines.push('', '📡 WOSPREDV3 · Rally Timeline Coordinator');
+    return lines.join('\n');
+  }
+
+  async function copyPlan() {
+    if (!lastPlan) calculate();
+    if (!lastPlan) return;
+    try {
+      await navigator.clipboard.writeText(lastPlan.chat);
+      toast('✓ Plan copied');
+    } catch {
+      const area = document.createElement('textarea');
+      area.value = lastPlan.chat;
+      document.body.appendChild(area);
+      area.select();
+      document.execCommand('copy');
+      area.remove();
+      toast('✓ Plan copied');
+    }
+  }
+
+  function serialize() {
+    const { entries } = readRows();
+    return {
+      planName:$('planName').value,
+      defaultGap:$('defaultGap').value,
+      instructionStyle:$('instructionStyle').value,
+      rows:entries.map(x => ({side:x.side, alliance:x.alliance, leader:x.leader, role:x.role, hit:x.hit, march:x.marchText, gather:x.gather}))
+    };
+  }
+
+  function saveLocal() {
+    localStorage.setItem('rtc-plan-v1', JSON.stringify(serialize()));
+    toast('✓ Plan saved on this device');
+  }
+
+  function restoreLocal() {
+    const raw = localStorage.getItem('rtc-plan-v1');
+    if (!raw) return toast('No saved plan found', true);
+    try {
+      const saved = JSON.parse(raw);
+      rowsEl.innerHTML = '';
+      rowId = 0;
+      (saved.rows || []).forEach(addRow);
+      $('planName').value = saved.planName || 'Castle Battle Plan';
+      $('defaultGap').value = saved.defaultGap || 1;
+      $('instructionStyle').value = saved.instructionStyle || 'after';
+      calculate();
+      toast('✓ Saved plan restored');
+    } catch {
+      toast('Saved plan could not be read', true);
+    }
+  }
+
+  function toast(message, isError = false) {
+    let el = document.querySelector('.toast');
+    if (!el) {
+      el = document.createElement('div');
+      el.className = 'toast';
+      Object.assign(el.style, {position:'fixed',bottom:'22px',left:'50%',transform:'translateX(-50%)',zIndex:'9999',padding:'10px 18px',borderRadius:'999px',fontWeight:'800',boxShadow:'var(--shadow)'});
+      document.body.appendChild(el);
+    }
+    el.textContent = message;
+    el.style.background = isError ? 'var(--red)' : 'var(--green)';
+    el.style.color = '#07100a';
+    el.style.display = 'block';
+    clearTimeout(el._timer);
+    el._timer = setTimeout(() => { el.style.display = 'none'; }, 1800);
+  }
+
+  function toggleTheme() {
+    const root = document.documentElement;
+    const next = root.dataset.theme === 'dark' ? 'light' : 'dark';
+    root.dataset.theme = next;
+    $('themeBtn').textContent = next === 'dark' ? '☀ Light' : '🌙 Dark';
+    localStorage.setItem('rtc-theme', next);
+  }
+
+  $('attackPreset').addEventListener('click', () => loadPreset('attack'));
+  $('defensePreset').addEventListener('click', () => loadPreset('defense'));
+  $('addRow').addEventListener('click', () => addRow());
+  $('clearRows').addEventListener('click', () => { rowsEl.innerHTML=''; rowId=0; $('resultsCard').classList.add('hidden'); lastPlan=null; });
+  $('calculate').addEventListener('click', calculate);
+  $('copy').addEventListener('click', copyPlan);
+  $('save').addEventListener('click', saveLocal);
+  $('restore').addEventListener('click', restoreLocal);
+  $('themeBtn').addEventListener('click', toggleTheme);
+
+  document.documentElement.dataset.theme = localStorage.getItem('rtc-theme') || 'dark';
+  $('themeBtn').textContent = document.documentElement.dataset.theme === 'dark' ? '☀ Light' : '🌙 Dark';
+  loadPreset('attack');
+})();
+</script>
+</body>
+</html>
