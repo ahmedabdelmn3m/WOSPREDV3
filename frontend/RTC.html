@@ -63,6 +63,7 @@
     input[type="checkbox"],input[type="radio"] { width:auto; min-height:auto; accent-color:var(--ice); }
     .table-wrap { overflow-x:auto; border:1px solid var(--border); border-radius:var(--radius); }
     table { width:100%; min-width:980px; border-collapse:collapse; }
+    .enemy-table { min-width:1180px; }
     th { padding:9px 7px; text-align:left; color:var(--dim); background:var(--card); font-size:10px; text-transform:uppercase; letter-spacing:.55px; position:sticky; top:0; z-index:1; }
     td { padding:7px; border-top:1px solid var(--border); vertical-align:middle; }
     tr.disabled td { opacity:.52; }
@@ -163,7 +164,7 @@
         <div class="card-head">
           <div>
             <div class="section-title">1. Friendly Leader Library</div>
-            <div class="section-help library-extra">Saved leaders for Alliance A and B. Example values are editable.</div>
+            <div class="section-help library-extra">Defense sample: A1 Bazz holds castle; B1/B2/B3 are Jenna response rallies.</div>
           </div>
           <div class="toolbar">
             <button class="btn btn-primary" id="addLeaderBtn" type="button">＋ Leader</button>
@@ -193,7 +194,7 @@
         <div class="card-head">
           <div>
             <div class="section-title">2. Live Enemy Wave Capture</div>
-            <div class="section-help">Enter countdowns from one observation snapshot. The earliest countdown hits first.</div>
+            <div class="section-help">Enter observed enemy gather time and saved enemy march time. The tool adds them to estimate hit time.</div>
           </div>
           <div class="toolbar">
             <button class="btn btn-fire" id="addEnemyBtn" type="button">＋ Enemy</button>
@@ -203,17 +204,19 @@
         <div class="snapshot-bar">
           <div>
             <div class="section-title">Snapshot Status</div>
-            <div class="snapshot-meta" id="snapshotMeta">Not frozen yet. Countdown values still calculate as the common snapshot.</div>
+            <div class="snapshot-meta" id="snapshotMeta">Not frozen yet. Gather-left values and enemy marches still calculate as the common snapshot.</div>
           </div>
           <button class="btn btn-ghost" id="sortEnemiesBtn" type="button">Sort Enemy Hits</button>
         </div>
         <div class="table-wrap">
-          <table>
+          <table class="enemy-table">
             <thead>
               <tr>
                 <th>Enemy Alliance</th>
                 <th>Enemy Leader</th>
-                <th style="width:124px">Impact In</th>
+                <th style="width:124px">Gather Left</th>
+                <th style="width:118px">Enemy March</th>
+                <th style="width:132px">Est. Hit In</th>
                 <th style="width:170px">Label</th>
                 <th class="notes-col">Notes</th>
                 <th style="width:128px">Actions</th>
@@ -230,7 +233,7 @@
         <div class="card-head">
           <div>
             <div class="section-title">3. Friendly Response Builder</div>
-            <div class="section-help">Add friendly hits and optional planned enemy final counters. Presets only populate editable rows.</div>
+            <div class="section-help">Defense preset places Jenna inside the enemy wave, Jenna2 after the enemy counter, and Jenna3 after the last enemy hit.</div>
           </div>
           <div class="toolbar">
             <button class="btn btn-green" id="defensePresetBtn" type="button">Defense Preset</button>
@@ -248,7 +251,7 @@
                 <th style="width:170px">Purpose</th>
                 <th style="width:170px">Hit Relative To</th>
                 <th style="width:92px">Offset</th>
-                <th style="width:142px">Rally State</th>
+                <th style="width:142px">Friendly State</th>
                 <th style="width:112px">Remaining</th>
                 <th style="width:128px">Actions</th>
               </tr>
@@ -293,9 +296,10 @@
     <details>
       <summary>How the timing model works</summary>
       <div class="help-content">
-        <p>Enemy countdowns share one snapshot. A 22 second enemy rally hits before a 24 second enemy rally, even if it was entered second.</p>
+        <p>Enemy rows share one observation snapshot. If Enemy March is filled, estimated hit time is Gather Left plus Enemy March. If Enemy March is blank, Gather Left is treated as direct impact countdown.</p>
         <p>Friendly launch point = desired hit point - rally gathering duration - leader march time. Friendly launch points are sorted, then shown as LAUNCH FIRST and relative delays after the previous friendly launcher.</p>
-        <p>Live mode checks whether a not-launched, gathering, or marching rally can still hit the desired point. Impossible timing is shown as a warning instead of being hidden.</p>
+        <p>Friendly State means: Ready = waiting for your declaration; Gathering = rally is already open and Remaining is fill time left; Marching = rally has launched and Remaining is march time left.</p>
+        <p>Defense preset assumes Bazz is holding castle with Alliance A garrison help, while Jenna, Jenna2, and Jenna3 are the Alliance B response chain.</p>
       </div>
     </details>
   </section>
@@ -311,13 +315,14 @@
     leaders:'rtc-leaders-v2',
     wave:'rtc-enemy-wave-v2',
     plan:'rtc-response-plan-v2',
-    prefs:'rtc-prefs-v2'
+    prefs:'rtc-prefs-v2',
+    enemyMarches:'rtc-enemy-marches-v1'
   };
   const ids = { leader:0, enemy:0, response:0 };
   const $ = (id) => document.getElementById(id);
   const state = { leaders:[], enemies:[], responses:[], prefs:{ mode:'defense', planning:'preplanned', theme:'dark', compact:false }, last:null };
 
-  const roleOptions = ['Main attack','Counter attack','Recovery rally','Final hit','Reinforcement','Custom'];
+  const roleOptions = ['Castle holder','Garrison support','Attack only','Defense counter','Counter-counter','Post-wave reinforce','Main attack','Counter attack','Recovery rally','Final hit','Reinforcement','Custom'];
   const enemyLabels = ['Main enemy attack','Enemy counter','Enemy final counter','Custom'];
 
   function uid(prefix) {
@@ -375,29 +380,32 @@
 
   function sampleLeaders() {
     return [
-      { id:uid('leader'), enabled:true, alliance:'A', name:'Leader A1', march:'0:32', gather:5, role:'Main attack' },
-      { id:uid('leader'), enabled:true, alliance:'A', name:'Leader A2', march:'0:41', gather:5, role:'Recovery rally' },
-      { id:uid('leader'), enabled:true, alliance:'A', name:'Leader A3', march:'0:55', gather:10, role:'Final hit' },
-      { id:uid('leader'), enabled:true, alliance:'B', name:'Leader B1', march:'0:36', gather:5, role:'Counter attack' },
-      { id:uid('leader'), enabled:true, alliance:'B', name:'Leader B2', march:'0:28', gather:5, role:'Counter attack' },
-      { id:uid('leader'), enabled:true, alliance:'B', name:'Leader B3', march:'0:49', gather:10, role:'Reinforcement' }
+      { id:uid('leader'), enabled:true, alliance:'A', name:'Bazz', march:'0:32', gather:5, role:'Castle holder' },
+      { id:uid('leader'), enabled:true, alliance:'A', name:'SOL', march:'0:41', gather:5, role:'Attack only' },
+      { id:uid('leader'), enabled:true, alliance:'A', name:'Red', march:'0:55', gather:10, role:'Attack only' },
+      { id:uid('leader'), enabled:true, alliance:'B', name:'Jenna', march:'0:36', gather:5, role:'Defense counter' },
+      { id:uid('leader'), enabled:true, alliance:'B', name:'Jenna2', march:'0:28', gather:5, role:'Counter-counter' },
+      { id:uid('leader'), enabled:true, alliance:'B', name:'Jenna3', march:'0:34', gather:5, role:'Post-wave reinforce' }
     ];
   }
 
   function sampleEnemies() {
     return [
-      { id:uid('enemy'), alliance:'Enemy', leader:'Enemy Rally 1', countdown:'24', label:'Main enemy attack', notes:'' },
-      { id:uid('enemy'), alliance:'Enemy', leader:'Enemy Rally 2', countdown:'22', label:'Main enemy attack', notes:'' }
+      { id:uid('enemy'), alliance:'Enemy', leader:'Enemy Rally 1', countdown:'5:55', march:'0:32', label:'Main enemy attack', notes:'Gather left + saved march' },
+      { id:uid('enemy'), alliance:'Enemy', leader:'Enemy Rally 2', countdown:'5:57', march:'0:35', label:'Main enemy attack', notes:'Middle of enemy wave' },
+      { id:uid('enemy'), alliance:'Enemy', leader:'Enemy Rally 3', countdown:'6:04', march:'0:39', label:'Main enemy attack', notes:'Last observed enemy hit' }
     ];
   }
 
   function defenseResponses() {
-    const b1 = firstLeader('B');
-    const a1 = firstLeader('A');
+    const b1 = leaderSlot('B', 0);
+    const b2 = leaderSlot('B', 1);
+    const b3 = leaderSlot('B', 2);
     return [
-      { id:uid('response'), type:'friendly', alliance:'B', leaderId:b1?.id || '', enemyAlliance:'Enemy', enemyLeader:'', purpose:'Counter attack', anchor:'finalEnemy', offset:'1', manualTarget:'', liveState:'not-launched', remaining:'' },
-      { id:uid('response'), type:'enemy', alliance:'Enemy', leaderId:'', enemyAlliance:'Enemy', enemyLeader:'Enemy Final Counter', purpose:'Enemy final counter', anchor:'previousFriendly', offset:'3', manualTarget:'', liveState:'not-launched', remaining:'' },
-      { id:uid('response'), type:'friendly', alliance:a1?.alliance || 'A', leaderId:a1?.id || '', enemyAlliance:'Enemy', enemyLeader:'', purpose:'Final recovery rally', anchor:'enemyFinalCounter', offset:'1', manualTarget:'', liveState:'not-launched', remaining:'' }
+      { id:uid('response'), type:'friendly', alliance:'B', leaderId:b1?.id || '', enemyAlliance:'Enemy', enemyLeader:'', purpose:'B1 castle hold counter', anchor:'middleObservedEnemy', offset:'1', manualTarget:'', liveState:'not-launched', remaining:'' },
+      { id:uid('response'), type:'enemy', alliance:'Enemy', leaderId:'', enemyAlliance:'Enemy', enemyLeader:'Enemy counter after Jenna', purpose:'Enemy counter after Jenna', anchor:'previousFriendly', offset:'3', manualTarget:'', liveState:'not-launched', remaining:'' },
+      { id:uid('response'), type:'friendly', alliance:'B', leaderId:b2?.id || '', enemyAlliance:'Enemy', enemyLeader:'', purpose:'B2 counter enemy counter', anchor:'latestPlannedEnemyCounter', offset:'1', manualTarget:'', liveState:'not-launched', remaining:'' },
+      { id:uid('response'), type:'friendly', alliance:'B', leaderId:b3?.id || '', enemyAlliance:'Enemy', enemyLeader:'', purpose:'B3 optional post-wave reinforce', anchor:'finalEnemy', offset:'2', manualTarget:'', liveState:'not-launched', remaining:'' }
     ];
   }
 
@@ -412,7 +420,13 @@
   }
 
   function firstLeader(alliance) {
-    return state.leaders.find(l => l.enabled && l.alliance === alliance) || state.leaders.find(l => l.alliance === alliance);
+    return leaderSlot(alliance, 0);
+  }
+
+  function leaderSlot(alliance, slot) {
+    const enabled = state.leaders.filter(l => l.enabled && l.alliance === alliance);
+    const pool = enabled.length ? enabled : state.leaders.filter(l => l.alliance === alliance);
+    return pool[slot] || null;
   }
 
   function applyPrefs() {
@@ -476,16 +490,71 @@
     });
   }
 
+  function enemyProfileKey(enemy) {
+    const alliance = (enemy.alliance || 'Enemy').trim().toLowerCase();
+    const leader = (enemy.leader || '').trim().toLowerCase();
+    return leader ? `${alliance}|${leader}` : '';
+  }
+
+  function enemyMarchProfiles() {
+    return readJSON(STORAGE.enemyMarches, {}) || {};
+  }
+
+  function rememberEnemyMarch(enemy) {
+    const key = enemyProfileKey(enemy);
+    const march = String(enemy.march ?? '').trim();
+    if (!key || !march || parseDuration(march) === null) return;
+    const profiles = enemyMarchProfiles();
+    profiles[key] = march;
+    writeJSON(STORAGE.enemyMarches, profiles);
+  }
+
+  function hydrateEnemyMarch(enemy) {
+    if (String(enemy.march ?? '').trim()) return;
+    const saved = enemyMarchProfiles()[enemyProfileKey(enemy)];
+    if (saved) enemy.march = saved;
+  }
+
+  function enemyHitSeconds(enemy) {
+    const observed = parseDuration(enemy.countdown);
+    if (observed === null) return null;
+    const marchText = String(enemy.march ?? '').trim();
+    if (!marchText) return observed;
+    const march = parseDuration(marchText);
+    return march === null ? null : observed + march;
+  }
+
+  function clockLabel(seconds) {
+    if (seconds === null) return 'Invalid';
+    const whole = Math.max(0, Math.round(seconds));
+    const mins = Math.floor(whole / 60);
+    const secs = whole % 60;
+    return mins ? `${mins}:${String(secs).padStart(2, '0')}` : `${secs}s`;
+  }
+
+  function enemyImpactText(enemy) {
+    const observed = parseDuration(enemy.countdown);
+    const marchText = String(enemy.march ?? '').trim();
+    const march = marchText ? parseDuration(marchText) : 0;
+    if (observed === null) return 'Enter gather';
+    if (march === null) return 'Fix march';
+    const hit = observed + march;
+    return marchText ? `${clockLabel(hit)} hit` : `${clockLabel(hit)} direct`;
+  }
+
   function renderEnemies() {
     const rows = $('enemyRows');
     rows.innerHTML = '';
     state.enemies.forEach((enemy, index) => {
+      hydrateEnemyMarch(enemy);
       const tr = document.createElement('tr');
       tr.dataset.id = enemy.id;
       tr.innerHTML = `
         <td><input class="enemy-alliance" type="text" value="${esc(enemy.alliance)}" placeholder="Enemy alliance" /></td>
         <td><input class="enemy-leader" type="text" value="${esc(enemy.leader)}" placeholder="Enemy Rally ${index + 1}" /></td>
-        <td><input class="enemy-countdown" type="text" value="${esc(enemy.countdown)}" placeholder="24 or 1:15" /></td>
+        <td><input class="enemy-countdown" type="text" value="${esc(enemy.countdown)}" placeholder="5:55" /></td>
+        <td><input class="enemy-march" type="text" value="${esc(enemy.march || '')}" placeholder="0:32" /></td>
+        <td><div class="status enemy-impact">${esc(enemyImpactText(enemy))}</div></td>
         <td><select class="enemy-label">${enemyLabels.map(x => `<option value="${esc(x)}" ${enemy.label === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></td>
         <td class="notes-col"><input class="enemy-notes" type="text" value="${esc(enemy.notes)}" placeholder="Optional notes" /></td>
         <td><div class="row-actions">
@@ -494,9 +563,13 @@
           <button class="icon-btn duplicate" type="button" title="Duplicate">⧉</button>
           <button class="icon-btn remove" type="button" title="Remove">×</button>
         </div></td>`;
+      const refreshImpact = () => { const el = tr.querySelector('.enemy-impact'); if (el) el.textContent = enemyImpactText(enemy); };
       tr.querySelector('.enemy-alliance').addEventListener('input', e => { enemy.alliance = e.target.value; persistWave(); });
+      tr.querySelector('.enemy-alliance').addEventListener('change', () => { hydrateEnemyMarch(enemy); rememberEnemyMarch(enemy); persistWave(); renderEnemies(); });
       tr.querySelector('.enemy-leader').addEventListener('input', e => { enemy.leader = e.target.value; persistWave(); });
-      tr.querySelector('.enemy-countdown').addEventListener('input', e => { enemy.countdown = e.target.value; persistWave(); });
+      tr.querySelector('.enemy-leader').addEventListener('change', () => { hydrateEnemyMarch(enemy); rememberEnemyMarch(enemy); persistWave(); renderEnemies(); });
+      tr.querySelector('.enemy-countdown').addEventListener('input', e => { enemy.countdown = e.target.value; persistWave(); refreshImpact(); });
+      tr.querySelector('.enemy-march').addEventListener('input', e => { enemy.march = e.target.value; persistWave(); rememberEnemyMarch(enemy); refreshImpact(); });
       tr.querySelector('.enemy-label').addEventListener('change', e => { enemy.label = e.target.value; persistWave(); });
       tr.querySelector('.enemy-notes').addEventListener('input', e => { enemy.notes = e.target.value; persistWave(); });
       tr.querySelector('.move-up').addEventListener('click', () => moveItem(state.enemies, index, index - 1, () => { persistWave(); renderEnemies(); renderResponses(); }));
@@ -512,10 +585,13 @@
 
   function anchorOptions(selected) {
     const base = [
-      ['firstEnemy','First enemy hit'],
-      ['previousEnemy','Previous enemy hit'],
-      ['finalEnemy','Final enemy hit'],
+      ['firstEnemy','First observed enemy hit'],
+      ['middleObservedEnemy','Middle observed enemy hit'],
+      ['finalObservedEnemy','Final observed enemy hit'],
+      ['previousEnemy','Latest enemy hit so far'],
+      ['finalEnemy','Final enemy hit so far'],
       ['previousFriendly','Previous friendly hit'],
+      ['latestPlannedEnemyCounter','Latest planned enemy counter'],
       ['enemyFinalCounter','Enemy final counter'],
       ['manual','Manually selected rally']
     ];
@@ -549,8 +625,8 @@
         <td><input class="response-purpose" type="text" value="${esc(response.purpose)}" placeholder="${response.type === 'enemy' ? 'Enemy final counter' : 'Counter attack'}" /></td>
         <td><select class="response-anchor">${anchorOptions(response.anchor)}</select><select class="response-manual" style="margin-top:5px;display:${response.anchor === 'manual' ? 'block' : 'none'}">${manualOptions(response.manualTarget)}</select></td>
         <td><input class="response-offset" type="text" value="${esc(response.offset)}" placeholder="1" /></td>
-        <td><select class="response-live" ${response.type === 'enemy' ? 'disabled' : ''}><option value="not-launched" ${response.liveState !== 'gathering' && response.liveState !== 'marching' ? 'selected' : ''}>Not launched</option><option value="gathering" ${response.liveState === 'gathering' ? 'selected' : ''}>Currently gathering</option><option value="marching" ${response.liveState === 'marching' ? 'selected' : ''}>Already marching</option></select></td>
-        <td><input class="response-remaining" type="text" value="${esc(response.remaining)}" placeholder="remaining" ${response.type === 'enemy' || response.liveState === 'not-launched' ? 'disabled' : ''} /></td>
+        <td><select class="response-live" ${response.type === 'enemy' ? 'disabled' : ''}><option value="not-launched" ${response.liveState !== 'gathering' && response.liveState !== 'marching' ? 'selected' : ''}>Ready, not launched</option><option value="gathering" ${response.liveState === 'gathering' ? 'selected' : ''}>Rally gathering</option><option value="marching" ${response.liveState === 'marching' ? 'selected' : ''}>Rally marching</option></select></td>
+        <td><input class="response-remaining" type="text" value="${esc(response.remaining)}" placeholder="time left" ${response.type === 'enemy' || response.liveState === 'not-launched' ? 'disabled' : ''} /></td>
         <td><div class="row-actions">
           <button class="icon-btn move-up" type="button" title="Move up">↑</button>
           <button class="icon-btn move-down" type="button" title="Move down">↓</button>
@@ -581,8 +657,8 @@
   function previewEvents() {
     const events = [];
     state.enemies.forEach((enemy, i) => {
-      const seconds = parseDuration(enemy.countdown);
-      if (seconds !== null) events.push({ id:enemy.id, side:'enemy', sideLabel:'Enemy', name:enemy.leader || `Enemy Rally ${i + 1}`, hit:seconds, purpose:enemy.label || 'Enemy rally' });
+      const seconds = enemyHitSeconds(enemy);
+      if (seconds !== null) events.push({ id:enemy.id, side:'enemy', source:'snapshot', sideLabel:'Enemy', name:enemy.leader || `Enemy Rally ${i + 1}`, hit:seconds, purpose:enemy.label || 'Enemy rally' });
     });
     return events.sort((a,b) => a.hit - b.hit);
   }
@@ -600,14 +676,18 @@
 
   function readBaseEnemies(errors) {
     return state.enemies.map((enemy, index) => {
-      const hit = parseDuration(enemy.countdown);
+      const observed = parseDuration(enemy.countdown);
+      const marchText = String(enemy.march ?? '').trim();
+      const march = marchText ? parseDuration(marchText) : 0;
+      const hit = observed !== null && march !== null ? observed + march : null;
       const name = (enemy.leader || '').trim();
       if (!name) errors.push(`Enemy row ${index + 1}: enter an enemy leader or label.`);
-      if (hit === null || hit < 0) errors.push(`${name || `Enemy row ${index + 1}`}: impact countdown must be seconds or m:ss.`);
+      if (observed === null || observed < 0) errors.push(`${name || `Enemy row ${index + 1}`}: gather left must be seconds or m:ss.`);
+      if (marchText && (march === null || march < 0)) errors.push(`${name || `Enemy row ${index + 1}`}: enemy march must be seconds or m:ss.`);
       return {
         id:enemy.id, side:'enemy', source:'snapshot', alliance:(enemy.alliance || 'Enemy').trim() || 'Enemy',
         name:name || `Enemy Rally ${index + 1}`, purpose:enemy.label || 'Enemy rally', notes:enemy.notes || '',
-        hit, order:index
+        hit, observed, march, marchText, order:index
       };
     }).filter(e => e.hit !== null);
   }
@@ -628,12 +708,17 @@
 
   function resolveAnchor(anchor, manualTarget, events, errors, rowName) {
     const enemies = events.filter(e => e.side === 'enemy').sort((a,b) => a.hit - b.hit);
+    const observedEnemies = enemies.filter(e => e.source === 'snapshot');
+    const plannedEnemyCounters = enemies.filter(e => e.source === 'planned' && (/counter/i.test(e.purpose) || /counter/i.test(e.name)));
     const friendlies = events.filter(e => e.side === 'friendly').sort((a,b) => a.hit - b.hit);
     let target = null;
-    if (anchor === 'firstEnemy') target = enemies[0];
+    if (anchor === 'firstEnemy') target = observedEnemies[0] || enemies[0];
+    if (anchor === 'middleObservedEnemy') target = observedEnemies[Math.max(0, Math.ceil(observedEnemies.length / 2) - 1)];
+    if (anchor === 'finalObservedEnemy') target = observedEnemies[observedEnemies.length - 1];
     if (anchor === 'previousEnemy') target = enemies[enemies.length - 1];
     if (anchor === 'finalEnemy') target = enemies[enemies.length - 1];
     if (anchor === 'previousFriendly') target = friendlies[friendlies.length - 1];
+    if (anchor === 'latestPlannedEnemyCounter') target = plannedEnemyCounters[plannedEnemyCounters.length - 1];
     if (anchor === 'enemyFinalCounter') target = [...enemies].reverse().find(e => /final/i.test(e.purpose) || /final/i.test(e.name));
     if (anchor === 'manual') target = events.find(e => e.id === manualTarget);
     if (!target) errors.push(`${rowName}: missing response anchor (${anchorLabel(anchor)}).`);
@@ -642,10 +727,13 @@
 
   function anchorLabel(anchor) {
     return {
-      firstEnemy:'first enemy hit',
-      previousEnemy:'previous enemy hit',
-      finalEnemy:'final enemy hit',
+      firstEnemy:'first observed enemy hit',
+      middleObservedEnemy:'middle observed enemy hit',
+      finalObservedEnemy:'final observed enemy hit',
+      previousEnemy:'latest enemy hit so far',
+      finalEnemy:'final enemy hit so far',
       previousFriendly:'previous friendly hit',
+      latestPlannedEnemyCounter:'latest planned enemy counter',
       enemyFinalCounter:'enemy final counter',
       manual:'manual rally'
     }[anchor] || 'anchor';
@@ -871,8 +959,8 @@
 
   function sortEnemies() {
     state.enemies.sort((a,b) => {
-      const av = parseDuration(a.countdown);
-      const bv = parseDuration(b.countdown);
+      const av = enemyHitSeconds(a);
+      const bv = enemyHitSeconds(b);
       return (av ?? Number.POSITIVE_INFINITY) - (bv ?? Number.POSITIVE_INFINITY);
     });
     persistWave();
@@ -884,7 +972,7 @@
     sortEnemies();
     state.frozenAt = new Date().toISOString();
     persistWave();
-    $('snapshotMeta').textContent = `Frozen ${new Date(state.frozenAt).toLocaleTimeString()}. Countdown values are treated as one common observation snapshot.`;
+    $('snapshotMeta').textContent = `Frozen ${new Date(state.frozenAt).toLocaleTimeString()}. Gather-left values and saved march times are treated as one common observation snapshot.`;
     calculatePlan();
   }
 
@@ -904,9 +992,11 @@
   }
 
   function resetCurrentBattle() {
+    state.prefs.mode = 'defense';
     state.enemies = sampleEnemies();
     state.responses = defenseResponses();
     state.frozenAt = null;
+    savePrefs();
     persistWave();
     persistPlan();
     renderAll();
@@ -934,6 +1024,7 @@
     state.leaders = readJSON(STORAGE.leaders, null) || sampleLeaders();
     const wave = readJSON(STORAGE.wave, null);
     state.enemies = wave?.enemies || sampleEnemies();
+    state.enemies.forEach(enemy => { hydrateEnemyMarch(enemy); rememberEnemyMarch(enemy); });
     state.frozenAt = wave?.frozenAt || null;
     state.responses = readJSON(STORAGE.plan, null) || defenseResponses();
   }
@@ -943,8 +1034,8 @@
     renderLeaders();
     renderEnemies();
     renderResponses();
-    if (state.frozenAt) $('snapshotMeta').textContent = `Frozen ${new Date(state.frozenAt).toLocaleTimeString()}. Countdown values are treated as one common observation snapshot.`;
-    else $('snapshotMeta').textContent = 'Not frozen yet. Countdown values still calculate as the common snapshot.';
+    if (state.frozenAt) $('snapshotMeta').textContent = `Frozen ${new Date(state.frozenAt).toLocaleTimeString()}. Gather-left values and saved march times are treated as one common observation snapshot.`;
+    else $('snapshotMeta').textContent = 'Not frozen yet. Gather-left values and enemy marches still calculate as the common snapshot.';
   }
 
   function addLeader() {
@@ -955,7 +1046,7 @@
   }
 
   function addEnemy() {
-    state.enemies.push({ id:uid('enemy'), alliance:'Enemy', leader:`Enemy Rally ${state.enemies.length + 1}`, countdown:'24', label:'Main enemy attack', notes:'' });
+    state.enemies.push({ id:uid('enemy'), alliance:'Enemy', leader:`Enemy Rally ${state.enemies.length + 1}`, countdown:'5:55', march:'', label:'Main enemy attack', notes:'' });
     persistWave();
     renderEnemies();
     renderResponses();
@@ -970,7 +1061,14 @@
 
   function wire() {
     $('addLeaderBtn').addEventListener('click', addLeader);
-    $('sampleLeadersBtn').addEventListener('click', () => { state.leaders = sampleLeaders(); persistLibrary(); renderLeaders(); renderResponses(); toast('Sample leaders loaded'); });
+    $('sampleLeadersBtn').addEventListener('click', () => {
+      state.leaders = sampleLeaders();
+      state.responses = state.prefs.mode === 'attack' ? attackResponses() : defenseResponses();
+      persistLibrary(); persistPlan();
+      renderLeaders(); renderResponses();
+      calculatePlan();
+      toast('Defense leader sample loaded');
+    });
     $('saveLibraryBtn').addEventListener('click', () => { persistLibrary(); toast('Leader library saved'); });
     $('addEnemyBtn').addEventListener('click', addEnemy);
     $('freezeBtn').addEventListener('click', freezeSnapshot);
