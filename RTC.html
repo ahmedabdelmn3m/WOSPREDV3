@@ -144,7 +144,7 @@
     </div>
     <div class="mode-card">
       <label><input type="radio" name="battleMode" value="attack" /> Attack Mode</label>
-      <span>Enemy holds. Alliance A attacks, enemy counters, B answers.</span>
+      <span>Soften the garrison, let the holder capture last, then answer counters.</span>
     </div>
     <div class="mode-card">
       <label><input type="radio" name="planningState" value="preplanned" checked /> Preplanned Rally</label>
@@ -164,7 +164,7 @@
         <div class="card-head">
           <div>
             <div class="section-title">1. Friendly Leader Library</div>
-            <div class="section-help library-extra">Defense sample: A1 Bazz holds castle; B1/B2/B3 are Jenna response rallies.</div>
+            <div class="section-help library-extra">Attack sample: SOL kills infantry, Red softens, Bazz captures, and Alliance B handles the counter wave.</div>
           </div>
           <div class="toolbar">
             <button class="btn btn-primary" id="addLeaderBtn" type="button">＋ Leader</button>
@@ -299,7 +299,7 @@
         <p>Enemy rows share one observation snapshot. If Enemy March is filled, estimated hit time is Gather Left plus Enemy March. If Enemy March is blank, Gather Left is treated as direct impact countdown.</p>
         <p>Friendly launch point = desired hit point - rally gathering duration - leader march time. Friendly launch points are sorted, then shown as LAUNCH FIRST and relative delays after the previous friendly launcher.</p>
         <p>Friendly State means: Ready = waiting for your declaration; Gathering = rally is already open and Remaining is fill time left; Marching = rally has launched and Remaining is march time left.</p>
-        <p>Friendly Need rows are assigned from the Leader Library by Role and Alliance. A missing matching leader is shown as an error instead of silently using the wrong rally.</p>
+        <p>Attack order is Infantry killer, optional Softener, Castle holder, counter responses, then Post-wave reinforce. Friendly Need rows are assigned from the Leader Library by Role and Alliance.</p>
       </div>
     </details>
   </section>
@@ -322,17 +322,18 @@
   const $ = (id) => document.getElementById(id);
   const state = { leaders:[], enemies:[], responses:[], prefs:{ mode:'defense', planning:'preplanned', theme:'dark', compact:false }, last:null };
 
-  const roleOptions = ['Castle holder','Garrison support','Attack only','Defense counter','Counter-counter','Post-wave reinforce','Main attack','Counter attack','Recovery rally','Final hit','Reinforcement','Custom'];
+  const roleOptions = ['Infantry killer','Softener','Castle holder','Counter-attack','Counter-counter','Post-wave reinforce','Garrison support','Defense counter','Recovery rally','Final hit','Reinforcement','Custom'];
   const needDefinitions = [
+    { value:'Infantry killer', roles:['Infantry killer'], alliance:'A' },
+    { value:'Softener', roles:['Softener'], alliance:'A' },
     { value:'Castle holder', roles:['Castle holder'], alliance:'A' },
-    { value:'Garrison support', roles:['Garrison support'], alliance:'A' },
-    { value:'Main attack', roles:['Main attack','Attack only'], alliance:'A' },
-    { value:'Defense counter', roles:['Defense counter','Counter attack'], alliance:'B' },
-    { value:'Counter attack', roles:['Counter attack','Defense counter'], alliance:'B' },
+    { value:'Counter-attack', roles:['Counter-attack','Counter attack','Defense counter'], alliance:'B' },
     { value:'Counter-counter', roles:['Counter-counter'], alliance:'B' },
+    { value:'Post-wave reinforce', roles:['Post-wave reinforce','Reinforcement'], alliance:'B' },
+    { value:'Garrison support', roles:['Garrison support'], alliance:'A' },
+    { value:'Defense counter', roles:['Defense counter','Counter-attack','Counter attack'], alliance:'B' },
     { value:'Recovery rally', roles:['Recovery rally'], alliance:'A' },
     { value:'Final hit', roles:['Final hit'], alliance:'A' },
-    { value:'Post-wave reinforce', roles:['Post-wave reinforce','Reinforcement'], alliance:'B' },
     { value:'Custom', roles:roleOptions, alliance:'' }
   ];
   const enemyLabels = ['Main enemy attack','Enemy counter','Enemy final counter','Custom'];
@@ -393,9 +394,9 @@
   function sampleLeaders() {
     return [
       { id:uid('leader'), enabled:true, alliance:'A', name:'Bazz', march:'0:32', gather:5, role:'Castle holder' },
-      { id:uid('leader'), enabled:true, alliance:'A', name:'SOL', march:'0:41', gather:5, role:'Attack only' },
-      { id:uid('leader'), enabled:true, alliance:'A', name:'Red', march:'0:55', gather:10, role:'Attack only' },
-      { id:uid('leader'), enabled:true, alliance:'B', name:'Jenna', march:'0:36', gather:5, role:'Defense counter' },
+      { id:uid('leader'), enabled:true, alliance:'A', name:'SOL', march:'0:41', gather:5, role:'Infantry killer' },
+      { id:uid('leader'), enabled:true, alliance:'A', name:'Red', march:'0:55', gather:10, role:'Softener' },
+      { id:uid('leader'), enabled:true, alliance:'B', name:'Jenna', march:'0:36', gather:5, role:'Counter-attack' },
       { id:uid('leader'), enabled:true, alliance:'B', name:'Jenna2', march:'0:28', gather:5, role:'Counter-counter' },
       { id:uid('leader'), enabled:true, alliance:'B', name:'Jenna3', march:'0:34', gather:5, role:'Post-wave reinforce' }
     ];
@@ -419,24 +420,25 @@
   }
 
   function attackResponses() {
-    const attackers = matchingLeaders('Main attack', 'A').slice(0, 3);
-    const attackRows = (attackers.length ? attackers : [null]).map((leader, index) => ({
-      id:uid('response'),
-      type:'friendly',
-      alliance:'A',
-      leaderId:leader?.id || '',
-      need:'Main attack',
-      purpose:'Main attack',
-      anchor:index === 0 ? 'firstEnemy' : 'previousFriendly',
-      offset:'1',
-      manualTarget:'',
-      liveState:'not-launched',
-      remaining:''
-    }));
-    return assignLeadersByNeed(attackRows.concat([
+    const rows = [
+      { id:uid('response'), type:'friendly', alliance:'A', leaderId:'', need:'Infantry killer', purpose:'Infantry killer', anchor:'firstEnemy', offset:'1', manualTarget:'', liveState:'not-launched', remaining:'' }
+    ];
+    if (matchingLeaders('Softener', 'A').length) {
+      rows.push({ id:uid('response'), type:'friendly', alliance:'A', leaderId:'', need:'Softener', purpose:'Softener', anchor:'previousFriendly', offset:'1', manualTarget:'', liveState:'not-launched', remaining:'' });
+    }
+    rows.push(
+      { id:uid('response'), type:'friendly', alliance:'A', leaderId:'', need:'Castle holder', purpose:'Castle holder', anchor:'previousFriendly', offset:'1', manualTarget:'', liveState:'not-launched', remaining:'' },
       { id:uid('response'), type:'enemy', alliance:'Enemy', leaderId:'', enemyAlliance:'Enemy', enemyLeader:'Enemy Counter', purpose:'Enemy counter', anchor:'previousFriendly', offset:'3', manualTarget:'', liveState:'not-launched', remaining:'' },
-      { id:uid('response'), type:'friendly', alliance:'B', leaderId:'', need:'Counter attack', purpose:'Counter attack', anchor:'previousEnemy', offset:'1', manualTarget:'', liveState:'not-launched', remaining:'' }
-    ]), true);
+      { id:uid('response'), type:'friendly', alliance:'B', leaderId:'', need:'Counter-attack', purpose:'Counter-attack', anchor:'previousEnemy', offset:'1', manualTarget:'', liveState:'not-launched', remaining:'' }
+    );
+    if (matchingLeaders('Counter-counter', 'B').length) {
+      rows.push(
+        { id:uid('response'), type:'enemy', alliance:'Enemy', leaderId:'', enemyAlliance:'Enemy', enemyLeader:'Enemy Second Counter', purpose:'Enemy second counter', anchor:'previousFriendly', offset:'3', manualTarget:'', liveState:'not-launched', remaining:'' },
+        { id:uid('response'), type:'friendly', alliance:'B', leaderId:'', need:'Counter-counter', purpose:'Counter-counter', anchor:'previousEnemy', offset:'1', manualTarget:'', liveState:'not-launched', remaining:'' }
+      );
+    }
+    rows.push({ id:uid('response'), type:'friendly', alliance:'B', leaderId:'', need:'Post-wave reinforce', purpose:'Post-wave reinforce', anchor:'finalEnemy', offset:'2', manualTarget:'', liveState:'not-launched', remaining:'' });
+    return assignLeadersByNeed(rows, true);
   }
 
   function firstLeader(alliance) {
@@ -456,10 +458,11 @@
     if (/counter.?counter|counter enemy counter/i.test(text)) return 'Counter-counter';
     if (/castle hold|defen[cs]e counter/i.test(text)) return 'Defense counter';
     if (/post.?wave|reinfor/i.test(text)) return 'Post-wave reinforce';
+    if (/infantry|main attack|attack only|initial capture/i.test(text)) return 'Infantry killer';
+    if (/soften|double attack/i.test(text)) return 'Softener';
     if (/recover|retake/i.test(text)) return 'Recovery rally';
     if (/final hit|final lock/i.test(text)) return 'Final hit';
-    if (/main attack|attack only|initial capture/i.test(text)) return 'Main attack';
-    if (/counter/i.test(text)) return 'Counter attack';
+    if (/counter/i.test(text)) return 'Counter-attack';
     if (/garrison/i.test(text)) return 'Garrison support';
     if (/castle holder/i.test(text)) return 'Castle holder';
     return 'Custom';
@@ -517,6 +520,14 @@
     return needDefinitions.map(need => `<option value="${esc(need.value)}" ${need.value === selected ? 'selected' : ''}>${esc(need.value)}</option>`).join('');
   }
 
+  function roleSelectOptions(selected) {
+    const roles = roleOptions.includes(selected) ? roleOptions : [selected, ...roleOptions];
+    return roles.map(role => {
+      const label = roleOptions.includes(role) ? role : `${role || 'Unknown role'} (legacy - reassign)`;
+      return `<option value="${esc(role)}" ${role === selected ? 'selected' : ''}>${esc(label)}</option>`;
+    }).join('');
+  }
+
   function applyPrefs() {
     document.documentElement.dataset.theme = state.prefs.theme || 'dark';
     $('themeBtn').textContent = document.documentElement.dataset.theme === 'dark' ? '☀ Light' : '🌙 Dark';
@@ -557,7 +568,7 @@
         <td><input class="leader-name" type="text" value="${esc(leader.name)}" placeholder="Leader A1" /></td>
         <td><input class="leader-march" type="text" value="${esc(leader.march)}" placeholder="0:32 or 32" /></td>
         <td><select class="leader-gather"><option value="5" ${Number(leader.gather) !== 10 ? 'selected' : ''}>5 minutes</option><option value="10" ${Number(leader.gather) === 10 ? 'selected' : ''}>10 minutes</option></select></td>
-        <td class="role-col"><select class="leader-role">${roleOptions.map(r => `<option value="${esc(r)}" ${leader.role === r ? 'selected' : ''}>${esc(r)}</option>`).join('')}</select></td>
+        <td class="role-col"><select class="leader-role">${roleSelectOptions(leader.role)}</select></td>
         <td><div class="row-actions">
           <button class="icon-btn move-up" type="button" title="Move up">↑</button>
           <button class="icon-btn move-down" type="button" title="Move down">↓</button>
@@ -1184,7 +1195,7 @@
   }
 
   function addResponse() {
-    const need = state.prefs.mode === 'attack' ? 'Main attack' : 'Defense counter';
+    const need = state.prefs.mode === 'attack' ? 'Infantry killer' : 'Defense counter';
     state.responses.push({ id:uid('response'), type:'friendly', alliance:defaultAllianceForNeed(need), leaderId:'', need, purpose:need, anchor:'finalEnemy', offset:'1', manualTarget:'', liveState:'not-launched', remaining:'' });
     assignLeadersByNeed();
     persistPlan();
@@ -1199,7 +1210,7 @@
       persistLibrary(); persistPlan();
       renderLeaders(); renderResponses();
       calculatePlan();
-      toast('Defense leader sample loaded');
+      toast('Role-based leader sample loaded');
     });
     $('saveLibraryBtn').addEventListener('click', () => { persistLibrary(); toast('Leader library saved'); });
     $('addEnemyBtn').addEventListener('click', addEnemy);
