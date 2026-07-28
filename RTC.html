@@ -79,6 +79,12 @@
     .error-box { display:none; margin-bottom:10px; padding:10px 12px; color:#ffd9d4; background:rgba(231,76,60,.13); border:1px solid rgba(231,76,60,.35); border-radius:var(--radius); }
     .snapshot-bar { display:grid; grid-template-columns:1fr auto; gap:8px; align-items:center; padding:10px; border:1px solid rgba(0,200,255,.24); border-radius:var(--radius); background:rgba(0,200,255,.06); margin-bottom:9px; }
     .snapshot-meta { color:var(--dim); font-size:12px; }
+    .decision-options { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+    .decision-options label { display:flex; align-items:center; gap:6px; padding:7px 9px; border:1px solid var(--border); border-radius:7px; background:var(--input); color:var(--txt); cursor:pointer; }
+    .decision-recommendation,.decision-output { padding:10px 12px; border:1px solid var(--border); border-radius:var(--radius); background:var(--card); color:var(--txt); font-weight:800; }
+    .decision-recommendation.good,.decision-output.good { color:var(--green); border-color:rgba(46,204,113,.42); background:rgba(46,204,113,.08); }
+    .decision-recommendation.warn,.decision-output.warn { color:var(--warn); border-color:rgba(243,156,18,.42); background:rgba(243,156,18,.08); }
+    .decision-recommendation.fire,.decision-output.fire { color:var(--enemy); border-color:rgba(255,107,53,.42); background:rgba(255,107,53,.08); }
     .outputs { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
     .result-list { display:flex; flex-direction:column; gap:7px; }
     .result { display:grid; grid-template-columns:38px minmax(120px,.8fr) 1fr auto; gap:9px; align-items:center; padding:10px 11px; border:1px solid var(--border); border-radius:var(--radius); background:var(--card); }
@@ -241,6 +247,17 @@
             <button class="btn btn-primary" id="addResponseBtn" type="button">＋ Response</button>
           </div>
         </div>
+        <div class="snapshot-bar" id="defenseDecision">
+          <div>
+            <div class="section-title">What happens after the final enemy hit?</div>
+            <div class="decision-options">
+              <label><input type="radio" name="defenseOutcome" value="friendly-holds" /> Alliance A holds</label>
+              <label><input type="radio" name="defenseOutcome" value="enemy-captures" /> Enemy captures</label>
+              <label><input type="radio" name="defenseOutcome" value="uncertain" checked /> Uncertain</label>
+            </div>
+          </div>
+          <div class="decision-recommendation warn" id="decisionRecommendation">Conditional: do not commit Alliance B until you decide who owns the castle.</div>
+        </div>
         <div class="table-wrap">
           <table class="wide-table">
             <thead>
@@ -276,6 +293,7 @@
             <div class="section-help">Only relative seconds. The first friendly launcher is the trigger.</div>
           </div>
         </div>
+        <div class="decision-output" id="decisionOutput" style="display:none"></div>
         <div class="outputs">
           <div>
             <div class="section-title" style="margin-bottom:8px">🚀 Friendly Launch Sequence</div>
@@ -320,15 +338,16 @@
   };
   const ids = { leader:0, enemy:0, response:0 };
   const $ = (id) => document.getElementById(id);
-  const state = { leaders:[], enemies:[], responses:[], prefs:{ mode:'defense', planning:'preplanned', theme:'dark', compact:false }, last:null };
+  const state = { leaders:[], enemies:[], responses:[], prefs:{ mode:'defense', planning:'preplanned', theme:'dark', compact:false, defenseOutcome:'uncertain' }, last:null };
 
-  const roleOptions = ['Infantry killer','Softener','Castle holder','Counter-attack','Counter-counter','Post-wave reinforce','Garrison support','Defense counter','Recovery rally','Final hit','Reinforcement','Custom'];
+  const roleOptions = ['Infantry killer','Softener','Castle holder','Counter-attack','Counter-counter','Last-wave retaker','Post-wave reinforce','Garrison support','Defense counter','Recovery rally','Final hit','Reinforcement','Custom'];
   const needDefinitions = [
     { value:'Infantry killer', roles:['Infantry killer'], alliance:'A' },
     { value:'Softener', roles:['Softener'], alliance:'A' },
     { value:'Castle holder', roles:['Castle holder'], alliance:'A' },
     { value:'Counter-attack', roles:['Counter-attack','Counter attack','Defense counter'], alliance:'B' },
     { value:'Counter-counter', roles:['Counter-counter'], alliance:'B' },
+    { value:'Last-wave retaker', roles:['Last-wave retaker','Counter-attack','Counter attack','Defense counter'], alliance:'B' },
     { value:'Post-wave reinforce', roles:['Post-wave reinforce','Reinforcement'], alliance:'B' },
     { value:'Garrison support', roles:['Garrison support'], alliance:'A' },
     { value:'Defense counter', roles:['Defense counter','Counter-attack','Counter attack'], alliance:'B' },
@@ -411,11 +430,22 @@
   }
 
   function defenseResponses() {
+    if (state.prefs.defenseOutcome === 'friendly-holds') return [];
     return assignLeadersByNeed([
-      { id:uid('response'), type:'friendly', alliance:'B', leaderId:'', need:'Defense counter', purpose:'Defense counter', anchor:'middleObservedEnemy', offset:'1', manualTarget:'', liveState:'not-launched', remaining:'' },
-      { id:uid('response'), type:'enemy', alliance:'Enemy', leaderId:'', enemyAlliance:'Enemy', enemyLeader:'Enemy counter after friendly response', purpose:'Enemy counter after friendly response', anchor:'previousFriendly', offset:'3', manualTarget:'', liveState:'not-launched', remaining:'' },
-      { id:uid('response'), type:'friendly', alliance:'B', leaderId:'', need:'Counter-counter', purpose:'Counter-counter', anchor:'latestPlannedEnemyCounter', offset:'1', manualTarget:'', liveState:'not-launched', remaining:'' },
-      { id:uid('response'), type:'friendly', alliance:'B', leaderId:'', need:'Post-wave reinforce', purpose:'Post-wave reinforce', anchor:'finalEnemy', offset:'2', manualTarget:'', liveState:'not-launched', remaining:'' }
+      {
+        id:uid('response'),
+        type:'friendly',
+        alliance:'B',
+        leaderId:'',
+        need:'Last-wave retaker',
+        purpose:'Last-wave retaker',
+        anchor:'finalObservedEnemy',
+        offset:'1',
+        manualTarget:'',
+        liveState:'not-launched',
+        remaining:'',
+        conditional:state.prefs.defenseOutcome === 'uncertain'
+      }
     ], true);
   }
 
@@ -456,6 +486,7 @@
     const exact = needDefinitions.find(need => need.value.toLowerCase() === text.toLowerCase());
     if (exact) return exact.value;
     if (/counter.?counter|counter enemy counter/i.test(text)) return 'Counter-counter';
+    if (/last.?wave|final wave|final enemy.*retake/i.test(text)) return 'Last-wave retaker';
     if (/castle hold|defen[cs]e counter/i.test(text)) return 'Defense counter';
     if (/post.?wave|reinfor/i.test(text)) return 'Post-wave reinforce';
     if (/infantry|main attack|attack only|initial capture/i.test(text)) return 'Infantry killer';
@@ -535,10 +566,54 @@
     $('compactBtn').textContent = state.prefs.compact ? 'Full Planning Mode' : 'Compact War Mode';
     document.querySelectorAll('[name="battleMode"]').forEach(r => { r.checked = r.value === state.prefs.mode; });
     document.querySelectorAll('[name="planningState"]').forEach(r => { r.checked = r.value === state.prefs.planning; });
+    document.querySelectorAll('[name="defenseOutcome"]').forEach(r => { r.checked = r.value === state.prefs.defenseOutcome; });
+    $('defenseDecision').style.display = state.prefs.mode === 'defense' ? 'grid' : 'none';
+    renderDecisionRecommendation();
   }
 
   function savePrefs() {
     writeJSON(STORAGE.prefs, state.prefs);
+  }
+
+  function finalObservedEnemy() {
+    return state.enemies
+      .map(enemy => ({ enemy, hit:enemyHitSeconds(enemy) }))
+      .filter(item => item.hit !== null)
+      .sort((a,b) => a.hit - b.hit)
+      .at(-1)?.enemy || null;
+  }
+
+  function defenseRecommendation() {
+    if (state.prefs.mode !== 'defense') return null;
+    const finalEnemy = finalObservedEnemy();
+    const enemyName = finalEnemy?.leader || 'the final enemy rally';
+    if (state.prefs.defenseOutcome === 'friendly-holds') {
+      return {
+        tone:'good',
+        title:'HOLD ALLIANCE B',
+        message:`Alliance A is expected to hold after ${enemyName}. Do not launch Alliance B into your own defense; reinforce Alliance A instead.`
+      };
+    }
+    if (state.prefs.defenseOutcome === 'enemy-captures') {
+      return {
+        tone:'fire',
+        title:'RETAKE +1 SECOND',
+        message:`Enemy is expected to own the castle after ${enemyName}. Alliance B should land its Last-wave retaker +1 second after that hit.`
+      };
+    }
+    return {
+      tone:'warn',
+      title:'CONDITIONAL - MANUAL DECISION REQUIRED',
+      message:`Prepare the +1 second timing after ${enemyName}, but do not commit Alliance B until you change this choice to Alliance A holds or Enemy captures.`
+    };
+  }
+
+  function renderDecisionRecommendation() {
+    const recommendation = defenseRecommendation();
+    const el = $('decisionRecommendation');
+    if (!recommendation) return;
+    el.className = `decision-recommendation ${recommendation.tone}`;
+    el.innerHTML = `<strong>${esc(recommendation.title)}</strong><div class="snapshot-meta" style="margin-top:4px">${esc(recommendation.message)}</div>`;
   }
 
   function leaderOptions(selectedId, allianceFilter = '', needValue = 'Custom', responseId = '') {
@@ -673,10 +748,10 @@
       const refreshImpact = () => { const el = tr.querySelector('.enemy-impact'); if (el) el.textContent = enemyImpactText(enemy); };
       tr.querySelector('.enemy-alliance').addEventListener('input', e => { enemy.alliance = e.target.value; persistWave(); });
       tr.querySelector('.enemy-alliance').addEventListener('change', () => { hydrateEnemyMarch(enemy); rememberEnemyMarch(enemy); persistWave(); renderEnemies(); });
-      tr.querySelector('.enemy-leader').addEventListener('input', e => { enemy.leader = e.target.value; persistWave(); });
+      tr.querySelector('.enemy-leader').addEventListener('input', e => { enemy.leader = e.target.value; persistWave(); renderDecisionRecommendation(); });
       tr.querySelector('.enemy-leader').addEventListener('change', () => { hydrateEnemyMarch(enemy); rememberEnemyMarch(enemy); persistWave(); renderEnemies(); });
-      tr.querySelector('.enemy-countdown').addEventListener('input', e => { enemy.countdown = e.target.value; persistWave(); refreshImpact(); });
-      tr.querySelector('.enemy-march').addEventListener('input', e => { enemy.march = e.target.value; persistWave(); rememberEnemyMarch(enemy); refreshImpact(); });
+      tr.querySelector('.enemy-countdown').addEventListener('input', e => { enemy.countdown = e.target.value; persistWave(); refreshImpact(); renderDecisionRecommendation(); });
+      tr.querySelector('.enemy-march').addEventListener('input', e => { enemy.march = e.target.value; persistWave(); rememberEnemyMarch(enemy); refreshImpact(); renderDecisionRecommendation(); });
       tr.querySelector('.enemy-label').addEventListener('change', e => { enemy.label = e.target.value; persistWave(); });
       tr.querySelector('.enemy-notes').addEventListener('input', e => { enemy.notes = e.target.value; persistWave(); });
       tr.querySelector('.move-up').addEventListener('click', () => moveItem(state.enemies, index, index - 1, () => { persistWave(); renderEnemies(); renderResponses(); }));
@@ -714,8 +789,13 @@
 
   function renderResponses() {
     assignLeadersByNeed();
+    renderDecisionRecommendation();
     const rows = $('responseRows');
     rows.innerHTML = '';
+    if (!state.responses.length && state.prefs.mode === 'defense' && state.prefs.defenseOutcome === 'friendly-holds') {
+      rows.innerHTML = '<tr><td colspan="9"><div class="decision-recommendation good"><strong>HOLD ALLIANCE B</strong><div class="snapshot-meta" style="margin-top:4px">No Alliance B attack is scheduled because Alliance A is expected to keep the castle.</div></div></td></tr>';
+      return;
+    }
     state.responses.forEach((response, index) => {
       const leader = state.leaders.find(l => l.id === response.leaderId);
       const alliance = response.type === 'friendly' ? (leader?.alliance || response.alliance || 'A') : (response.enemyAlliance || response.alliance || 'Enemy');
@@ -732,7 +812,7 @@
           : `<select class="response-leader">${leaderOptions(response.leaderId, response.alliance, response.need, response.id)}</select>`}</td>
         <td>${response.type === 'enemy'
           ? `<input class="response-purpose" type="text" value="${esc(response.purpose)}" placeholder="Enemy final counter" />`
-          : `<select class="response-need">${needOptions(response.need)}</select>`}</td>
+          : `<select class="response-need">${needOptions(response.need)}</select>${response.conditional ? '<div class="warning-text">Conditional: launch only if Enemy captures</div>' : ''}`}</td>
         <td><select class="response-anchor">${anchorOptions(response.anchor)}</select><select class="response-manual" style="margin-top:5px;display:${response.anchor === 'manual' ? 'block' : 'none'}">${manualOptions(response.manualTarget)}</select></td>
         <td><input class="response-offset" type="text" value="${esc(response.offset)}" placeholder="1" /></td>
         <td><select class="response-live" ${response.type === 'enemy' ? 'disabled' : ''}><option value="not-launched" ${response.liveState !== 'gathering' && response.liveState !== 'marching' ? 'selected' : ''}>Ready, not launched</option><option value="gathering" ${response.liveState === 'gathering' ? 'selected' : ''}>Rally gathering</option><option value="marching" ${response.liveState === 'marching' ? 'selected' : ''}>Rally marching</option></select></td>
@@ -881,6 +961,7 @@
     if (!events.length) errors.push('Add at least one enemy rally countdown.');
     const responseEvents = [];
     const usedFriendlyLeaders = new Set();
+    const holdWithoutAttack = state.prefs.mode === 'defense' && state.prefs.defenseOutcome === 'friendly-holds';
 
     state.responses.forEach((response, index) => {
       const rowName = response.type === 'enemy'
@@ -924,12 +1005,12 @@
           id:response.id, side:'friendly', alliance:leader.alliance, name:leader.name, purpose, hit,
           leaderId:leader.id, marchSecs, marchText:leader.march, gather:Number(leader.gather) === 10 ? 10 : 5,
           gatherSecs, launchPoint, actionPoint:feasibility.actionPoint, feasibility, anchorName:anchor?.name || '',
-          offset, order:index + 100
+          offset, order:index + 100, conditional:!!response.conditional
         });
       }
     });
 
-    if (!responseEvents.some(e => e.side === 'friendly')) errors.push('Add at least one friendly response.');
+    if (!holdWithoutAttack && !responseEvents.some(e => e.side === 'friendly')) errors.push('Add at least one friendly response.');
     showErrors(errors);
     if (errors.length) return null;
 
@@ -943,8 +1024,9 @@
       const previous = hitRows[index - 1];
       return { ...row, hitOrder:index + 1, first:index === 0, delta:index === 0 ? 0 : row.hit - previous.hit, previousName:previous?.name || '' };
     });
-    const chat = buildChat(decoratedLaunch, decoratedHits);
-    state.last = { launchRows:decoratedLaunch, hitRows:decoratedHits, chat };
+    const recommendation = defenseRecommendation();
+    const chat = buildChat(decoratedLaunch, decoratedHits, recommendation);
+    state.last = { launchRows:decoratedLaunch, hitRows:decoratedHits, chat, recommendation };
     renderOutput(state.last);
     return state.last;
   }
@@ -1013,8 +1095,17 @@
   function renderOutput(plan) {
     const launchEl = $('launchResults');
     const hitEl = $('hitResults');
+    const decisionEl = $('decisionOutput');
     launchEl.innerHTML = '';
     hitEl.innerHTML = '';
+    if (plan.recommendation) {
+      decisionEl.style.display = 'block';
+      decisionEl.className = `decision-output ${plan.recommendation.tone}`;
+      decisionEl.innerHTML = `<strong>${esc(plan.recommendation.title)}</strong><div class="snapshot-meta" style="margin-top:4px">${esc(plan.recommendation.message)}</div>`;
+    } else {
+      decisionEl.style.display = 'none';
+      decisionEl.textContent = '';
+    }
     plan.launchRows.forEach(row => {
       const div = document.createElement('div');
       div.className = `result${row.first ? ' first' : ''}${row.feasibility.ok ? '' : ' warning'}`;
@@ -1043,19 +1134,25 @@
   function launchInstruction(row) {
     if (row.feasibility.state === 'gathering') return `<strong>ALREADY GATHERING</strong>`;
     if (row.feasibility.state === 'marching') return `<strong>ALREADY MARCHING</strong>`;
-    if (row.first) return '<strong>LAUNCH FIRST</strong>';
-    return `Launch <strong>+${secondsLabel(row.delta)}</strong> AFTER ${esc(row.previousName)}`;
+    const instruction = row.first
+      ? '<strong>LAUNCH FIRST</strong>'
+      : `Launch <strong>+${secondsLabel(row.delta)}</strong> AFTER ${esc(row.previousName)}`;
+    return row.conditional ? `<strong>CONDITIONAL</strong> - ${instruction}` : instruction;
   }
 
-  function buildChat(launchRows, hitRows) {
+  function buildChat(launchRows, hitRows, recommendation = null) {
     const title = state.prefs.mode === 'attack' ? 'CASTLE ATTACK PLAN' : 'CASTLE DEFENSE PLAN';
-    const lines = [`⚔️ ${title}`, '', '🚀 LAUNCH ORDER:'];
+    const lines = [`⚔️ ${title}`];
+    if (recommendation) {
+      lines.push('', `${recommendation.title}:`, recommendation.message);
+    }
+    lines.push('', '🚀 LAUNCH ORDER:');
     launchRows.forEach(row => {
       const tag = `[${row.alliance}] ${row.name}`;
       if (row.feasibility.state === 'gathering') lines.push(`${row.launchOrder}️⃣ ${tag} → ALREADY GATHERING${row.feasibility.ok ? '' : ` (${row.feasibility.message})`}`);
       else if (row.feasibility.state === 'marching') lines.push(`${row.launchOrder}️⃣ ${tag} → ALREADY MARCHING${row.feasibility.ok ? '' : ` (${row.feasibility.message})`}`);
-      else if (row.first) lines.push(`${row.launchOrder}️⃣ ${tag} → LAUNCH FIRST`);
-      else lines.push(`${row.launchOrder}️⃣ ${tag} → Launch +${secondsLabel(row.delta, true)} AFTER ${row.previousName}`);
+      else if (row.first) lines.push(`${row.launchOrder}️⃣ ${tag} → ${row.conditional ? 'CONDITIONAL - ' : ''}LAUNCH FIRST`);
+      else lines.push(`${row.launchOrder}️⃣ ${tag} → ${row.conditional ? 'CONDITIONAL - ' : ''}Launch +${secondsLabel(row.delta, true)} AFTER ${row.previousName}`);
     });
     lines.push('', '💥 HIT ORDER:');
     hitRows.forEach(row => {
@@ -1134,6 +1231,7 @@
 
   function resetCurrentBattle() {
     state.prefs.mode = 'defense';
+    state.prefs.defenseOutcome = 'uncertain';
     state.enemies = sampleEnemies();
     state.responses = defenseResponses();
     state.frozenAt = null;
@@ -1148,10 +1246,10 @@
   function resetEverything() {
     if (!confirm('Reset all saved RTC leader, wave, response, and preference data?')) return;
     Object.values(STORAGE).forEach(removeKey);
+    state.prefs = { mode:'defense', planning:'preplanned', theme:'dark', compact:false, defenseOutcome:'uncertain' };
     state.leaders = sampleLeaders();
     state.enemies = sampleEnemies();
     state.responses = defenseResponses();
-    state.prefs = { mode:'defense', planning:'preplanned', theme:'dark', compact:false };
     state.frozenAt = null;
     applyPrefs();
     renderAll();
@@ -1161,13 +1259,18 @@
   }
 
   function loadState() {
-    state.prefs = { mode:'defense', planning:'preplanned', theme:'dark', compact:false, ...readJSON(STORAGE.prefs, {}) };
+    const savedPrefs = readJSON(STORAGE.prefs, {}) || {};
+    const hasManualDefenseOutcome = Object.prototype.hasOwnProperty.call(savedPrefs, 'defenseOutcome');
+    state.prefs = { mode:'defense', planning:'preplanned', theme:'dark', compact:false, defenseOutcome:'uncertain', ...savedPrefs };
     state.leaders = readJSON(STORAGE.leaders, null) || sampleLeaders();
     const wave = readJSON(STORAGE.wave, null);
     state.enemies = wave?.enemies || sampleEnemies();
     state.enemies.forEach(enemy => { hydrateEnemyMarch(enemy); rememberEnemyMarch(enemy); });
     state.frozenAt = wave?.frozenAt || null;
-    state.responses = readJSON(STORAGE.plan, null) || defenseResponses();
+    const savedResponses = readJSON(STORAGE.plan, null);
+    state.responses = state.prefs.mode === 'defense' && !hasManualDefenseOutcome
+      ? defenseResponses()
+      : (savedResponses || (state.prefs.mode === 'attack' ? attackResponses() : defenseResponses()));
     assignLeadersByNeed();
   }
 
@@ -1195,7 +1298,7 @@
   }
 
   function addResponse() {
-    const need = state.prefs.mode === 'attack' ? 'Infantry killer' : 'Defense counter';
+    const need = state.prefs.mode === 'attack' ? 'Infantry killer' : 'Last-wave retaker';
     state.responses.push({ id:uid('response'), type:'friendly', alliance:defaultAllianceForNeed(need), leaderId:'', need, purpose:need, anchor:'finalEnemy', offset:'1', manualTarget:'', liveState:'not-launched', remaining:'' });
     assignLeadersByNeed();
     persistPlan();
@@ -1233,8 +1336,23 @@
       state.prefs.compact = !state.prefs.compact;
       applyPrefs(); savePrefs();
     });
-    document.querySelectorAll('[name="battleMode"]').forEach(r => r.addEventListener('change', e => { state.prefs.mode = e.target.value; savePrefs(); }));
+    document.querySelectorAll('[name="battleMode"]').forEach(r => r.addEventListener('change', e => {
+      state.prefs.mode = e.target.value;
+      state.responses = state.prefs.mode === 'attack' ? attackResponses() : defenseResponses();
+      savePrefs();
+      persistPlan();
+      renderAll();
+      calculatePlan();
+    }));
     document.querySelectorAll('[name="planningState"]').forEach(r => r.addEventListener('change', e => { state.prefs.planning = e.target.value; savePrefs(); calculatePlan(); }));
+    document.querySelectorAll('[name="defenseOutcome"]').forEach(r => r.addEventListener('change', e => {
+      state.prefs.defenseOutcome = e.target.value;
+      state.responses = defenseResponses();
+      savePrefs();
+      persistPlan();
+      renderAll();
+      calculatePlan();
+    }));
   }
 
   loadState();
