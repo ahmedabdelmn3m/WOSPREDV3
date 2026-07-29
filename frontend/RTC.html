@@ -77,6 +77,8 @@
     .status { min-height:20px; color:var(--dim); font-size:11px; }
     .status.bad { color:#ffd9d4; }
     .status.good { color:var(--green); }
+    .garrison-row td { background:rgba(255,107,53,.05); }
+    .status.garrison { color:var(--enemy); font-weight:800; }
     .error-box { display:none; margin-bottom:10px; padding:10px 12px; color:#ffd9d4; background:rgba(231,76,60,.13); border:1px solid rgba(231,76,60,.35); border-radius:var(--radius); }
     .snapshot-bar { display:grid; grid-template-columns:1fr auto; gap:8px; align-items:center; padding:10px; border:1px solid rgba(0,200,255,.24); border-radius:var(--radius); background:rgba(0,200,255,.06); margin-bottom:9px; }
     .snapshot-meta { color:var(--dim); font-size:12px; }
@@ -202,7 +204,7 @@
         <div class="card-head">
           <div>
             <div class="section-title">2. Live Enemy Wave Capture</div>
-            <div class="section-help">Enter observed enemy gather time and saved enemy march time. The tool adds them to estimate hit time.</div>
+            <div class="section-help">Label the current holder as Castle Garrison. Timed enemy rallies use Gather Left plus Enemy March.</div>
           </div>
           <div class="toolbar">
             <button class="btn btn-fire" id="addEnemyBtn" type="button">＋ Enemy</button>
@@ -336,10 +338,10 @@
     <details>
       <summary>How the timing model works</summary>
       <div class="help-content">
-        <p>Enemy rows share one observation snapshot. If Enemy March is filled, estimated hit time is Gather Left plus Enemy March. If Enemy March is blank, Gather Left is treated as direct impact countdown.</p>
+        <p>Castle Garrison is the current castle holder and is not counted as a hit. Other enemy rows share one observation snapshot. If Enemy March is filled, estimated hit time is Gather Left plus Enemy March.</p>
         <p>Friendly launch point = desired hit point - rally gathering duration - leader march time. Friendly launch points are sorted, then shown as LAUNCH FIRST and relative delays after the previous friendly launcher.</p>
         <p>Friendly State means: Ready = waiting for your declaration; Gathering = rally is already open and Remaining is fill time left; Marching = rally has launched and Remaining is march time left.</p>
-        <p>Attack order is Infantry killer, optional Softener, Castle holder, counter responses, then Post-wave reinforce. Friendly Need rows are assigned from the Leader Library by Role and Alliance.</p>
+        <p>Attack order is Infantry killer, optional Softener, Castle holder, observed enemy counters, Alliance B +1 second after Enemy Final Counter, then Post-wave reinforce.</p>
       </div>
     </details>
   </section>
@@ -360,7 +362,7 @@
   };
   const ids = { leader:0, enemy:0, response:0 };
   const $ = (id) => document.getElementById(id);
-  const state = { leaders:[], enemies:[], responses:[], prefs:{ mode:'', intentChosen:false, planning:'preplanned', theme:'dark', compact:false, defenseOutcome:'uncertain' }, last:null };
+  const state = { leaders:[], enemies:[], responses:[], prefs:{ mode:'', intentChosen:false, planning:'preplanned', theme:'dark', compact:false, defenseOutcome:'uncertain', attackLabelFlowVersion:1 }, last:null };
 
   const roleOptions = ['Infantry killer','Softener','Castle holder','Counter-attack','Counter-counter','Last-wave retaker','Post-wave reinforce','Garrison support','Defense counter','Recovery rally','Final hit','Reinforcement','Custom'];
   const needDefinitions = [
@@ -377,7 +379,7 @@
     { value:'Final hit', roles:['Final hit'], alliance:'A' },
     { value:'Custom', roles:roleOptions, alliance:'' }
   ];
-  const enemyLabels = ['Main enemy attack','Enemy counter','Enemy final counter','Custom'];
+  const enemyLabels = ['Castle Garrison','Enemy Counter','Enemy Final Counter','Enemy Attack','Custom'];
 
   function uid(prefix) {
     ids[prefix] += 1;
@@ -445,10 +447,28 @@
 
   function sampleEnemies() {
     return [
-      { id:uid('enemy'), alliance:'Enemy', leader:'Enemy Rally 1', countdown:'5:55', march:'0:32', label:'Main enemy attack', notes:'Gather left + saved march' },
-      { id:uid('enemy'), alliance:'Enemy', leader:'Enemy Rally 2', countdown:'5:57', march:'0:35', label:'Main enemy attack', notes:'Middle of enemy wave' },
-      { id:uid('enemy'), alliance:'Enemy', leader:'Enemy Rally 3', countdown:'6:04', march:'0:39', label:'Main enemy attack', notes:'Last observed enemy hit' }
+      { id:uid('enemy'), alliance:'Enemy', leader:'Enemy Castle Holder', countdown:'', march:'', label:'Castle Garrison', notes:'Current castle occupant; not a timed hit' },
+      { id:uid('enemy'), alliance:'Enemy', leader:'Enemy Rally 1', countdown:'5:57', march:'0:35', label:'Enemy Counter', notes:'Observed response after our capture wave' },
+      { id:uid('enemy'), alliance:'Enemy', leader:'Enemy Rally 2', countdown:'6:04', march:'0:39', label:'Enemy Final Counter', notes:'Alliance B responds +1 second after this hit' }
     ];
+  }
+
+  function normalizeEnemyLabel(value) {
+    const label = String(value || '').trim();
+    if (/^castle garrison$/i.test(label)) return 'Castle Garrison';
+    if (/^enemy final counter$/i.test(label)) return 'Enemy Final Counter';
+    if (/^enemy counter$/i.test(label)) return 'Enemy Counter';
+    if (/^(main )?enemy attack$/i.test(label)) return 'Enemy Attack';
+    if (/^custom$/i.test(label)) return 'Custom';
+    return 'Enemy Attack';
+  }
+
+  function isCastleGarrison(enemy) {
+    return normalizeEnemyLabel(enemy?.label) === 'Castle Garrison';
+  }
+
+  function castleGarrisons() {
+    return state.enemies.filter(isCastleGarrison);
   }
 
   function defenseResponses() {
@@ -473,23 +493,29 @@
 
   function attackResponses() {
     const rows = [
-      { id:uid('response'), type:'friendly', alliance:'A', leaderId:'', need:'Infantry killer', purpose:'Infantry killer', anchor:'firstEnemy', offset:'1', manualTarget:'', liveState:'not-launched', remaining:'' }
+      { id:uid('response'), type:'friendly', alliance:'A', leaderId:'', need:'Infantry killer', purpose:'Infantry killer', anchor:'attackStart', offset:'0', manualTarget:'', liveState:'not-launched', remaining:'' }
     ];
     if (matchingLeaders('Softener', 'A').length) {
       rows.push({ id:uid('response'), type:'friendly', alliance:'A', leaderId:'', need:'Softener', purpose:'Softener', anchor:'previousFriendly', offset:'1', manualTarget:'', liveState:'not-launched', remaining:'' });
     }
-    rows.push(
-      { id:uid('response'), type:'friendly', alliance:'A', leaderId:'', need:'Castle holder', purpose:'Castle holder', anchor:'previousFriendly', offset:'1', manualTarget:'', liveState:'not-launched', remaining:'' },
-      { id:uid('response'), type:'enemy', alliance:'Enemy', leaderId:'', enemyAlliance:'Enemy', enemyLeader:'Enemy Counter', purpose:'Enemy counter', anchor:'previousFriendly', offset:'3', manualTarget:'', liveState:'not-launched', remaining:'' },
-      { id:uid('response'), type:'friendly', alliance:'B', leaderId:'', need:'Counter-attack', purpose:'Counter-attack', anchor:'previousEnemy', offset:'1', manualTarget:'', liveState:'not-launched', remaining:'' }
-    );
-    if (matchingLeaders('Counter-counter', 'B').length) {
-      rows.push(
-        { id:uid('response'), type:'enemy', alliance:'Enemy', leaderId:'', enemyAlliance:'Enemy', enemyLeader:'Enemy Second Counter', purpose:'Enemy second counter', anchor:'previousFriendly', offset:'3', manualTarget:'', liveState:'not-launched', remaining:'' },
-        { id:uid('response'), type:'friendly', alliance:'B', leaderId:'', need:'Counter-counter', purpose:'Counter-counter', anchor:'previousEnemy', offset:'1', manualTarget:'', liveState:'not-launched', remaining:'' }
-      );
+    rows.push({ id:uid('response'), type:'friendly', alliance:'A', leaderId:'', need:'Castle holder', purpose:'Castle holder', anchor:'previousFriendly', offset:'1', manualTarget:'', liveState:'not-launched', remaining:'' });
+    if (state.enemies.some(enemy => normalizeEnemyLabel(enemy.label) === 'Enemy Final Counter')) {
+      rows.push({ id:uid('response'), type:'friendly', alliance:'B', leaderId:'', need:'Counter-attack', purpose:'Counter-attack', anchor:'enemyFinalCounter', offset:'1', manualTarget:'', liveState:'not-launched', remaining:'' });
     }
-    rows.push({ id:uid('response'), type:'friendly', alliance:'B', leaderId:'', need:'Post-wave reinforce', purpose:'Post-wave reinforce', anchor:'finalEnemy', offset:'2', manualTarget:'', liveState:'not-launched', remaining:'' });
+    const hasTimedEnemy = state.enemies.some(enemy => !isCastleGarrison(enemy) && enemyHitSeconds(enemy) !== null);
+    rows.push({
+      id:uid('response'),
+      type:'friendly',
+      alliance:'B',
+      leaderId:'',
+      need:'Post-wave reinforce',
+      purpose:'Post-wave reinforce',
+      anchor:hasTimedEnemy ? 'finalEnemy' : 'previousFriendly',
+      offset:hasTimedEnemy ? '2' : '1',
+      manualTarget:'',
+      liveState:'not-launched',
+      remaining:''
+    });
     return assignLeadersByNeed(rows, true);
   }
 
@@ -504,6 +530,7 @@
 
   function rebuildSequenceFromGivens() {
     if (!battleIntentChosen()) return;
+    state.prefs.attackLabelFlowVersion = 1;
     state.responses = responsesForCurrentIntent();
     savePrefs();
     persistPlan();
@@ -624,6 +651,7 @@
     const meta = $('intentStatusMeta');
     const activeLeaders = state.leaders.filter(leader => leader.enabled).length;
     const observedEnemies = state.enemies.filter(enemy => enemyHitSeconds(enemy) !== null).length;
+    const garrisonCount = castleGarrisons().length;
     if (!battleIntentChosen()) {
       status.className = 'intent-status';
       title.textContent = 'Waiting for battle intent';
@@ -633,7 +661,9 @@
     const intent = state.prefs.mode === 'attack' ? 'Attack' : 'Defense';
     status.className = 'intent-status ready';
     title.textContent = `${intent} sequence built`;
-    meta.textContent = `${activeLeaders} active leaders · ${observedEnemies} enemy observations used`;
+    meta.textContent = state.prefs.mode === 'attack'
+      ? `${activeLeaders} active leaders · ${garrisonCount} castle garrison · ${observedEnemies} timed enemy rallies`
+      : `${activeLeaders} active leaders · ${observedEnemies} enemy observations used`;
   }
 
   function finalObservedEnemy() {
@@ -666,6 +696,19 @@
       tone:'warn',
       title:'CONDITIONAL - MANUAL DECISION REQUIRED',
       message:`Prepare the +1 second timing after ${enemyName}, but do not commit Alliance B until you change this choice to Alliance A holds or Enemy captures.`
+    };
+  }
+
+  function attackRecommendation() {
+    if (!battleIntentChosen() || state.prefs.mode !== 'attack') return null;
+    const garrison = castleGarrisons()[0];
+    if (!garrison) return null;
+    const alliance = (garrison.alliance || 'Enemy').trim() || 'Enemy';
+    const leader = (garrison.leader || 'Castle Garrison').trim() || 'Castle Garrison';
+    return {
+      tone:'fire',
+      title:'CASTLE GARRISON TARGET',
+      message:`${alliance} · ${leader} is the starting castle holder. It is a target state, not a timed hit.`
     };
   }
 
@@ -759,6 +802,7 @@
   }
 
   function enemyHitSeconds(enemy) {
+    if (isCastleGarrison(enemy)) return null;
     const observed = parseDuration(enemy.countdown);
     if (observed === null) return null;
     const marchText = String(enemy.march ?? '').trim();
@@ -776,6 +820,7 @@
   }
 
   function enemyImpactText(enemy) {
+    if (isCastleGarrison(enemy)) return 'Castle target';
     const observed = parseDuration(enemy.countdown);
     const marchText = String(enemy.march ?? '').trim();
     const march = marchText ? parseDuration(marchText) : 0;
@@ -789,15 +834,18 @@
     const rows = $('enemyRows');
     rows.innerHTML = '';
     state.enemies.forEach((enemy, index) => {
+      enemy.label = normalizeEnemyLabel(enemy.label);
       hydrateEnemyMarch(enemy);
+      const garrison = isCastleGarrison(enemy);
       const tr = document.createElement('tr');
       tr.dataset.id = enemy.id;
+      tr.classList.toggle('garrison-row', garrison);
       tr.innerHTML = `
         <td><input class="enemy-alliance" type="text" value="${esc(enemy.alliance)}" placeholder="Enemy alliance" /></td>
         <td><input class="enemy-leader" type="text" value="${esc(enemy.leader)}" placeholder="Enemy Rally ${index + 1}" /></td>
-        <td><input class="enemy-countdown" type="text" value="${esc(enemy.countdown)}" placeholder="5:55" /></td>
-        <td><input class="enemy-march" type="text" value="${esc(enemy.march || '')}" placeholder="0:32" /></td>
-        <td><div class="status enemy-impact">${esc(enemyImpactText(enemy))}</div></td>
+        <td><input class="enemy-countdown" type="text" value="${esc(enemy.countdown)}" placeholder="${garrison ? 'Not timed' : '5:55'}" ${garrison ? 'disabled' : ''} /></td>
+        <td><input class="enemy-march" type="text" value="${esc(enemy.march || '')}" placeholder="${garrison ? 'Not timed' : '0:32'}" ${garrison ? 'disabled' : ''} /></td>
+        <td><div class="status enemy-impact ${garrison ? 'garrison' : ''}">${esc(enemyImpactText(enemy))}</div></td>
         <td><select class="enemy-label">${enemyLabels.map(x => `<option value="${esc(x)}" ${enemy.label === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></td>
         <td class="notes-col"><input class="enemy-notes" type="text" value="${esc(enemy.notes)}" placeholder="Optional notes" /></td>
         <td><div class="row-actions">
@@ -813,21 +861,34 @@
       tr.querySelector('.enemy-leader').addEventListener('change', () => { hydrateEnemyMarch(enemy); rememberEnemyMarch(enemy); persistWave(); renderEnemies(); });
       tr.querySelector('.enemy-countdown').addEventListener('input', e => { enemy.countdown = e.target.value; persistWave(); refreshImpact(); renderDecisionRecommendation(); });
       tr.querySelector('.enemy-march').addEventListener('input', e => { enemy.march = e.target.value; persistWave(); rememberEnemyMarch(enemy); refreshImpact(); renderDecisionRecommendation(); });
-      tr.querySelector('.enemy-label').addEventListener('change', e => { enemy.label = e.target.value; persistWave(); });
+      tr.querySelector('.enemy-label').addEventListener('change', e => {
+        enemy.label = normalizeEnemyLabel(e.target.value);
+        commitEnemyStructure();
+      });
       tr.querySelector('.enemy-notes').addEventListener('input', e => { enemy.notes = e.target.value; persistWave(); });
-      tr.querySelector('.move-up').addEventListener('click', () => moveItem(state.enemies, index, index - 1, () => { persistWave(); renderEnemies(); renderResponses(); }));
-      tr.querySelector('.move-down').addEventListener('click', () => moveItem(state.enemies, index, index + 1, () => { persistWave(); renderEnemies(); renderResponses(); }));
+      tr.querySelector('.move-up').addEventListener('click', () => moveItem(state.enemies, index, index - 1, commitEnemyStructure));
+      tr.querySelector('.move-down').addEventListener('click', () => moveItem(state.enemies, index, index + 1, commitEnemyStructure));
       tr.querySelector('.duplicate').addEventListener('click', () => {
         state.enemies.splice(index + 1, 0, { ...enemy, id:uid('enemy'), leader:`${enemy.leader || 'Enemy Rally'} copy` });
-        persistWave(); renderEnemies(); renderResponses();
+        commitEnemyStructure();
       });
-      tr.querySelector('.remove').addEventListener('click', () => { state.enemies.splice(index, 1); persistWave(); renderEnemies(); renderResponses(); });
+      tr.querySelector('.remove').addEventListener('click', () => { state.enemies.splice(index, 1); commitEnemyStructure(); });
       rows.appendChild(tr);
     });
   }
 
+  function commitEnemyStructure() {
+    persistWave();
+    if (battleIntentChosen()) rebuildSequenceFromGivens();
+    else {
+      renderEnemies();
+      renderResponses();
+    }
+  }
+
   function anchorOptions(selected) {
     const base = [
+      ['attackStart','Castle attack opening'],
       ['firstEnemy','First observed enemy hit'],
       ['middleObservedEnemy','Middle observed enemy hit'],
       ['finalObservedEnemy','Final observed enemy hit'],
@@ -956,11 +1017,16 @@
 
   function readBaseEnemies(errors) {
     return state.enemies.map((enemy, index) => {
+      enemy.label = normalizeEnemyLabel(enemy.label);
+      const name = (enemy.leader || '').trim();
+      if (isCastleGarrison(enemy)) {
+        if (!name) errors.push(`Enemy row ${index + 1}: enter the castle garrison leader or name.`);
+        return null;
+      }
       const observed = parseDuration(enemy.countdown);
       const marchText = String(enemy.march ?? '').trim();
       const march = marchText ? parseDuration(marchText) : 0;
       const hit = observed !== null && march !== null ? observed + march : null;
-      const name = (enemy.leader || '').trim();
       if (!name) errors.push(`Enemy row ${index + 1}: enter an enemy leader or label.`);
       if (observed === null || observed < 0) errors.push(`${name || `Enemy row ${index + 1}`}: gather left must be seconds or m:ss.`);
       if (marchText && (march === null || march < 0)) errors.push(`${name || `Enemy row ${index + 1}`}: enemy march must be seconds or m:ss.`);
@@ -969,7 +1035,21 @@
         name:name || `Enemy Rally ${index + 1}`, purpose:enemy.label || 'Enemy rally', notes:enemy.notes || '',
         hit, observed, march, marchText, order:index
       };
-    }).filter(e => e.hit !== null);
+    }).filter(event => event && event.hit !== null);
+  }
+
+  function validateEnemyStructure(errors, events) {
+    if (state.prefs.mode === 'defense') {
+      if (!events.length) errors.push('Add at least one timed enemy attack or counter.');
+      return;
+    }
+    const garrisons = castleGarrisons();
+    if (!garrisons.length) errors.push('Attack mode: label one enemy row as Castle Garrison.');
+    if (garrisons.length > 1) errors.push('Attack mode: keep only one Castle Garrison row.');
+    const counters = state.enemies.filter(enemy => normalizeEnemyLabel(enemy.label) === 'Enemy Counter');
+    const finalCounters = state.enemies.filter(enemy => normalizeEnemyLabel(enemy.label) === 'Enemy Final Counter');
+    if (counters.length && !finalCounters.length) errors.push('Attack mode: mark the last observed counter as Enemy Final Counter.');
+    if (finalCounters.length > 1) errors.push('Attack mode: keep only one Enemy Final Counter.');
   }
 
   function validateLeaders(errors) {
@@ -992,6 +1072,15 @@
     const plannedEnemyCounters = enemies.filter(e => e.source === 'planned' && (/counter/i.test(e.purpose) || /counter/i.test(e.name)));
     const friendlies = events.filter(e => e.side === 'friendly').sort((a,b) => a.hit - b.hit);
     let target = null;
+    if (anchor === 'attackStart') {
+      const garrison = castleGarrisons()[0];
+      const openingGap = matchingLeaders('Softener', 'A').length ? 3 : 2;
+      target = {
+        id:'attack-start',
+        name:garrison?.leader || 'Castle Garrison',
+        hit:Math.min(0, (enemies[0]?.hit ?? openingGap) - openingGap)
+      };
+    }
     if (anchor === 'firstEnemy') target = observedEnemies[0] || enemies[0];
     if (anchor === 'middleObservedEnemy') target = observedEnemies[Math.max(0, Math.ceil(observedEnemies.length / 2) - 1)];
     if (anchor === 'finalObservedEnemy') target = observedEnemies[observedEnemies.length - 1];
@@ -1007,6 +1096,7 @@
 
   function anchorLabel(anchor) {
     return {
+      attackStart:'castle attack opening',
       firstEnemy:'first observed enemy hit',
       middleObservedEnemy:'middle observed enemy hit',
       finalObservedEnemy:'final observed enemy hit',
@@ -1034,7 +1124,7 @@
     assignLeadersByNeed();
     validateLeaders(errors);
     const events = readBaseEnemies(errors);
-    if (!events.length) errors.push('Add at least one enemy rally countdown.');
+    validateEnemyStructure(errors, events);
     const responseEvents = [];
     const usedFriendlyLeaders = new Set();
     const holdWithoutAttack = state.prefs.mode === 'defense' && state.prefs.defenseOutcome === 'friendly-holds';
@@ -1100,7 +1190,7 @@
       const previous = hitRows[index - 1];
       return { ...row, hitOrder:index + 1, first:index === 0, delta:index === 0 ? 0 : row.hit - previous.hit, previousName:previous?.name || '' };
     });
-    const recommendation = defenseRecommendation();
+    const recommendation = defenseRecommendation() || attackRecommendation();
     const chat = buildChat(decoratedLaunch, decoratedHits, recommendation);
     state.last = { launchRows:decoratedLaunch, hitRows:decoratedHits, chat, recommendation };
     renderOutput(state.last);
@@ -1273,13 +1363,13 @@
 
   function sortEnemies() {
     state.enemies.sort((a,b) => {
+      if (isCastleGarrison(a)) return isCastleGarrison(b) ? 0 : -1;
+      if (isCastleGarrison(b)) return 1;
       const av = enemyHitSeconds(a);
       const bv = enemyHitSeconds(b);
       return (av ?? Number.POSITIVE_INFINITY) - (bv ?? Number.POSITIVE_INFINITY);
     });
-    persistWave();
-    renderEnemies();
-    renderResponses();
+    commitEnemyStructure();
   }
 
   function freezeSnapshot() {
@@ -1323,7 +1413,7 @@
   function resetEverything() {
     if (!confirm('Reset all saved RTC leader, wave, response, and preference data?')) return;
     Object.values(STORAGE).forEach(removeKey);
-    state.prefs = { mode:'', intentChosen:false, planning:'preplanned', theme:'dark', compact:false, defenseOutcome:'uncertain' };
+    state.prefs = { mode:'', intentChosen:false, planning:'preplanned', theme:'dark', compact:false, defenseOutcome:'uncertain', attackLabelFlowVersion:1 };
     state.leaders = sampleLeaders();
     state.enemies = sampleEnemies();
     state.responses = [];
@@ -1339,7 +1429,8 @@
     const savedPrefs = readJSON(STORAGE.prefs, {}) || {};
     const hasIntentChoice = savedPrefs.intentChosen === true;
     const hasManualDefenseOutcome = Object.prototype.hasOwnProperty.call(savedPrefs, 'defenseOutcome');
-    state.prefs = { mode:'', intentChosen:false, planning:'preplanned', theme:'dark', compact:false, defenseOutcome:'uncertain', ...savedPrefs };
+    const hasLabelDrivenAttack = savedPrefs.attackLabelFlowVersion === 1;
+    state.prefs = { mode:'', intentChosen:false, planning:'preplanned', theme:'dark', compact:false, defenseOutcome:'uncertain', attackLabelFlowVersion:1, ...savedPrefs };
     if (!hasIntentChoice) {
       state.prefs.mode = '';
       state.prefs.intentChosen = false;
@@ -1348,14 +1439,24 @@
     state.leaders = readJSON(STORAGE.leaders, null) || sampleLeaders();
     const wave = readJSON(STORAGE.wave, null);
     state.enemies = wave?.enemies || sampleEnemies();
-    state.enemies.forEach(enemy => { hydrateEnemyMarch(enemy); rememberEnemyMarch(enemy); });
+    state.enemies.forEach(enemy => {
+      enemy.label = normalizeEnemyLabel(enemy.label);
+      hydrateEnemyMarch(enemy);
+      rememberEnemyMarch(enemy);
+    });
     state.frozenAt = wave?.frozenAt || null;
     const savedResponses = readJSON(STORAGE.plan, null);
     state.responses = !battleIntentChosen()
       ? []
-      : (state.prefs.mode === 'defense' && !hasManualDefenseOutcome
+      : (state.prefs.mode === 'attack' && !hasLabelDrivenAttack
+        ? attackResponses()
+        : (state.prefs.mode === 'defense' && !hasManualDefenseOutcome
         ? defenseResponses()
-        : (savedResponses || responsesForCurrentIntent()));
+        : (savedResponses || responsesForCurrentIntent())));
+    if (state.prefs.mode === 'attack' && !hasLabelDrivenAttack) {
+      savePrefs();
+      persistPlan();
+    }
     assignLeadersByNeed();
   }
 
@@ -1376,10 +1477,17 @@
   }
 
   function addEnemy() {
-    state.enemies.push({ id:uid('enemy'), alliance:'Enemy', leader:`Enemy Rally ${state.enemies.length + 1}`, countdown:'5:55', march:'', label:'Main enemy attack', notes:'' });
-    persistWave();
-    renderEnemies();
-    renderResponses();
+    const needsGarrison = state.prefs.mode === 'attack' && !castleGarrisons().length;
+    state.enemies.push({
+      id:uid('enemy'),
+      alliance:'Enemy',
+      leader:needsGarrison ? 'Enemy Castle Holder' : `Enemy Rally ${state.enemies.length + 1}`,
+      countdown:needsGarrison ? '' : '5:55',
+      march:'',
+      label:needsGarrison ? 'Castle Garrison' : (state.prefs.mode === 'attack' ? 'Enemy Counter' : 'Enemy Attack'),
+      notes:''
+    });
+    commitEnemyStructure();
   }
 
   function addResponse() {
