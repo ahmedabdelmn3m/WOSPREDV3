@@ -247,7 +247,7 @@
         <div class="card-head">
           <div>
             <div class="section-title">3. Friendly Response Builder</div>
-            <div class="section-help">Rebuild uses enabled leaders as the available rallies; Alliance B roles are suggestions, not required slots.</div>
+            <div class="section-help">Rebuild uses only enabled leader rows. Alliance and timing decide the sequence; roles guide ordering but never create missing rallies.</div>
           </div>
           <div class="toolbar">
             <button class="btn btn-primary" id="addResponseBtn" type="button">＋ Response</button>
@@ -345,7 +345,7 @@
         <p>Castle Garrison is the current holder and is not counted as an incoming hit. Gather + March calculates a landing from the shared snapshot. Relative to Friendly Rally uses the selected friendly leader's planned hit plus a signed offset.</p>
         <p>Friendly launch point = desired hit point - rally gathering duration - leader march time. Friendly launch points are sorted, then shown as LAUNCH FIRST and relative delays after the previous friendly launcher.</p>
         <p>Friendly State means: Ready = waiting for your declaration; Gathering = rally is already open and Remaining is fill time left; Marching = rally has launched and Remaining is march time left.</p>
-        <p>Attack order is Infantry killer, optional Softener, and Castle holder. Alliance B leaders explicitly targeted by later enemies are placed where needed; every remaining enabled Alliance B rally then lands after the final enemy counter, one second apart.</p>
+        <p>Every enabled Alliance A leader becomes part of the capture wave; known roles guide the order and Castle holder stays last when available. Alliance B leaders targeted by later enemies are placed where needed, then every remaining enabled Alliance B rally lands after the final enemy counter, one second apart.</p>
       </div>
     </details>
   </section>
@@ -366,13 +366,14 @@
   };
   const ids = { leader:0, enemy:0, response:0 };
   const $ = (id) => document.getElementById(id);
-  const state = { leaders:[], enemies:[], responses:[], prefs:{ mode:'', intentChosen:false, planning:'preplanned', theme:'dark', compact:false, defenseOutcome:'uncertain', attackLabelFlowVersion:3 }, last:null };
+  const state = { leaders:[], enemies:[], responses:[], prefs:{ mode:'', intentChosen:false, planning:'preplanned', theme:'dark', compact:false, defenseOutcome:'uncertain', attackLabelFlowVersion:4 }, last:null };
 
   const roleOptions = ['Infantry killer','Softener','Castle holder','Counter-attack','Counter-counter','Last-wave retaker','Post-wave reinforce','Garrison support','Defense counter','Recovery rally','Final hit','Reinforcement','Custom'];
   const needDefinitions = [
     { value:'Infantry killer', roles:['Infantry killer'], alliance:'A' },
     { value:'Softener', roles:['Softener'], alliance:'A' },
     { value:'Castle holder', roles:['Castle holder'], alliance:'A' },
+    { value:'Capture wave', roles:roleOptions, alliance:'A' },
     { value:'Final response', roles:roleOptions, alliance:'B' },
     { value:'Counter-attack', roles:['Counter-attack','Counter attack','Defense counter'], alliance:'B' },
     { value:'Counter-counter', roles:['Counter-counter'], alliance:'B' },
@@ -523,32 +524,53 @@
 
   function defenseResponses() {
     if (state.prefs.defenseOutcome === 'friendly-holds') return [];
-    return assignLeadersByNeed([
-      {
+    const availableResponses = state.leaders.filter(leader => leader.enabled && leader.alliance === 'B');
+    return assignLeadersByNeed(availableResponses.map((leader, index) => ({
         id:uid('response'),
         type:'friendly',
+        generated:true,
+        generatedKind:'counter',
         alliance:'B',
-        leaderId:'',
-        need:'Last-wave retaker',
-        purpose:'Last-wave retaker',
-        anchor:'finalObservedEnemy',
+        leaderId:leader.id,
+        need:'Final response',
+        purpose:'Final response',
+        anchor:index === 0 ? 'finalObservedEnemy' : 'previousFriendly',
         offset:'1',
         manualTarget:'',
         liveState:'not-launched',
         remaining:'',
         conditional:state.prefs.defenseOutcome === 'uncertain'
-      }
-    ], true);
+      })));
+  }
+
+  function captureLeaderPriority(leader) {
+    if (leader.role === 'Infantry killer') return 10;
+    if (leader.role === 'Softener') return 20;
+    if (leader.role === 'Castle holder') return 40;
+    return 30;
   }
 
   function attackResponses() {
-    const rows = [
-      { id:uid('response'), type:'friendly', alliance:'A', leaderId:'', need:'Infantry killer', purpose:'Infantry killer', anchor:'attackStart', offset:'0', manualTarget:'', liveState:'not-launched', remaining:'' }
-    ];
-    if (matchingLeaders('Softener', 'A').length) {
-      rows.push({ id:uid('response'), type:'friendly', alliance:'A', leaderId:'', need:'Softener', purpose:'Softener', anchor:'previousFriendly', offset:'1', manualTarget:'', liveState:'not-launched', remaining:'' });
-    }
-    rows.push({ id:uid('response'), type:'friendly', alliance:'A', leaderId:'', need:'Castle holder', purpose:'Castle holder', anchor:'previousFriendly', offset:'1', manualTarget:'', liveState:'not-launched', remaining:'' });
+    const captureLeaders = state.leaders
+      .map((leader, order) => ({ leader, order }))
+      .filter(item => item.leader.enabled && item.leader.alliance === 'A')
+      .sort((a,b) => captureLeaderPriority(a.leader) - captureLeaderPriority(b.leader) || a.order - b.order)
+      .map(item => item.leader);
+    const rows = captureLeaders.map((leader, index) => ({
+      id:uid('response'),
+      type:'friendly',
+      generated:true,
+      generatedKind:'capture',
+      alliance:'A',
+      leaderId:leader.id,
+      need:'Capture wave',
+      purpose:'Capture wave',
+      anchor:index === 0 ? 'attackStart' : 'previousFriendly',
+      offset:index === 0 ? '0' : '1',
+      manualTarget:'',
+      liveState:'not-launched',
+      remaining:''
+    }));
     const incomingEnemies = state.enemies.filter(enemy => !isCastleGarrison(enemy));
     const availableResponses = state.leaders.filter(leader => leader.enabled && leader.alliance === 'B');
     const scheduledResponseLeaders = new Set();
@@ -579,6 +601,7 @@
           id:uid('response'),
           type:'friendly',
           generated:true,
+          generatedKind:'counter',
           sourceEnemyId:enemy.id,
           alliance:'B',
           leaderId:nextTarget.id,
@@ -593,12 +616,15 @@
         scheduledResponseLeaders.add(nextTarget.id);
       }
     });
-    const remainingResponses = availableResponses.filter(leader => !scheduledResponseLeaders.has(leader.id));
+    const remainingResponses = incomingEnemies.length
+      ? availableResponses.filter(leader => !scheduledResponseLeaders.has(leader.id))
+      : [];
     remainingResponses.forEach((leader, index) => {
       rows.push({
         id:uid('response'),
         type:'friendly',
         generated:true,
+        generatedKind:'counter',
         sourceEnemyId:index === 0 ? incomingEnemies.at(-1)?.id || '' : '',
         alliance:'B',
         leaderId:leader.id,
@@ -625,7 +651,7 @@
 
   function rebuildSequenceFromGivens() {
     if (!battleIntentChosen()) return;
-    state.prefs.attackLabelFlowVersion = 3;
+    state.prefs.attackLabelFlowVersion = 4;
     state.responses = responsesForCurrentIntent();
     savePrefs();
     persistPlan();
@@ -1066,6 +1092,13 @@
       rows.innerHTML = '<tr><td colspan="9"><div class="decision-recommendation good"><strong>HOLD ALLIANCE B</strong><div class="snapshot-meta" style="margin-top:4px">No Alliance B attack is scheduled because Alliance A is expected to keep the castle.</div></div></td></tr>';
       return;
     }
+    if (!state.responses.length) {
+      const message = state.prefs.mode === 'attack'
+        ? 'No enabled friendly rally is available for this attack and counter sequence.'
+        : 'No enabled Alliance B counter rally is available in the Friendly Leader Library.';
+      rows.innerHTML = `<tr><td colspan="9"><div class="decision-recommendation warn"><strong>NO FRIENDLY RALLY IN THE GIVENS</strong><div class="snapshot-meta" style="margin-top:4px">${esc(message)} The enemy timeline can still be calculated.</div></div></td></tr>`;
+      return;
+    }
     state.responses.forEach((response, index) => {
       const leader = state.leaders.find(l => l.id === response.leaderId);
       const alliance = response.type === 'friendly' ? (leader?.alliance || response.alliance || 'A') : (response.enemyAlliance || response.alliance || 'Enemy');
@@ -1073,11 +1106,15 @@
       const generatedResponse = response.type === 'friendly' && !!response.generated;
       const lockedGenerated = sourcedEnemy || generatedResponse;
       const sourceEnemy = state.enemies.find(enemy => enemy.id === response.sourceEnemyId);
+      const generatedLabel = response.generatedKind === 'capture' ? 'Available capture rally' : 'Available counter rally';
+      const generatedAnchorLabel = response.generatedKind === 'capture'
+        ? (response.anchor === 'attackStart' ? 'Castle attack opening' : 'Previous capture rally')
+        : (sourceEnemy?.leader || (response.anchor === 'previousFriendly' ? 'Previous friendly response' : 'Final observed enemy'));
       response.alliance = alliance;
       const tr = document.createElement('tr');
       tr.dataset.id = response.id;
       tr.innerHTML = `
-        <td><select class="response-type" ${lockedGenerated ? 'disabled' : ''}><option value="friendly" ${response.type !== 'enemy' ? 'selected' : ''}>${generatedResponse ? 'Available final response' : 'Friendly response'}</option><option value="enemy" ${response.type === 'enemy' ? 'selected' : ''}>${sourcedEnemy ? 'Enemy observation' : 'Enemy final counter'}</option></select></td>
+        <td><select class="response-type" ${lockedGenerated ? 'disabled' : ''}><option value="friendly" ${response.type !== 'enemy' ? 'selected' : ''}>${generatedResponse ? generatedLabel : 'Friendly response'}</option><option value="enemy" ${response.type === 'enemy' ? 'selected' : ''}>${sourcedEnemy ? 'Enemy observation' : 'Enemy final counter'}</option></select></td>
         <td>${response.type === 'enemy'
           ? `<input class="response-enemy-alliance" type="text" value="${esc(response.enemyAlliance || 'Enemy')}" placeholder="Enemy" ${sourcedEnemy ? 'readonly' : ''} />`
           : `<span class="pill ${alliance === 'A' ? 'pill-a' : 'pill-b'}">Alliance ${esc(alliance)}</span>`}</td>
@@ -1087,11 +1124,11 @@
         <td>${response.type === 'enemy'
           ? `<input class="response-purpose" type="text" value="${esc(response.purpose)}" placeholder="Enemy final counter" ${sourcedEnemy ? 'readonly' : ''} />`
           : `<select class="response-need" ${generatedResponse ? 'disabled' : ''}>${needOptions(response.need)}</select>${response.conditional ? '<div class="warning-text">Conditional: launch only if Enemy captures</div>' : ''}`}</td>
-        <td><select class="response-anchor" ${lockedGenerated ? 'disabled' : ''}>${anchorOptions(response.anchor)}</select>${sourcedEnemy ? `<div class="snapshot-meta" style="margin-top:4px">${esc(relativeLeaderLabel(response.anchorLeaderId))}</div>` : ''}${generatedResponse ? `<div class="snapshot-meta" style="margin-top:4px">${esc(sourceEnemy?.leader || (response.anchor === 'previousFriendly' ? 'Previous friendly response' : 'Final observed enemy'))}</div>` : ''}<select class="response-manual" style="margin-top:5px;display:${response.anchor === 'manual' ? 'block' : 'none'}">${manualOptions(response.manualTarget)}</select></td>
+        <td><select class="response-anchor" ${lockedGenerated ? 'disabled' : ''}>${anchorOptions(response.anchor)}</select>${sourcedEnemy ? `<div class="snapshot-meta" style="margin-top:4px">${esc(relativeLeaderLabel(response.anchorLeaderId))}</div>` : ''}${generatedResponse ? `<div class="snapshot-meta" style="margin-top:4px">${esc(generatedAnchorLabel)}</div>` : ''}<select class="response-manual" style="margin-top:5px;display:${response.anchor === 'manual' ? 'block' : 'none'}">${manualOptions(response.manualTarget)}</select></td>
         <td><input class="response-offset" type="text" value="${esc(response.offset)}" placeholder="1" ${lockedGenerated ? 'readonly' : ''} /></td>
         <td><select class="response-live" ${response.type === 'enemy' ? 'disabled' : ''}><option value="not-launched" ${response.liveState !== 'gathering' && response.liveState !== 'marching' ? 'selected' : ''}>Ready, not launched</option><option value="gathering" ${response.liveState === 'gathering' ? 'selected' : ''}>Rally gathering</option><option value="marching" ${response.liveState === 'marching' ? 'selected' : ''}>Rally marching</option></select></td>
         <td><input class="response-remaining" type="text" value="${esc(response.remaining)}" placeholder="time left" ${response.type === 'enemy' || response.liveState === 'not-launched' ? 'disabled' : ''} /></td>
-        <td>${lockedGenerated ? `<span class="pill ${sourcedEnemy ? 'pill-enemy' : 'pill-b'}">${sourcedEnemy ? 'From Capture' : 'Given +1s'}</span>` : `<div class="row-actions">
+        <td>${lockedGenerated ? `<span class="pill ${sourcedEnemy ? 'pill-enemy' : alliance === 'A' ? 'pill-a' : 'pill-b'}">${sourcedEnemy ? 'From Capture' : 'From Givens'}</span>` : `<div class="row-actions">
           <button class="icon-btn move-up" type="button" title="Move up">↑</button>
           <button class="icon-btn move-down" type="button" title="Move down">↓</button>
           <button class="icon-btn duplicate" type="button" title="Duplicate">⧉</button>
@@ -1236,7 +1273,7 @@
     let target = null;
     if (anchor === 'attackStart') {
       const garrison = castleGarrisons()[0];
-      const openingGap = matchingLeaders('Softener', 'A').length ? 3 : 2;
+      const openingGap = Math.max(1, state.leaders.filter(leader => leader.enabled && leader.alliance === 'A').length);
       target = {
         id:'attack-start',
         name:garrison?.leader || 'Castle Garrison',
@@ -1298,7 +1335,6 @@
     validateEnemyStructure(errors, events);
     const responseEvents = [];
     const usedFriendlyLeaders = new Set();
-    const holdWithoutAttack = state.prefs.mode === 'defense' && state.prefs.defenseOutcome === 'friendly-holds';
 
     state.responses.forEach((response, index) => {
       const rowName = response.type === 'enemy'
@@ -1343,12 +1379,11 @@
           id:response.id, side:'friendly', alliance:leader.alliance, name:leader.name, purpose, hit,
           leaderId:leader.id, marchSecs, marchText:leader.march, gather:Number(leader.gather) === 10 ? 10 : 5,
           gatherSecs, launchPoint, actionPoint:feasibility.actionPoint, feasibility, anchorName:anchor?.name || '',
-          anchorId:anchor?.id || '', offset, order:index + 100, conditional:!!response.conditional
+          anchorId:anchor?.id || '', offset, order:index + 100, conditional:!!response.conditional, generatedKind:response.generatedKind || ''
         });
       }
     });
 
-    if (!holdWithoutAttack && !responseEvents.some(e => e.side === 'friendly')) errors.push('Add at least one friendly response.');
     showErrors(errors);
     if (errors.length) return null;
 
@@ -1433,7 +1468,7 @@
   function hitRelationship(row) {
     if (!row.anchorName || row.offset === null) return '';
     if (row.offset === 0) {
-      if (row.side === 'friendly' && normalizeNeed(row.purpose) === 'Infantry killer') return `Opens the attack on <strong>${esc(row.anchorName)}</strong>`;
+      if (row.side === 'friendly' && (row.generatedKind === 'capture' || normalizeNeed(row.purpose) === 'Infantry killer')) return `Opens the attack on <strong>${esc(row.anchorName)}</strong>`;
       return `Hits at the same time as <strong>${esc(row.anchorName)}</strong>`;
     }
     const direction = row.offset > 0 ? 'after' : 'before';
@@ -1601,7 +1636,7 @@
   function resetEverything() {
     if (!confirm('Reset all saved RTC leader, wave, response, and preference data?')) return;
     Object.values(STORAGE).forEach(removeKey);
-    state.prefs = { mode:'', intentChosen:false, planning:'preplanned', theme:'dark', compact:false, defenseOutcome:'uncertain', attackLabelFlowVersion:3 };
+    state.prefs = { mode:'', intentChosen:false, planning:'preplanned', theme:'dark', compact:false, defenseOutcome:'uncertain', attackLabelFlowVersion:4 };
     state.leaders = sampleLeaders();
     state.enemies = sampleEnemies();
     state.responses = [];
@@ -1617,8 +1652,8 @@
     const savedPrefs = readJSON(STORAGE.prefs, {}) || {};
     const hasIntentChoice = savedPrefs.intentChosen === true;
     const hasManualDefenseOutcome = Object.prototype.hasOwnProperty.call(savedPrefs, 'defenseOutcome');
-    const hasLabelDrivenAttack = savedPrefs.attackLabelFlowVersion === 3;
-    state.prefs = { mode:'', intentChosen:false, planning:'preplanned', theme:'dark', compact:false, defenseOutcome:'uncertain', attackLabelFlowVersion:3, ...savedPrefs };
+    const hasLabelDrivenAttack = savedPrefs.attackLabelFlowVersion === 4;
+    state.prefs = { mode:'', intentChosen:false, planning:'preplanned', theme:'dark', compact:false, defenseOutcome:'uncertain', attackLabelFlowVersion:4, ...savedPrefs };
     if (!hasIntentChoice) {
       state.prefs.mode = '';
       state.prefs.intentChosen = false;
@@ -1647,7 +1682,7 @@
           ? defenseResponses()
           : (savedResponses || responsesForCurrentIntent())));
     if (state.prefs.mode === 'attack' && !hasLabelDrivenAttack) {
-      state.prefs.attackLabelFlowVersion = 3;
+      state.prefs.attackLabelFlowVersion = 4;
       savePrefs();
       persistPlan();
     }
