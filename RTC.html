@@ -782,8 +782,96 @@
     });
   }
 
+  function availableJoinerLineups(remaining, joinerCount) {
+    const lineups = [];
+    function visit(heroIndex, slotsLeft, selected) {
+      if (slotsLeft === 0) {
+        lineups.push(selected);
+        return;
+      }
+      if (heroIndex >= joinerHeroes.length) return;
+      const hero = joinerHeroes[heroIndex];
+      const limit = Math.min(slotsLeft, Math.max(0, remaining[hero.id] || 0), 4);
+      for (let count = limit; count >= 0; count -= 1) {
+        visit(heroIndex + 1, slotsLeft - count, selected.concat(Array(count).fill(hero)));
+      }
+    }
+    visit(0, joinerCount, []);
+    return lineups;
+  }
+
+  function localCounterMultiplier(leader) {
+    const counters = { infantry:'lancer', lancer:'marksman', marksman:'infantry' };
+    return counters[dominantTroopType(leader)] === leader.enemyTroopType ? 1.10 : 1.00;
+  }
+
+  function calculateExhaustiveJoinerAssignments() {
+    const leaders = plannedJoinerLeaders();
+    const remaining = Object.fromEntries(joinerHeroes.map(hero => [
+      hero.id,
+      Math.floor(boundedNumber(state.joiners?.heroCounts?.[hero.id], 0, 0, 20))
+    ]));
+    const totalSupply = Math.min(leaders.length * 4, Object.values(remaining).reduce((sum, count) => sum + count, 0));
+    const { ordered, quotas } = joinerPlanQuotas(leaders, totalSupply);
+    const planByLeader = new Map();
+    ordered.forEach(leader => {
+      const goal = resolvedJoinerGoal(leader);
+      const joinerCount = quotas.get(leader.id) || 0;
+      const base = calculateRallyIndexes(leader, []);
+      const ranked = availableJoinerLineups(remaining, joinerCount).map(heroes => {
+        const result = calculateRallyIndexes(leader, heroes);
+        const damageGain = percentGain(base.damage, result.damage);
+        const defenseGain = percentGain(base.defense, result.defense);
+        const damageRatio = base.damage > 0 ? result.damage / base.damage : 1;
+        const defenseRatio = base.defense > 0 ? result.defense / base.defense : 1;
+        const objectiveValue = goal === 'survival'
+          ? result.defense
+          : goal === 'balanced'
+            ? Math.sqrt(Math.max(0, damageRatio * defenseRatio))
+            : result.damage;
+        return {
+          heroes, result, damageGain, defenseGain, objectiveValue,
+          key:heroes.map(hero => hero.id).sort().join('|')
+        };
+      }).sort((a,b) =>
+        b.objectiveValue - a.objectiveValue ||
+        b.damageGain - a.damageGain ||
+        b.defenseGain - a.defenseGain ||
+        a.key.localeCompare(b.key)
+      );
+      const winner = ranked[0] || { heroes:[], result:base, damageGain:0, defenseGain:0 };
+      winner.heroes.forEach(hero => { remaining[hero.id] = Math.max(0, remaining[hero.id] - 1); });
+      const warnings = [];
+      if (goal === 'survival' && winner.defenseGain === 0) {
+        warnings.push('No configured level-5 primary joiner skill increases Defense, Health, or Damage Taken Reduction; the defense tie was resolved by damage and deterministic tie-breaks.');
+      }
+      planByLeader.set(leader.id, {
+        leader,
+        heroes:winner.heroes,
+        goal,
+        split:normalizedTroopSplit(leader),
+        base,
+        result:winner.result,
+        damageGain:winner.damageGain,
+        defenseGain:winner.defenseGain,
+        backend:{
+          source:'browser',
+          objective:joinerObjective(goal),
+          evaluated:ranked.length,
+          alternatives:ranked.slice(1, 3).map(item => ({ joiners:item.heroes.map(hero => hero.name) })),
+          explanations:[],
+          warnings,
+          counterMultiplier:localCounterMultiplier(leader),
+          dominantTroop:dominantTroopType(leader),
+          reportComparison:false
+        }
+      });
+    });
+    return leaders.map(leader => planByLeader.get(leader.id)).filter(Boolean);
+  }
+
   function activeJoinerPlan() {
-    if (!state.prefs.compact && state.joinerBackend?.status === 'ready' && state.joinerBackend.plan) {
+    if (!state.prefs.compact && ['ready','browser'].includes(state.joinerBackend?.status) && state.joinerBackend.plan) {
       return state.joinerBackend.plan;
     }
     return calculateJoinerAssignments();
@@ -949,8 +1037,8 @@
       syncJoinerPlanToOutput(plan);
     } catch (error) {
       if (serial !== joinerRequestSerial || state.prefs.compact) return;
-      state.joinerBackend = { status:'fallback', plan:null, message:error?.name === 'AbortError' ? 'Recommendation API timed out' : String(error?.message || error) };
-      const fallback = calculateJoinerAssignments();
+      const fallback = calculateExhaustiveJoinerAssignments();
+      state.joinerBackend = { status:'browser', plan:fallback, message:error?.name === 'AbortError' ? 'Recommendation API timed out' : String(error?.message || error) };
       renderJoinerResults(fallback);
       syncJoinerPlanToOutput(fallback);
     } finally {
@@ -1558,8 +1646,8 @@
       $('joinerModelStatus').textContent = 'Calculating level 5 lineups...';
     } else if (state.joinerBackend?.status === 'ready') {
       $('joinerModelStatus').textContent = `${assigned} level 5 joins · ${plan.length} rallies`;
-    } else if (state.joinerBackend?.status === 'fallback') {
-      $('joinerModelStatus').textContent = `${assigned} joins · local fallback`;
+    } else if (state.joinerBackend?.status === 'browser') {
+      $('joinerModelStatus').textContent = `${assigned} level 5 joins · browser engine`;
     } else {
       $('joinerModelStatus').textContent = `${assigned} joins assigned · checking level 5 engine`;
     }
