@@ -79,3 +79,34 @@ def test_parse_scout_text_extracts_known_fields():
     body = response.json()
     assert body["parsed_stats"]["infantry"]["attack_pct"] == 123.4
     assert body["fields_found"] == 3
+
+
+def test_joiner_recommendation_endpoint_returns_level_5_ranked_result():
+    response = client.post(
+        "/api/rallies/joiner-recommendations",
+        json={
+            "objective": "MAX_DAMAGE",
+            "joinerCount": 4,
+            "allowDuplicateHeroes": True,
+            "troopType": "infantry",
+            "availableHeroIds": ["reina", "jeronimo", "jessie", "flint"],
+            "availableHeroCounts": {"reina": 1, "jeronimo": 1, "jessie": 1, "flint": 1},
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body["recommendedJoiners"]) == 4
+    assert all(item["skillLevel"] == 5 for item in body["recommendedJoiners"])
+    assert body["scores"]["damageImprovementPercentage"] > 0
+    assert body["alternatives"] == []
+
+
+def test_joiner_recommendation_endpoint_rejects_invalid_reduction():
+    response = client.post(
+        "/api/rallies/joiner-recommendations",
+        json={
+            "objective": "MAX_DEFENSE",
+            "currentBuffs": {"damageTakenReduction": 1.0},
+        },
+    )
+    assert response.status_code == 422

@@ -62,6 +62,8 @@ def apply_leader_skills(leader_march: Iterable[Any]) -> dict:
     modifiers = empty_modifiers()
     for hero in heroes[:3]:
         for skill in hero.expedition_skills:
+            if not getattr(skill, "applicable_as_rally_leader", True):
+                continue
             _apply_skill(modifiers, skill)
             breakdown.append(_skill_breakdown(hero, skill, "leader_full"))
     return {"modifiers": modifiers, "breakdown": breakdown, "applied_count": len(breakdown)}
@@ -146,6 +148,15 @@ def _apply_primary_support_skills(heroes_like: Iterable[Any], source_label: str)
                 "source": source_label,
                 "skill": None,
                 "notes": "No verified primary expedition skill value is configured.",
+            })
+            continue
+        if not getattr(primary, "applicable_as_joiner", True):
+            breakdown.append({
+                "hero_id": hero.id,
+                "hero_name": hero.name,
+                "source": source_label,
+                "skill": None,
+                "notes": "Primary expedition skill is not configured as applicable to rally joiners.",
             })
             continue
         _apply_skill(modifiers, primary)

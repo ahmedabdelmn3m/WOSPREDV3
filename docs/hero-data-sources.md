@@ -64,3 +64,22 @@ Manual admin corrections should update:
 - `manualOverrides.overriddenFields`
 
 Future logic should keep the baseline source data and layer calibrated assumptions on top.
+
+## Rally Joiner Recommendation Data
+
+The backend rally-joiner engine reads the primary expedition skill from
+`hero_data.py`. Only skills explicitly marked `applicable_as_joiner=True` are
+eligible, and the current recommendation API filters them to Skill Level 5.
+
+To add or correct a joiner later:
+
+1. Add or update the hero in `HEROES_BY_ID` in `hero_data.py`.
+2. Configure the verified primary skill value, target troop, `stacking_method`,
+   `max_stacks`, and `stack_group` on its `ExpeditionSkill`.
+3. Keep unknown percentages absent instead of estimating them.
+4. Add a focused case to `tests/test_joiner_recommendation.py` and
+   `tests/test_rally_skills.py` when the shared rally mechanics change.
+
+The pure ranking implementation is in
+`core_engine/joiner_recommendation.py`. The API endpoint is
+`POST /api/rallies/joiner-recommendations`.

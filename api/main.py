@@ -9,6 +9,7 @@ POST /predict-outcome        V2 prediction with win probability + analysis
 POST /army-preview           Inspect effective stats without battling
 POST /reverse-optimize       Find minimum stat upgrades to reach a win target
 POST /formation/optimize     Rank all standard formations for a matchup
+POST /api/rallies/joiner-recommendations  Rank level-5 rally joiner combinations
 GET  /presets                List saved presets
 POST /presets                Save a preset
 GET  /presets/{name}         Load a specific preset
@@ -40,6 +41,8 @@ from mechanics.v1_raw_model         import V1RawModel
 from mechanics.v2_calibrated_model  import V2CalibratedModel
 from hero_data import HEROES_BY_ID as STRUCTURED_HEROES, hero_to_dict
 from troop_data import all_troop_stats, get_troop_base_stats, expected_skill_modifiers, TROOP_SKILL_RULES
+from api.joiner_models import JoinerRecommendationRequest
+from core_engine.joiner_recommendation import JoinerRecommendationService
 
 # ── Singletons (one per process) ─────────────────────────────────────────────
 _combat_engine     = CombatEngine()
@@ -49,6 +52,7 @@ _formation_optimizer = FormationOptimizer(_combat_engine)
 _preset_manager    = PresetManager()
 _v1                = V1RawModel()
 _v2                = V2CalibratedModel(_v1)
+_joiner_recommendations = JoinerRecommendationService()
 _prediction_runs: list[dict[str, Any]] = []
 _battle_logs: list[dict[str, Any]] = []
 _scout_uploads: list[dict[str, Any]] = []
@@ -63,6 +67,16 @@ def _load_json(relative_path: str, fallback: Any) -> Any:
             return json.load(f)
     except FileNotFoundError:
         return fallback
+
+
+def _round_api_numbers(value: Any) -> Any:
+    if isinstance(value, float):
+        return round(value, 10)
+    if isinstance(value, list):
+        return [_round_api_numbers(item) for item in value]
+    if isinstance(value, dict):
+        return {key: _round_api_numbers(item) for key, item in value.items()}
+    return value
 
 
 HERO_DEFINITIONS = _load_json("heroes/hero_definitions.json", [])
@@ -518,6 +532,7 @@ async def root():
             "GET  /presets/{name}":     "Load a preset",
             "DELETE /presets/{name}":   "Delete a preset",
             "GET  /troop-stats":         "T10 Apex and T11 Helios troop base stats and skill rules",
+            "POST /api/rallies/joiner-recommendations": "Rank level-5 rally joiner combinations",
         },
     }
 
@@ -534,8 +549,15 @@ async def health():
 
 @app.get("/hero-definitions")
 async def hero_definitions():
+    fallback = [
+        {
+            **hero_to_dict(hero),
+            "status": "modeled" if hero.expedition_skills else "pending verification",
+        }
+        for hero in STRUCTURED_HEROES.values()
+    ]
     return {
-        "heroes": _load_json("heroes/hero_definitions.json", []),
+        "heroes": _load_json("heroes/hero_definitions.json", fallback),
         "note": "Unverified skills are exposed as pending verification and are not applied by the engine.",
     }
 
@@ -553,9 +575,18 @@ async def rally_hero_definitions():
     }
 
 
+@app.post("/api/rallies/joiner-recommendations")
+async def recommend_rally_joiners(req: JoinerRecommendationRequest):
+    """Rank configured level-5 primary joiner skills for one rally objective."""
+    try:
+        return _round_api_numbers(_joiner_recommendations.recommend(**req.to_service_kwargs()))
+    except ValueError as exc:
+        raise HTTPException(422, str(exc))
+
+
 @app.get("/combat-constants")
 async def combat_constants():
-    return _load_json("config/combat_constants.json", {"constants": {}})
+    return _load_json("config/combat_constants.json", {"status": "pending verification", "constants": {}})
 
 
 @app.get("/troop-stats")

@@ -20,6 +20,11 @@ EFFECT_TYPES = (
     "defense_up",
     "health_up",
     "damage_taken_down",
+    "enemy_damage_taken_up",
+    "enemy_attack_down",
+    "enemy_defense_down",
+    "enemy_health_down",
+    "enemy_lethality_down",
     "unknown",
 )
 
@@ -35,6 +40,15 @@ class ExpeditionSkill:
     source: str = "unknown"
     confidence: str = "low"
     notes: str = ""
+    skill_level: int = 5
+    applicable_as_joiner: bool = True
+    applicable_as_rally_leader: bool = True
+    stacking_method: str = "ADDITIVE"
+    max_stacks: int = 4
+    stack_group: str = ""
+    activation_condition: Optional[str] = None
+    activation_probability: Optional[float] = None
+    priority_order: int = 0
 
     @property
     def value_decimal(self) -> float:
@@ -75,6 +89,15 @@ def skill(
     source: str = "user_provided",
     confidence: str = "medium",
     notes: str = "Assumes 4-star hero with Expedition Skill level 5 primary/top-right skill.",
+    skill_level: int = 5,
+    applicable_as_joiner: bool = True,
+    applicable_as_rally_leader: bool = True,
+    stacking_method: str = "ADDITIVE",
+    max_stacks: int = 4,
+    stack_group: str = "",
+    activation_condition: Optional[str] = None,
+    activation_probability: Optional[float] = None,
+    priority_order: int = 0,
 ) -> ExpeditionSkill:
     return ExpeditionSkill(
         slot=slot,
@@ -86,6 +109,15 @@ def skill(
         source=source,
         confidence=confidence,
         notes=notes,
+        skill_level=skill_level,
+        applicable_as_joiner=applicable_as_joiner,
+        applicable_as_rally_leader=applicable_as_rally_leader,
+        stacking_method=stacking_method,
+        max_stacks=max_stacks,
+        stack_group=stack_group,
+        activation_condition=activation_condition,
+        activation_probability=activation_probability,
+        priority_order=priority_order,
     )
 
 

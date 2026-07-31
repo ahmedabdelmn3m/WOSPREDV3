@@ -112,7 +112,7 @@
     .hero-supply-name strong { display:block; color:var(--hi); font-size:12px; overflow-wrap:anywhere; }
     .hero-supply-name span { display:block; color:var(--dim); font-size:10px; overflow-wrap:anywhere; }
     .hero-supply-row input { min-height:34px; padding:6px 8px; }
-    .joiner-profile-table { min-width:790px; }
+    .joiner-profile-table { min-width:920px; }
     .joiner-results { margin-top:11px; border-top:1px solid var(--border); }
     .joiner-result { display:grid; grid-template-columns:minmax(135px,.8fr) minmax(210px,1.2fr) minmax(190px,1fr); gap:10px; align-items:center; padding:10px 2px; border-bottom:1px solid var(--border); }
     .joiner-lineup { display:flex; flex-wrap:wrap; gap:5px; }
@@ -235,9 +235,9 @@
         <div class="card-head">
           <div>
             <div class="section-title">1B. Hero Joiner Tactics</div>
-            <div class="section-help">Primary expedition skill only, maximum four contributing joiners per rally. Values use the project's current modeled level-5 effects.</div>
+            <div class="section-help">Primary expedition skill only, maximum four contributing joiners per rally. Every modeled joiner skill is fixed at Skill Level 5.</div>
           </div>
-          <div class="pill pill-a" id="joinerModelStatus">Damage + defense model</div>
+          <div class="pill pill-a" id="joinerModelStatus">Level 5 recommendation model</div>
         </div>
         <div class="joiner-layout">
           <div>
@@ -248,6 +248,15 @@
                 <label class="field"><span>Lethality %</span><input id="joinerLethality" type="number" min="0" step="1" /></label>
                 <label class="field"><span>Defense %</span><input id="joinerDefense" type="number" min="0" step="1" /></label>
                 <label class="field"><span>Health %</span><input id="joinerHealth" type="number" min="0" step="1" /></label>
+              </div>
+            </div>
+            <div class="joiner-band">
+              <div class="section-title">Optional enemy report</div>
+              <div class="joiner-fields">
+                <label class="field"><span>Enemy Attack %</span><input id="joinerEnemyAttack" type="number" min="0" step="1" placeholder="-" /></label>
+                <label class="field"><span>Enemy Lethality %</span><input id="joinerEnemyLethality" type="number" min="0" step="1" placeholder="-" /></label>
+                <label class="field"><span>Enemy Defense %</span><input id="joinerEnemyDefense" type="number" min="0" step="1" placeholder="-" /></label>
+                <label class="field"><span>Enemy Health %</span><input id="joinerEnemyHealth" type="number" min="0" step="1" placeholder="-" /></label>
               </div>
             </div>
           </div>
@@ -264,6 +273,7 @@
               <tr>
                 <th>Friendly Rally</th>
                 <th style="width:160px">Tactical Goal</th>
+                <th style="width:150px">Enemy Target</th>
                 <th style="width:118px">Infantry %</th>
                 <th style="width:118px">Lancer %</th>
                 <th style="width:118px">Marksman %</th>
@@ -439,7 +449,16 @@
   };
   const ids = { leader:0, enemy:0, response:0 };
   const $ = (id) => document.getElementById(id);
-  const state = { leaders:[], enemies:[], responses:[], prefs:{ mode:'', intentChosen:false, planning:'preplanned', theme:'dark', compact:false, defenseOutcome:'uncertain', attackLabelFlowVersion:4 }, joiners:null, last:null };
+  const state = { leaders:[], enemies:[], responses:[], prefs:{ mode:'', intentChosen:false, planning:'preplanned', theme:'dark', compact:false, defenseOutcome:'uncertain', attackLabelFlowVersion:4 }, joiners:null, joinerBackend:{ status:'idle', plan:null }, last:null };
+  const JOINER_API_URL = (() => {
+    try {
+      const queryOverride = new URLSearchParams(location.search).get('joinerApi');
+      const override = localStorage.getItem('rtc_joiner_api_url') || localStorage.getItem('wos_api_url');
+      return String(queryOverride || override || 'https://wospredv3-production.up.railway.app').replace(/\/+$/, '');
+    } catch {
+      return 'https://wospredv3-production.up.railway.app';
+    }
+  })();
 
   const roleOptions = ['Infantry killer','Softener','Castle holder','Counter-attack','Counter-counter','Last-wave retaker','Post-wave reinforce','Garrison support','Defense counter','Recovery rally','Final hit','Reinforcement','Custom'];
   const needDefinitions = [
@@ -465,6 +484,12 @@
     { value:'balanced', label:'Balanced' },
     { value:'survival', label:'Survival' }
   ];
+  const joinerTargetOptions = [
+    { value:'', label:'Not observed' },
+    { value:'infantry', label:'Infantry' },
+    { value:'lancer', label:'Lancer' },
+    { value:'marksman', label:'Marksman' }
+  ];
   const joinerHeroes = [
     { id:'reina', name:'Reina', effect:'attack_damage_up', value:0.30, scope:'all', label:'+30% attack damage' },
     { id:'jeronimo', name:'Jeronimo', effect:'damage_up', value:0.25, scope:'all', label:'+25% damage' },
@@ -474,6 +499,9 @@
     { id:'flint', name:'Flint', effect:'damage_up', value:1.00, scope:'infantry', label:'+100% infantry damage' },
     { id:'philly', name:'Philly', effect:'attack_up', value:0.15, scope:'all', label:'+15% attack' }
   ];
+  let joinerRequestTimer = null;
+  let joinerRequestSerial = 0;
+  let joinerAbortController = null;
 
   function defaultJoinerState() {
     return {
@@ -481,6 +509,10 @@
       lethality:100,
       defense:100,
       health:100,
+      enemyAttack:null,
+      enemyLethality:null,
+      enemyDefense:null,
+      enemyHealth:null,
       heroCounts:Object.fromEntries(joinerHeroes.map(hero => [hero.id, 1]))
     };
   }
@@ -572,12 +604,20 @@
       lancer:boundedNumber(current.lancer, 30, 0, 100),
       marksman:boundedNumber(current.marksman, 30, 0, 100)
     };
+    leader.enemyTroopType = joinerTargetOptions.some(option => option.value === leader.enemyTroopType)
+      ? leader.enemyTroopType
+      : '';
     return leader;
   }
 
   function boundedNumber(value, fallback, min, max) {
     const number = Number(value);
     return Number.isFinite(number) ? Math.min(max, Math.max(min, number)) : fallback;
+  }
+
+  function optionalJoinerNumber(value) {
+    if (value === null || value === undefined || String(value).trim() === '') return null;
+    return boundedNumber(value, 0, 0, 10000);
   }
 
   function resolvedJoinerGoal(leader) {
@@ -602,6 +642,17 @@
       lancer:split.lancer / total,
       marksman:split.marksman / total
     };
+  }
+
+  function dominantTroopType(leader) {
+    const split = normalizedTroopSplit(leader);
+    return ['infantry','lancer','marksman'].sort((a,b) => split[b] - split[a] || a.localeCompare(b))[0];
+  }
+
+  function joinerObjective(goal) {
+    if (goal === 'survival') return 'MAX_DEFENSE';
+    if (goal === 'balanced') return 'BALANCED';
+    return 'MAX_DAMAGE';
   }
 
   function emptyJoinerModifiers() {
@@ -729,6 +780,182 @@
         defenseGain:percentGain(base.defense, result.defense)
       };
     });
+  }
+
+  function activeJoinerPlan() {
+    if (!state.prefs.compact && state.joinerBackend?.status === 'ready' && state.joinerBackend.plan) {
+      return state.joinerBackend.plan;
+    }
+    return calculateJoinerAssignments();
+  }
+
+  function joinerPlanQuotas(leaders, totalSupply) {
+    const ordered = leaders.map((leader, index) => ({ leader, index })).sort((a,b) =>
+      joinerRolePriority(b.leader.role) - joinerRolePriority(a.leader.role) || a.index - b.index
+    );
+    const quotas = new Map(leaders.map(leader => [leader.id, 0]));
+    let assigned = 0;
+    for (let slot = 0; slot < 4 && assigned < totalSupply; slot += 1) {
+      ordered.forEach(({ leader }) => {
+        if (assigned >= totalSupply) return;
+        quotas.set(leader.id, quotas.get(leader.id) + 1);
+        assigned += 1;
+      });
+    }
+    return { ordered:ordered.map(item => item.leader), quotas };
+  }
+
+  function recommendationHero(item) {
+    const known = joinerHeroes.find(hero => hero.id === item.heroId);
+    if (known) return { ...known };
+    const contribution = item.contribution || {};
+    const candidates = [
+      ['attackBonus','attack_up'],
+      ['lethalityBonus','lethality_up'],
+      ['defenseBonus','defense_up'],
+      ['healthBonus','health_up'],
+      ['damageDealtBonus','damage_up'],
+      ['damageTakenReduction','damage_taken_down']
+    ];
+    const selected = candidates.find(([key]) => Number(contribution[key]) !== 0) || ['damageDealtBonus','damage_up'];
+    return {
+      id:item.heroId,
+      name:item.heroName,
+      effect:selected[1],
+      value:Number(contribution[selected[0]] || 0),
+      scope:item.targetTroopType === 'all_troops' ? 'all' : item.targetTroopType,
+      label:`Skill Level ${item.skillLevel}`
+    };
+  }
+
+  async function requestJoinerRecommendation(payload, signal) {
+    const response = await fetch(`${JOINER_API_URL}/api/rallies/joiner-recommendations`, {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      body:JSON.stringify(payload),
+      signal
+    });
+    if (!response.ok) {
+      let message = `Recommendation API returned ${response.status}`;
+      try {
+        const body = await response.json();
+        if (body?.detail) message = String(body.detail);
+      } catch {}
+      throw new Error(message);
+    }
+    return response.json();
+  }
+
+  function scheduleBackendJoinerRecommendations() {
+    if (state.prefs.compact) return;
+    clearTimeout(joinerRequestTimer);
+    if (joinerAbortController) joinerAbortController.abort();
+    const serial = ++joinerRequestSerial;
+    joinerRequestTimer = setTimeout(() => loadBackendJoinerRecommendations(serial), 220);
+  }
+
+  async function loadBackendJoinerRecommendations(serial) {
+    if (state.prefs.compact || serial !== joinerRequestSerial) return;
+    const leaders = plannedJoinerLeaders();
+    if (!leaders.length) return;
+    const remaining = Object.fromEntries(joinerHeroes.map(hero => [
+      hero.id,
+      Math.floor(boundedNumber(state.joiners?.heroCounts?.[hero.id], 0, 0, 20))
+    ]));
+    const totalSupply = Math.min(leaders.length * 4, Object.values(remaining).reduce((sum, count) => sum + count, 0));
+    const { ordered, quotas } = joinerPlanQuotas(leaders, totalSupply);
+    const enemyReportValues = {
+      attack:optionalJoinerNumber(state.joiners?.enemyAttack),
+      lethality:optionalJoinerNumber(state.joiners?.enemyLethality),
+      defense:optionalJoinerNumber(state.joiners?.enemyDefense),
+      health:optionalJoinerNumber(state.joiners?.enemyHealth)
+    };
+    const enemyStats = Object.values(enemyReportValues).every(value => value !== null) ? enemyReportValues : null;
+    const planByLeader = new Map();
+    state.joinerBackend = { status:'pending', plan:null };
+    renderJoinerResults(calculateJoinerAssignments());
+    const controller = new AbortController();
+    joinerAbortController = controller;
+    const timeout = setTimeout(() => controller.abort(), 12000);
+    try {
+      for (const leader of ordered) {
+        const joinerCount = quotas.get(leader.id) || 0;
+        const goal = resolvedJoinerGoal(leader);
+        if (!joinerCount) {
+          const base = calculateRallyIndexes(leader, []);
+          planByLeader.set(leader.id, {
+            leader, heroes:[], goal, split:normalizedTroopSplit(leader), base, result:base,
+            damageGain:0, defenseGain:0,
+            backend:{ objective:joinerObjective(goal), evaluated:0, alternatives:[], warnings:['No available joiner copy remained for this rally.'] }
+          });
+          continue;
+        }
+        const availableHeroIds = Object.keys(remaining).filter(heroId => remaining[heroId] > 0);
+        const response = await requestJoinerRecommendation({
+          objective:joinerObjective(goal),
+          joinerCount,
+          allowDuplicateHeroes:true,
+          troopType:dominantTroopType(leader),
+          enemyTroopType:leader.enemyTroopType || null,
+          baseStats:{ attack:1, defense:1, health:1, lethality:1 },
+          currentBuffs:{
+            attack:boundedNumber(state.joiners?.attack, 0, 0, 10000) / 100,
+            lethality:boundedNumber(state.joiners?.lethality, 0, 0, 10000) / 100,
+            defense:boundedNumber(state.joiners?.defense, 0, 0, 10000) / 100,
+            health:boundedNumber(state.joiners?.health, 0, 0, 10000) / 100,
+            damageDealt:0,
+            damageTakenReduction:0
+          },
+          enemyStats,
+          availableHeroIds,
+          availableHeroCounts:remaining,
+          excludedHeroIds:[],
+          minimumSkillLevel:5,
+          conditionalEvaluation:'EXCLUDED',
+          attackWeight:0.5,
+          defenseWeight:0.5,
+          alternativeCount:2
+        }, controller.signal);
+        const heroes = response.recommendedJoiners.map(recommendationHero);
+        response.recommendedJoiners.forEach(item => {
+          remaining[item.heroId] = Math.max(0, (remaining[item.heroId] || 0) - 1);
+        });
+        const scores = response.scores;
+        planByLeader.set(leader.id, {
+          leader,
+          heroes,
+          goal,
+          split:normalizedTroopSplit(leader),
+          base:{ damage:scores.damageScoreBeforeJoiners, defense:scores.defenseScoreBeforeJoiners },
+          result:{ damage:scores.damageScoreAfterJoiners, defense:scores.defenseScoreAfterJoiners },
+          damageGain:scores.damageImprovementPercentage,
+          defenseGain:scores.defenseImprovementPercentage,
+          backend:{
+            objective:response.objective,
+            evaluated:response.evaluatedCombinations,
+            alternatives:response.alternatives || [],
+            explanations:response.stackingExplanation || [],
+            warnings:response.warnings || [],
+            counterMultiplier:scores.counterMultiplier,
+            dominantTroop:dominantTroopType(leader),
+            reportComparison:!!enemyStats
+          }
+        });
+      }
+      if (state.prefs.compact || serial !== joinerRequestSerial) return;
+      const plan = leaders.map(leader => planByLeader.get(leader.id)).filter(Boolean);
+      state.joinerBackend = { status:'ready', plan };
+      renderJoinerResults(plan);
+      syncJoinerPlanToOutput(plan);
+    } catch (error) {
+      if (serial !== joinerRequestSerial || state.prefs.compact) return;
+      state.joinerBackend = { status:'fallback', plan:null, message:error?.name === 'AbortError' ? 'Recommendation API timed out' : String(error?.message || error) };
+      const fallback = calculateJoinerAssignments();
+      renderJoinerResults(fallback);
+      syncJoinerPlanToOutput(fallback);
+    } finally {
+      clearTimeout(timeout);
+    }
   }
 
   function sampleEnemies() {
@@ -1166,6 +1393,8 @@
   }
 
   function renderJoinerTactics() {
+    if (!state.joinerBackend) state.joinerBackend = { status:'idle', plan:null };
+    state.joinerBackend = { status:'local', plan:null };
     state.joiners = { ...defaultJoinerState(), ...(state.joiners || {}) };
     state.joiners.heroCounts = { ...defaultJoinerState().heroCounts, ...(state.joiners.heroCounts || {}) };
     const observedFields = [
@@ -1179,6 +1408,20 @@
       input.value = state.joiners[key];
       input.oninput = event => {
         state.joiners[key] = boundedNumber(event.target.value, 0, 0, 10000);
+        persistJoinerTactics();
+        refreshJoinerOutcome();
+      };
+    });
+    [
+      ['joinerEnemyAttack','enemyAttack'],
+      ['joinerEnemyLethality','enemyLethality'],
+      ['joinerEnemyDefense','enemyDefense'],
+      ['joinerEnemyHealth','enemyHealth']
+    ].forEach(([id, key]) => {
+      const input = $(id);
+      input.value = state.joiners[key] ?? '';
+      input.oninput = event => {
+        state.joiners[key] = optionalJoinerNumber(event.target.value);
         persistJoinerTactics();
         refreshJoinerOutcome();
       };
@@ -1207,11 +1450,17 @@
       tr.innerHTML = `
         <td><div class="rname">${esc(leader.name || 'Unnamed leader')}</div><div class="rmeta">Alliance ${esc(leader.alliance)} · ${esc(leader.role)}</div></td>
         <td><select class="joiner-goal">${joinerGoalOptions.map(option => `<option value="${esc(option.value)}" ${leader.joinerGoal === option.value ? 'selected' : ''}>${esc(option.label)}</option>`).join('')}</select></td>
+        <td><select class="enemy-troop-target">${joinerTargetOptions.map(option => `<option value="${esc(option.value)}" ${leader.enemyTroopType === option.value ? 'selected' : ''}>${esc(option.label)}</option>`).join('')}</select></td>
         <td><input class="troop-infantry" type="number" min="0" max="100" step="1" value="${esc(leader.troopSplit.infantry)}" /></td>
         <td><input class="troop-lancer" type="number" min="0" max="100" step="1" value="${esc(leader.troopSplit.lancer)}" /></td>
         <td><input class="troop-marksman" type="number" min="0" max="100" step="1" value="${esc(leader.troopSplit.marksman)}" /></td>`;
       tr.querySelector('.joiner-goal').addEventListener('change', event => {
         leader.joinerGoal = event.target.value;
+        persistLibrary();
+        refreshJoinerOutcome();
+      });
+      tr.querySelector('.enemy-troop-target').addEventListener('change', event => {
+        leader.enemyTroopType = event.target.value;
         persistLibrary();
         refreshJoinerOutcome();
       });
@@ -1224,8 +1473,9 @@
       });
       rows.appendChild(tr);
     });
-    if (!rows.children.length) rows.innerHTML = '<tr><td colspan="5"><div class="joiner-empty">Enable at least one friendly leader to build joiner assignments.</div></td></tr>';
+    if (!rows.children.length) rows.innerHTML = '<tr><td colspan="6"><div class="joiner-empty">Enable at least one friendly leader to build joiner assignments.</div></td></tr>';
     renderJoinerResults();
+    scheduleBackendJoinerRecommendations();
   }
 
   function joinerLineupLabels(heroes) {
@@ -1237,6 +1487,20 @@
   function joinerRationale(item) {
     if (!item.heroes.length) return 'No modeled joining hero is available for this rally.';
     const parts = [];
+    if (item.backend) {
+      const objective = String(item.backend.objective || '').replaceAll('_', ' ').toLowerCase();
+      const count = item.backend.evaluated || 0;
+      parts.push(`Level 5 engine evaluated ${count} valid combination${count === 1 ? '' : 's'} for ${objective || 'this objective'} using ${item.backend.dominantTroop || dominantTroopType(item.leader)} as the dominant troop.`);
+      if (item.backend.counterMultiplier === 1.1) parts.push(`The 1.10 counter multiplier against ${item.leader.enemyTroopType} is included.`);
+      if (item.backend.reportComparison) parts.push('Enemy report penetration and incoming-pressure ratios are included.');
+      const firstWarning = item.backend.warnings?.[0];
+      if (firstWarning) parts.push(firstWarning);
+      const alternative = item.backend.alternatives?.[0];
+      if (alternative?.joiners?.length) {
+        parts.push(`Next best: ${joinerLineupLabels(alternative.joiners.map(name => ({ name }))).join(', ')}.`);
+      }
+      return parts.join(' ');
+    }
     if (item.goal === 'survival' && item.defenseGain === 0) {
       parts.push('No verified Defense or Health primary buff is available; this assignment only raises outgoing damage.');
     } else if (item.goal === 'balanced') {
@@ -1260,8 +1524,17 @@
   }
 
   function refreshJoinerOutcome() {
+    joinerRequestSerial += 1;
+    clearTimeout(joinerRequestTimer);
+    if (joinerAbortController) joinerAbortController.abort();
+    state.joinerBackend = { status:'local', plan:null };
     const plan = calculateJoinerAssignments();
     renderJoinerResults(plan);
+    syncJoinerPlanToOutput(plan);
+    scheduleBackendJoinerRecommendations();
+  }
+
+  function syncJoinerPlanToOutput(plan) {
     if (!state.last) return;
     state.last.joinerPlan = plan;
     state.last.chat = buildChat(
@@ -1273,15 +1546,23 @@
     $('chatOutput').textContent = state.last.chat;
   }
 
-  function renderJoinerResults(plan = calculateJoinerAssignments()) {
+  function renderJoinerResults(plan = activeJoinerPlan()) {
     const results = $('joinerResults');
     if (!plan.length) {
       results.innerHTML = '<div class="joiner-empty">Joiner outcomes will appear for enabled friendly rallies.</div>';
-      $('joinerModelStatus').textContent = 'Damage + defense model';
+      $('joinerModelStatus').textContent = 'Level 5 recommendation model';
       return;
     }
     const assigned = plan.reduce((sum, item) => sum + item.heroes.length, 0);
-    $('joinerModelStatus').textContent = `${assigned} joins assigned · ${plan.length} rallies`;
+    if (state.joinerBackend?.status === 'pending') {
+      $('joinerModelStatus').textContent = 'Calculating level 5 lineups...';
+    } else if (state.joinerBackend?.status === 'ready') {
+      $('joinerModelStatus').textContent = `${assigned} level 5 joins · ${plan.length} rallies`;
+    } else if (state.joinerBackend?.status === 'fallback') {
+      $('joinerModelStatus').textContent = `${assigned} joins · local fallback`;
+    } else {
+      $('joinerModelStatus').textContent = `${assigned} joins assigned · checking level 5 engine`;
+    }
     results.innerHTML = plan.map(item => {
       const lineup = joinerLineupLabels(item.heroes);
       return `<div class="joiner-result">
@@ -1802,7 +2083,7 @@
       return { ...row, hitOrder:index + 1, first:index === 0, delta:index === 0 ? 0 : row.hit - previous.hit, previousName:previous?.name || '' };
     });
     const recommendation = defenseRecommendation() || attackRecommendation();
-    const joinerPlan = calculateJoinerAssignments();
+    const joinerPlan = activeJoinerPlan();
     const chat = buildChat(decoratedLaunch, decoratedHits, recommendation, state.prefs.compact ? [] : joinerPlan);
     state.last = { launchRows:decoratedLaunch, hitRows:decoratedHits, chat, recommendation, joinerPlan };
     renderJoinerResults(joinerPlan);
@@ -2185,6 +2466,13 @@
     $('compactBtn').addEventListener('click', () => {
       state.prefs.compact = !state.prefs.compact;
       applyPrefs(); savePrefs(); calculatePlan();
+      if (state.prefs.compact) {
+        joinerRequestSerial += 1;
+        clearTimeout(joinerRequestTimer);
+        if (joinerAbortController) joinerAbortController.abort();
+      } else {
+        refreshJoinerOutcome();
+      }
     });
     document.querySelectorAll('[name="battleMode"]').forEach(r => r.addEventListener('change', e => {
       const previousMode = state.prefs.mode;
