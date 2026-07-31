@@ -102,6 +102,28 @@
     .intent-option span span { margin-top:3px; color:var(--dim); font-size:12px; font-weight:500; text-transform:none; letter-spacing:0; }
     .intent-status { display:flex; flex-direction:column; justify-content:space-between; gap:10px; padding:10px 12px; border:1px solid var(--border); border-radius:var(--radius); background:var(--card); }
     .intent-status.ready { border-color:rgba(46,204,113,.42); background:rgba(46,204,113,.08); }
+    .joiner-layout { display:grid; grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr); gap:12px; margin-bottom:12px; }
+    .joiner-band { padding:10px 0; border-top:1px solid var(--border); }
+    .joiner-band:first-child { padding-top:0; border-top:0; }
+    .joiner-fields { display:grid; grid-template-columns:repeat(4,minmax(74px,1fr)); gap:7px; margin-top:8px; }
+    .hero-supply { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px 10px; margin-top:8px; }
+    .hero-supply-row { display:grid; grid-template-columns:minmax(96px,1fr) 64px; gap:7px; align-items:center; min-width:0; }
+    .hero-supply-name { min-width:0; }
+    .hero-supply-name strong { display:block; color:var(--hi); font-size:12px; overflow-wrap:anywhere; }
+    .hero-supply-name span { display:block; color:var(--dim); font-size:10px; overflow-wrap:anywhere; }
+    .hero-supply-row input { min-height:34px; padding:6px 8px; }
+    .joiner-profile-table { min-width:790px; }
+    .joiner-results { margin-top:11px; border-top:1px solid var(--border); }
+    .joiner-result { display:grid; grid-template-columns:minmax(135px,.8fr) minmax(210px,1.2fr) minmax(190px,1fr); gap:10px; align-items:center; padding:10px 2px; border-bottom:1px solid var(--border); }
+    .joiner-lineup { display:flex; flex-wrap:wrap; gap:5px; }
+    .hero-chip { display:inline-flex; padding:4px 7px; border:1px solid rgba(0,200,255,.27); border-radius:999px; background:rgba(0,200,255,.08); color:var(--txt); font-size:10px; font-weight:800; }
+    .joiner-metrics { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+    .metric { padding:6px 8px; background:var(--input); border-left:2px solid var(--border-hi); }
+    .metric.good { border-color:var(--green); }
+    .metric strong,.metric span { display:block; }
+    .metric strong { color:var(--hi); font-size:12px; }
+    .metric span { color:var(--dim); font-size:10px; }
+    .joiner-empty { padding:14px 2px; color:var(--dim); }
     .outputs { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
     .result-list { display:flex; flex-direction:column; gap:7px; }
     .result { display:grid; grid-template-columns:38px minmax(120px,.8fr) 1fr auto; gap:9px; align-items:center; padding:10px 11px; border:1px solid var(--border); border-radius:var(--radius); background:var(--card); }
@@ -122,6 +144,7 @@
     .compact .card { padding:12px; }
     .compact table { min-width:760px; }
     .compact .wide-table { min-width:980px; }
+    .compact .planning-extra { display:none; }
     @media (max-width:1060px) {
       .grid,.outputs { grid-template-columns:1fr; }
       .mode-strip { grid-template-columns:1fr 1fr; }
@@ -130,10 +153,15 @@
       body { padding:8px; font-size:13px; }
       .app-header,.card-head,.snapshot-bar { grid-template-columns:1fr; flex-direction:column; align-items:stretch; }
       .header-actions .btn,.toolbar .btn { flex:1 1 auto; }
-      .mode-strip,.field-grid,.field-grid.three,.battle-intent,.intent-options { grid-template-columns:1fr; }
+      .mode-strip,.field-grid,.field-grid.three,.battle-intent,.intent-options,.joiner-layout { grid-template-columns:1fr; }
+      .joiner-fields,.hero-supply { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .joiner-result { grid-template-columns:1fr; }
       .result { grid-template-columns:30px 1fr; }
       .instruction,.result .pill,.warning-text { grid-column:2; }
       .title { font-size:15px; }
+    }
+    @media (max-width:440px) {
+      .joiner-fields,.hero-supply,.joiner-metrics { grid-template-columns:1fr; }
     }
   </style>
 </head>
@@ -201,6 +229,50 @@
             <tbody id="leaderRows"></tbody>
           </table>
         </div>
+      </section>
+
+      <section class="card planning-extra" id="joinerSection">
+        <div class="card-head">
+          <div>
+            <div class="section-title">1B. Hero Joiner Tactics</div>
+            <div class="section-help">Primary expedition skill only, maximum four contributing joiners per rally. Values use the project's current modeled level-5 effects.</div>
+          </div>
+          <div class="pill pill-a" id="joinerModelStatus">Damage + defense model</div>
+        </div>
+        <div class="joiner-layout">
+          <div>
+            <div class="joiner-band">
+              <div class="section-title">Observed combat bonuses</div>
+              <div class="joiner-fields">
+                <label class="field"><span>Attack %</span><input id="joinerAttack" type="number" min="0" step="1" /></label>
+                <label class="field"><span>Lethality %</span><input id="joinerLethality" type="number" min="0" step="1" /></label>
+                <label class="field"><span>Defense %</span><input id="joinerDefense" type="number" min="0" step="1" /></label>
+                <label class="field"><span>Health %</span><input id="joinerHealth" type="number" min="0" step="1" /></label>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="joiner-band">
+              <div class="section-title">Available joining heroes</div>
+              <div class="hero-supply" id="heroSupply"></div>
+            </div>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="joiner-profile-table">
+            <thead>
+              <tr>
+                <th>Friendly Rally</th>
+                <th style="width:160px">Tactical Goal</th>
+                <th style="width:118px">Infantry %</th>
+                <th style="width:118px">Lancer %</th>
+                <th style="width:118px">Marksman %</th>
+              </tr>
+            </thead>
+            <tbody id="joinerProfileRows"></tbody>
+          </table>
+        </div>
+        <div class="joiner-results" id="joinerResults"></div>
       </section>
 
       <section class="card">
@@ -345,6 +417,7 @@
         <p>Friendly launch point = desired hit point - rally gathering duration - leader march time. Friendly launch points are sorted, then shown as LAUNCH FIRST and relative delays after the previous friendly launcher.</p>
         <p>Friendly State means: Ready = waiting for your declaration; Gathering = rally is already open and Remaining is fill time left; Marching = rally has launched and Remaining is march time left.</p>
         <p>Every enabled Alliance A leader becomes part of the capture wave; known roles guide the order and Castle holder stays last when available. Alliance B leaders targeted by later enemies are placed where needed, then every remaining enabled Alliance B rally lands after the final enemy counter, one second apart.</p>
+        <p>Hero joiner damage uses Attack x (1 + Attack bonuses) x Lethality x (1 + Lethality bonuses) / 100, then applies Damage Up and Attack Damage Up. Defense mirrors it with Defense and Health. Only the primary skill from the first four modeled joiners contributes.</p>
       </div>
     </details>
   </section>
@@ -361,11 +434,12 @@
     wave:'rtc-enemy-wave-v2',
     plan:'rtc-response-plan-v2',
     prefs:'rtc-prefs-v2',
-    enemyMarches:'rtc-enemy-marches-v1'
+    enemyMarches:'rtc-enemy-marches-v1',
+    joiners:'rtc-joiner-tactics-v1'
   };
   const ids = { leader:0, enemy:0, response:0 };
   const $ = (id) => document.getElementById(id);
-  const state = { leaders:[], enemies:[], responses:[], prefs:{ mode:'', intentChosen:false, planning:'preplanned', theme:'dark', compact:false, defenseOutcome:'uncertain', attackLabelFlowVersion:4 }, last:null };
+  const state = { leaders:[], enemies:[], responses:[], prefs:{ mode:'', intentChosen:false, planning:'preplanned', theme:'dark', compact:false, defenseOutcome:'uncertain', attackLabelFlowVersion:4 }, joiners:null, last:null };
 
   const roleOptions = ['Infantry killer','Softener','Castle holder','Counter-attack','Counter-counter','Last-wave retaker','Post-wave reinforce','Garrison support','Defense counter','Recovery rally','Final hit','Reinforcement','Custom'];
   const needDefinitions = [
@@ -385,6 +459,31 @@
     { value:'Custom', roles:roleOptions, alliance:'' }
   ];
   const enemyLabels = ['Castle Garrison','Enemy Counter','Enemy Final Counter','Enemy Attack','Custom'];
+  const joinerGoalOptions = [
+    { value:'auto', label:'Auto from role' },
+    { value:'damage', label:'Damage' },
+    { value:'balanced', label:'Balanced' },
+    { value:'survival', label:'Survival' }
+  ];
+  const joinerHeroes = [
+    { id:'reina', name:'Reina', effect:'attack_damage_up', value:0.30, scope:'all', label:'+30% attack damage' },
+    { id:'jeronimo', name:'Jeronimo', effect:'damage_up', value:0.25, scope:'all', label:'+25% damage' },
+    { id:'jessie', name:'Jessie', effect:'damage_up', value:0.25, scope:'all', label:'+25% damage' },
+    { id:'seo-yoon', name:'Seo-Yoon', effect:'damage_up', value:0.25, scope:'all', label:'+25% damage' },
+    { id:'jasser', name:'Jasser', effect:'damage_up', value:0.25, scope:'all', label:'+25% damage' },
+    { id:'flint', name:'Flint', effect:'damage_up', value:1.00, scope:'infantry', label:'+100% infantry damage' },
+    { id:'philly', name:'Philly', effect:'attack_up', value:0.15, scope:'all', label:'+15% attack' }
+  ];
+
+  function defaultJoinerState() {
+    return {
+      attack:100,
+      lethality:100,
+      defense:100,
+      health:100,
+      heroCounts:Object.fromEntries(joinerHeroes.map(hero => [hero.id, 1]))
+    };
+  }
 
   function uid(prefix) {
     ids[prefix] += 1;
@@ -462,6 +561,174 @@
       { id:uid('leader'), enabled:true, alliance:'B', name:'Jenna2', march:'0:28', gather:5, role:'Counter-counter' },
       { id:uid('leader'), enabled:true, alliance:'B', name:'Jenna3', march:'0:34', gather:5, role:'Post-wave reinforce' }
     ];
+  }
+
+  function ensureLeaderJoinerProfile(leader) {
+    const validGoal = joinerGoalOptions.some(option => option.value === leader.joinerGoal);
+    leader.joinerGoal = validGoal ? leader.joinerGoal : 'auto';
+    const current = leader.troopSplit || {};
+    leader.troopSplit = {
+      infantry:boundedNumber(current.infantry, 40, 0, 100),
+      lancer:boundedNumber(current.lancer, 30, 0, 100),
+      marksman:boundedNumber(current.marksman, 30, 0, 100)
+    };
+    return leader;
+  }
+
+  function boundedNumber(value, fallback, min, max) {
+    const number = Number(value);
+    return Number.isFinite(number) ? Math.min(max, Math.max(min, number)) : fallback;
+  }
+
+  function resolvedJoinerGoal(leader) {
+    ensureLeaderJoinerProfile(leader);
+    if (leader.joinerGoal !== 'auto') return leader.joinerGoal;
+    if (['Post-wave reinforce','Garrison support','Reinforcement'].includes(leader.role)) return 'survival';
+    if (leader.role === 'Castle holder') return 'balanced';
+    return 'damage';
+  }
+
+  function joinerGoalLabel(goal) {
+    return joinerGoalOptions.find(option => option.value === goal)?.label || 'Auto from role';
+  }
+
+  function normalizedTroopSplit(leader) {
+    ensureLeaderJoinerProfile(leader);
+    const split = leader.troopSplit;
+    const total = split.infantry + split.lancer + split.marksman;
+    if (total <= 0) return { infantry:0.4, lancer:0.3, marksman:0.3 };
+    return {
+      infantry:split.infantry / total,
+      lancer:split.lancer / total,
+      marksman:split.marksman / total
+    };
+  }
+
+  function emptyJoinerModifiers() {
+    return Object.fromEntries(['infantry','lancer','marksman'].map(troop => [troop, {
+      attack_up:0,
+      damage_up:0,
+      attack_damage_up:0,
+      lethality_up:0,
+      defense_up:0,
+      health_up:0,
+      damage_taken_down:0
+    }]));
+  }
+
+  function joinerModifiers(heroes) {
+    const modifiers = emptyJoinerModifiers();
+    heroes.slice(0, 4).forEach(hero => {
+      const targets = hero.scope === 'all' ? ['infantry','lancer','marksman'] : [hero.scope];
+      targets.forEach(troop => {
+        if (modifiers[troop] && Object.prototype.hasOwnProperty.call(modifiers[troop], hero.effect)) {
+          modifiers[troop][hero.effect] += hero.value;
+        }
+      });
+    });
+    return modifiers;
+  }
+
+  function calculateRallyIndexes(leader, heroes = []) {
+    const split = normalizedTroopSplit(leader);
+    const modifiers = joinerModifiers(heroes);
+    const attackBonus = boundedNumber(state.joiners?.attack, 100, 0, 10000) / 100;
+    const lethalityBonus = boundedNumber(state.joiners?.lethality, 100, 0, 10000) / 100;
+    const defenseBonus = boundedNumber(state.joiners?.defense, 100, 0, 10000) / 100;
+    const healthBonus = boundedNumber(state.joiners?.health, 100, 0, 10000) / 100;
+    let damage = 0;
+    let defense = 0;
+    ['infantry','lancer','marksman'].forEach(troop => {
+      const mod = modifiers[troop];
+      const baseDamage = ((1 + attackBonus + mod.attack_up) * (1 + lethalityBonus + mod.lethality_up)) / 100;
+      const layeredDamage = baseDamage * (1 + mod.damage_up + mod.attack_damage_up);
+      const defensePower = ((1 + defenseBonus + mod.defense_up) * (1 + healthBonus + mod.health_up)) / 100;
+      damage += split[troop] * layeredDamage;
+      defense += split[troop] * defensePower;
+    });
+    return { damage, defense };
+  }
+
+  function percentGain(before, after) {
+    return before > 0 ? ((after / before) - 1) * 100 : 0;
+  }
+
+  function joinerGoalWeights(goal) {
+    if (goal === 'survival') return { damage:0.25, defense:0.75 };
+    if (goal === 'balanced') return { damage:0.60, defense:0.40 };
+    return { damage:0.90, defense:0.10 };
+  }
+
+  function joinerRolePriority(role) {
+    if (/counter|final hit|retaker/i.test(role)) return 1.25;
+    if (role === 'Castle holder') return 1.20;
+    if (role === 'Infantry killer') return 1.15;
+    if (/garrison|reinforce/i.test(role)) return 1.10;
+    return 1;
+  }
+
+  function joinerUtility(leader, heroes) {
+    const base = calculateRallyIndexes(leader, []);
+    const result = calculateRallyIndexes(leader, heroes);
+    const weights = joinerGoalWeights(resolvedJoinerGoal(leader));
+    return (
+      percentGain(base.damage, result.damage) * weights.damage +
+      percentGain(base.defense, result.defense) * weights.defense
+    ) * joinerRolePriority(leader.role);
+  }
+
+  function plannedJoinerLeaders() {
+    const enabled = state.leaders.filter(leader => leader.enabled).map(ensureLeaderJoinerProfile);
+    const byId = new Map(enabled.map(leader => [leader.id, leader]));
+    const ordered = [];
+    state.responses.forEach(response => {
+      if (response.type !== 'enemy' && byId.has(response.leaderId)) {
+        ordered.push(byId.get(response.leaderId));
+        byId.delete(response.leaderId);
+      }
+    });
+    return ordered.concat([...byId.values()]);
+  }
+
+  function calculateJoinerAssignments() {
+    const leaders = plannedJoinerLeaders();
+    const assignments = new Map(leaders.map(leader => [leader.id, []]));
+    const supply = [];
+    joinerHeroes.forEach(hero => {
+      const count = Math.floor(boundedNumber(state.joiners?.heroCounts?.[hero.id], 0, 0, 20));
+      for (let index = 0; index < count; index += 1) supply.push({ ...hero, instance:index });
+    });
+    while (supply.length && leaders.some(leader => assignments.get(leader.id).length < 4)) {
+      let best = null;
+      leaders.forEach(leader => {
+        const current = assignments.get(leader.id);
+        if (current.length >= 4) return;
+        supply.forEach((hero, supplyIndex) => {
+          const gain = joinerUtility(leader, current.concat(hero)) - joinerUtility(leader, current);
+          const coverage = current.length === 0 ? 1000 : 0;
+          const score = coverage + gain;
+          if (!best || score > best.score) best = { leader, hero, supplyIndex, score };
+        });
+      });
+      if (!best) break;
+      assignments.get(best.leader.id).push(best.hero);
+      supply.splice(best.supplyIndex, 1);
+    }
+    return leaders.map(leader => {
+      const heroes = assignments.get(leader.id);
+      const base = calculateRallyIndexes(leader, []);
+      const result = calculateRallyIndexes(leader, heroes);
+      return {
+        leader,
+        heroes,
+        goal:resolvedJoinerGoal(leader),
+        split:normalizedTroopSplit(leader),
+        base,
+        result,
+        damageGain:percentGain(base.damage, result.damage),
+        defenseGain:percentGain(base.defense, result.defense)
+      };
+    });
   }
 
   function sampleEnemies() {
@@ -875,26 +1142,163 @@
           <button class="icon-btn duplicate" type="button" title="Duplicate">⧉</button>
           <button class="icon-btn remove" type="button" title="Remove">×</button>
         </div></td>`;
-      tr.querySelector('.leader-enabled').addEventListener('change', e => { leader.enabled = e.target.checked; assignLeadersByNeed(); persistLibrary(); persistPlan(); renderLeaders(); renderEnemies(); renderResponses(); });
-      tr.querySelector('.leader-alliance').addEventListener('change', e => { leader.alliance = e.target.value; assignLeadersByNeed(); persistLibrary(); persistPlan(); renderEnemies(); renderResponses(); });
+      tr.querySelector('.leader-enabled').addEventListener('change', e => { leader.enabled = e.target.checked; assignLeadersByNeed(); persistLibrary(); persistPlan(); renderLeaders(); renderEnemies(); renderResponses(); renderJoinerTactics(); });
+      tr.querySelector('.leader-alliance').addEventListener('change', e => { leader.alliance = e.target.value; assignLeadersByNeed(); persistLibrary(); persistPlan(); renderEnemies(); renderResponses(); renderJoinerTactics(); });
       tr.querySelector('.leader-name').addEventListener('input', e => { leader.name = e.target.value; persistLibrary(); renderEnemies(); renderResponses(); });
+      tr.querySelector('.leader-name').addEventListener('change', renderJoinerTactics);
       tr.querySelector('.leader-march').addEventListener('input', e => { leader.march = e.target.value; persistLibrary(); });
       tr.querySelector('.leader-gather').addEventListener('change', e => { leader.gather = Number(e.target.value); persistLibrary(); });
-      tr.querySelector('.leader-role').addEventListener('change', e => { leader.role = e.target.value; assignLeadersByNeed(); persistLibrary(); persistPlan(); renderEnemies(); renderResponses(); });
-      tr.querySelector('.move-up').addEventListener('click', () => moveItem(state.leaders, index, index - 1, () => { persistLibrary(); renderLeaders(); renderEnemies(); renderResponses(); }));
-      tr.querySelector('.move-down').addEventListener('click', () => moveItem(state.leaders, index, index + 1, () => { persistLibrary(); renderLeaders(); renderEnemies(); renderResponses(); }));
+      tr.querySelector('.leader-role').addEventListener('change', e => { leader.role = e.target.value; assignLeadersByNeed(); persistLibrary(); persistPlan(); renderEnemies(); renderResponses(); renderJoinerTactics(); });
+      tr.querySelector('.move-up').addEventListener('click', () => moveItem(state.leaders, index, index - 1, () => { persistLibrary(); renderLeaders(); renderEnemies(); renderResponses(); renderJoinerTactics(); }));
+      tr.querySelector('.move-down').addEventListener('click', () => moveItem(state.leaders, index, index + 1, () => { persistLibrary(); renderLeaders(); renderEnemies(); renderResponses(); renderJoinerTactics(); }));
       tr.querySelector('.duplicate').addEventListener('click', () => {
-        const copy = { ...leader, id:uid('leader'), name:`${leader.name || 'Leader'} copy` };
+        const copy = { ...leader, troopSplit:{ ...leader.troopSplit }, id:uid('leader'), name:`${leader.name || 'Leader'} copy` };
         state.leaders.splice(index + 1, 0, copy);
-        persistLibrary(); renderLeaders(); renderEnemies(); renderResponses();
+        persistLibrary(); renderLeaders(); renderEnemies(); renderResponses(); renderJoinerTactics();
       });
       tr.querySelector('.remove').addEventListener('click', () => {
         state.leaders.splice(index, 1);
         state.responses.forEach(r => { if (r.leaderId === leader.id) r.leaderId = ''; });
-        assignLeadersByNeed(); persistLibrary(); persistPlan(); renderLeaders(); renderEnemies(); renderResponses();
+        assignLeadersByNeed(); persistLibrary(); persistPlan(); renderLeaders(); renderEnemies(); renderResponses(); renderJoinerTactics();
       });
       rows.appendChild(tr);
     });
+  }
+
+  function renderJoinerTactics() {
+    state.joiners = { ...defaultJoinerState(), ...(state.joiners || {}) };
+    state.joiners.heroCounts = { ...defaultJoinerState().heroCounts, ...(state.joiners.heroCounts || {}) };
+    const observedFields = [
+      ['joinerAttack','attack'],
+      ['joinerLethality','lethality'],
+      ['joinerDefense','defense'],
+      ['joinerHealth','health']
+    ];
+    observedFields.forEach(([id, key]) => {
+      const input = $(id);
+      input.value = state.joiners[key];
+      input.oninput = event => {
+        state.joiners[key] = boundedNumber(event.target.value, 0, 0, 10000);
+        persistJoinerTactics();
+        refreshJoinerOutcome();
+      };
+    });
+
+    const supply = $('heroSupply');
+    supply.innerHTML = joinerHeroes.map(hero => `
+      <label class="hero-supply-row">
+        <span class="hero-supply-name"><strong>${esc(hero.name)}</strong><span>${esc(hero.label)}</span></span>
+        <input type="number" min="0" max="20" step="1" value="${esc(state.joiners.heroCounts[hero.id])}" data-hero-id="${esc(hero.id)}" aria-label="Available ${esc(hero.name)} joiners" />
+      </label>`).join('');
+    supply.querySelectorAll('[data-hero-id]').forEach(input => {
+      input.addEventListener('input', event => {
+        const heroId = event.target.dataset.heroId;
+        state.joiners.heroCounts[heroId] = Math.floor(boundedNumber(event.target.value, 0, 0, 20));
+        persistJoinerTactics();
+        refreshJoinerOutcome();
+      });
+    });
+
+    const rows = $('joinerProfileRows');
+    rows.innerHTML = '';
+    state.leaders.filter(leader => leader.enabled).forEach(leader => {
+      ensureLeaderJoinerProfile(leader);
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><div class="rname">${esc(leader.name || 'Unnamed leader')}</div><div class="rmeta">Alliance ${esc(leader.alliance)} · ${esc(leader.role)}</div></td>
+        <td><select class="joiner-goal">${joinerGoalOptions.map(option => `<option value="${esc(option.value)}" ${leader.joinerGoal === option.value ? 'selected' : ''}>${esc(option.label)}</option>`).join('')}</select></td>
+        <td><input class="troop-infantry" type="number" min="0" max="100" step="1" value="${esc(leader.troopSplit.infantry)}" /></td>
+        <td><input class="troop-lancer" type="number" min="0" max="100" step="1" value="${esc(leader.troopSplit.lancer)}" /></td>
+        <td><input class="troop-marksman" type="number" min="0" max="100" step="1" value="${esc(leader.troopSplit.marksman)}" /></td>`;
+      tr.querySelector('.joiner-goal').addEventListener('change', event => {
+        leader.joinerGoal = event.target.value;
+        persistLibrary();
+        refreshJoinerOutcome();
+      });
+      [['.troop-infantry','infantry'],['.troop-lancer','lancer'],['.troop-marksman','marksman']].forEach(([selector, troop]) => {
+        tr.querySelector(selector).addEventListener('input', event => {
+          leader.troopSplit[troop] = boundedNumber(event.target.value, 0, 0, 100);
+          persistLibrary();
+          refreshJoinerOutcome();
+        });
+      });
+      rows.appendChild(tr);
+    });
+    if (!rows.children.length) rows.innerHTML = '<tr><td colspan="5"><div class="joiner-empty">Enable at least one friendly leader to build joiner assignments.</div></td></tr>';
+    renderJoinerResults();
+  }
+
+  function joinerLineupLabels(heroes) {
+    const counts = new Map();
+    heroes.forEach(hero => counts.set(hero.name, (counts.get(hero.name) || 0) + 1));
+    return [...counts.entries()].map(([name, count]) => count > 1 ? `${name} x${count}` : name);
+  }
+
+  function joinerRationale(item) {
+    if (!item.heroes.length) return 'No modeled joining hero is available for this rally.';
+    const parts = [];
+    if (item.goal === 'survival' && item.defenseGain === 0) {
+      parts.push('No verified Defense or Health primary buff is available; this assignment only raises outgoing damage.');
+    } else if (item.goal === 'balanced') {
+      parts.push('Balanced for the capture and hold phase using measurable primary-skill gains.');
+    } else {
+      parts.push('Prioritized for outgoing damage at this point in the hit chain.');
+    }
+    if (item.heroes.some(hero => hero.id === 'flint')) {
+      parts.push(`Flint is weighted against this rally's ${Math.round(item.split.infantry * 100)}% Infantry share.`);
+    }
+    return parts.join(' ');
+  }
+
+  function formatIndex(value) {
+    return Number(value || 0).toFixed(4);
+  }
+
+  function formatGain(value) {
+    const rounded = Math.round(Number(value || 0) * 10) / 10;
+    return `${rounded >= 0 ? '+' : ''}${rounded}%`;
+  }
+
+  function refreshJoinerOutcome() {
+    const plan = calculateJoinerAssignments();
+    renderJoinerResults(plan);
+    if (!state.last) return;
+    state.last.joinerPlan = plan;
+    state.last.chat = buildChat(
+      state.last.launchRows,
+      state.last.hitRows,
+      state.last.recommendation,
+      state.prefs.compact ? [] : plan
+    );
+    $('chatOutput').textContent = state.last.chat;
+  }
+
+  function renderJoinerResults(plan = calculateJoinerAssignments()) {
+    const results = $('joinerResults');
+    if (!plan.length) {
+      results.innerHTML = '<div class="joiner-empty">Joiner outcomes will appear for enabled friendly rallies.</div>';
+      $('joinerModelStatus').textContent = 'Damage + defense model';
+      return;
+    }
+    const assigned = plan.reduce((sum, item) => sum + item.heroes.length, 0);
+    $('joinerModelStatus').textContent = `${assigned} joins assigned · ${plan.length} rallies`;
+    results.innerHTML = plan.map(item => {
+      const lineup = joinerLineupLabels(item.heroes);
+      return `<div class="joiner-result">
+        <div>
+          <div class="rname">${esc(item.leader.name || 'Unnamed leader')}</div>
+          <div class="rmeta">${esc(item.leader.role)} · ${esc(joinerGoalLabel(item.goal))}</div>
+        </div>
+        <div>
+          <div class="joiner-lineup">${lineup.length ? lineup.map(name => `<span class="hero-chip">${esc(name)}</span>`).join('') : '<span class="rmeta">No joiner assigned</span>'}</div>
+          <div class="rmeta" style="margin-top:6px">${esc(joinerRationale(item))}</div>
+        </div>
+        <div class="joiner-metrics">
+          <div class="metric ${item.damageGain > 0 ? 'good' : ''}"><strong>${esc(formatGain(item.damageGain))}</strong><span>Damage ${esc(formatIndex(item.base.damage))} → ${esc(formatIndex(item.result.damage))}</span></div>
+          <div class="metric ${item.defenseGain > 0 ? 'good' : ''}"><strong>${esc(formatGain(item.defenseGain))}</strong><span>Defense ${esc(formatIndex(item.base.defense))} → ${esc(formatIndex(item.result.defense))}</span></div>
+        </div>
+      </div>`;
+    }).join('');
   }
 
   function enemyProfileKey(enemy) {
@@ -1201,6 +1605,7 @@
   function persistLibrary() { writeJSON(STORAGE.leaders, state.leaders); }
   function persistWave() { writeJSON(STORAGE.wave, { enemies:state.enemies, frozenAt:state.frozenAt || null }); }
   function persistPlan() { writeJSON(STORAGE.plan, state.responses); }
+  function persistJoinerTactics() { writeJSON(STORAGE.joiners, state.joiners); }
 
   function readBaseEnemies(errors) {
     return state.enemies.map((enemy, index) => {
@@ -1397,8 +1802,10 @@
       return { ...row, hitOrder:index + 1, first:index === 0, delta:index === 0 ? 0 : row.hit - previous.hit, previousName:previous?.name || '' };
     });
     const recommendation = defenseRecommendation() || attackRecommendation();
-    const chat = buildChat(decoratedLaunch, decoratedHits, recommendation);
-    state.last = { launchRows:decoratedLaunch, hitRows:decoratedHits, chat, recommendation };
+    const joinerPlan = calculateJoinerAssignments();
+    const chat = buildChat(decoratedLaunch, decoratedHits, recommendation, state.prefs.compact ? [] : joinerPlan);
+    state.last = { launchRows:decoratedLaunch, hitRows:decoratedHits, chat, recommendation, joinerPlan };
+    renderJoinerResults(joinerPlan);
     renderOutput(state.last);
     return state.last;
   }
@@ -1523,7 +1930,7 @@
     return row.conditional ? `<strong>CONDITIONAL</strong> - ${instruction}` : instruction;
   }
 
-  function buildChat(launchRows, hitRows, recommendation = null) {
+  function buildChat(launchRows, hitRows, recommendation = null, joinerPlan = []) {
     const title = state.prefs.mode === 'attack' ? 'CASTLE ATTACK PLAN' : 'CASTLE DEFENSE PLAN';
     const lines = [`⚔️ ${title}`];
     if (recommendation) {
@@ -1548,6 +1955,13 @@
       } else if (row.first) lines.push(`${row.hitOrder}. ${name} → HITS FIRST`);
       else lines.push(`${row.hitOrder}. ${name} → +${secondsLabel(row.delta, true)}`);
     });
+    if (joinerPlan.length) {
+      lines.push('', 'HERO JOINER ASSIGNMENTS:');
+      joinerPlan.forEach(item => {
+        const lineup = joinerLineupLabels(item.heroes).join(', ') || 'No joiner assigned';
+        lines.push(`[${item.leader.alliance}] ${item.leader.name} (${item.leader.role}) -> ${lineup} | Damage ${formatGain(item.damageGain)} | Defense ${formatGain(item.defenseGain)}`);
+      });
+    }
     const warnings = launchRows.filter(r => !r.feasibility.ok);
     if (warnings.length) {
       lines.push('', '⚠ WARNINGS:');
@@ -1606,7 +2020,8 @@
     const ok = writeJSON(STORAGE.leaders, state.leaders)
       && writeJSON(STORAGE.wave, { enemies:state.enemies, frozenAt:state.frozenAt || null })
       && writeJSON(STORAGE.plan, state.responses)
-      && writeJSON(STORAGE.prefs, state.prefs);
+      && writeJSON(STORAGE.prefs, state.prefs)
+      && writeJSON(STORAGE.joiners, state.joiners);
     toast(ok ? 'Plan saved' : 'Plan could not be saved', !ok);
   }
 
@@ -1639,6 +2054,7 @@
     state.leaders = sampleLeaders();
     state.enemies = sampleEnemies();
     state.responses = [];
+    state.joiners = defaultJoinerState();
     state.frozenAt = null;
     applyPrefs();
     renderAll();
@@ -1659,6 +2075,10 @@
       state.prefs.defenseOutcome = 'uncertain';
     }
     state.leaders = readJSON(STORAGE.leaders, null) || sampleLeaders();
+    state.leaders.forEach(ensureLeaderJoinerProfile);
+    const savedJoiners = readJSON(STORAGE.joiners, null) || {};
+    state.joiners = { ...defaultJoinerState(), ...savedJoiners };
+    state.joiners.heroCounts = { ...defaultJoinerState().heroCounts, ...(savedJoiners.heroCounts || {}) };
     const wave = readJSON(STORAGE.wave, null);
     state.enemies = wave?.enemies || sampleEnemies();
     state.enemies.forEach(enemy => {
@@ -1691,6 +2111,7 @@
   function renderAll() {
     applyPrefs();
     renderLeaders();
+    renderJoinerTactics();
     renderEnemies();
     renderResponses();
     if (state.frozenAt) $('snapshotMeta').textContent = `Frozen ${new Date(state.frozenAt).toLocaleTimeString()}. Gather + March rows use this snapshot; relative rows follow their selected friendly rallies.`;
@@ -1701,6 +2122,7 @@
     state.leaders.push({ id:uid('leader'), enabled:true, alliance:'A', name:'', march:'0:32', gather:5, role:'Custom' });
     persistLibrary();
     renderLeaders();
+    renderJoinerTactics();
     renderEnemies();
     renderResponses();
   }
@@ -1762,7 +2184,7 @@
     });
     $('compactBtn').addEventListener('click', () => {
       state.prefs.compact = !state.prefs.compact;
-      applyPrefs(); savePrefs();
+      applyPrefs(); savePrefs(); calculatePlan();
     });
     document.querySelectorAll('[name="battleMode"]').forEach(r => r.addEventListener('change', e => {
       const previousMode = state.prefs.mode;
