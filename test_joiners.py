@@ -18,9 +18,11 @@ def test_jessie_jasser():
 def test_seo_yoon_vs_jessie():
     seo = apply_joiner_primary_skills(["Seo-Yoon"])["modifiers"]["infantry"]
     jessie = apply_joiner_primary_skills(["Jessie"])["modifiers"]["infantry"]
-    assert seo["damage_up"] == 0.25
+    assert seo["attack_up"] == 0.25
+    assert seo["damage_up"] == 0
+    assert jessie["attack_up"] == 0
     assert jessie["damage_up"] == 0.25
-    assert seo == jessie
+    assert seo != jessie
 
 if __name__ == "__main__":
     test_jessie_jasser()

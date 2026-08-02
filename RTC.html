@@ -112,6 +112,8 @@
     .hero-supply-name strong { display:block; color:var(--hi); font-size:12px; overflow-wrap:anywhere; }
     .hero-supply-name span { display:block; color:var(--dim); font-size:10px; overflow-wrap:anywhere; }
     .hero-supply-row input { min-height:34px; padding:6px 8px; }
+    .experimental-control { display:flex; gap:8px; align-items:flex-start; margin-top:10px; padding:8px 9px; border:1px solid rgba(255,180,70,.28); border-radius:8px; background:rgba(255,180,70,.07); color:var(--dim); font-size:10px; line-height:1.35; }
+    .experimental-control input { margin-top:2px; }
     .joiner-profile-table { min-width:920px; }
     .joiner-results { margin-top:11px; border-top:1px solid var(--border); }
     .joiner-result { display:grid; grid-template-columns:minmax(135px,.8fr) minmax(210px,1.2fr) minmax(190px,1fr); gap:10px; align-items:center; padding:10px 2px; border-bottom:1px solid var(--border); }
@@ -236,9 +238,9 @@
         <div class="card-head">
           <div>
             <div class="section-title">1B. Hero Joiner Tactics</div>
-            <div class="section-help">Primary expedition skill only, maximum four contributing joiners per rally. Every modeled joiner skill is fixed at Skill Level 5.</div>
+            <div class="section-help">Primary expedition skill only, maximum four contributing joiners per rally. Same exact stat/scope buckets add; distinct buckets multiply in the damage and defense equations.</div>
           </div>
-          <div class="pill pill-a" id="joinerModelStatus">Level 5 recommendation model</div>
+          <div class="pill pill-a" id="joinerModelStatus">Evidence-based Level 5 model</div>
         </div>
         <div class="joiner-layout">
           <div>
@@ -265,6 +267,7 @@
             <div class="joiner-band">
               <div class="section-title">Available joining heroes</div>
               <div class="hero-supply" id="heroSupply"></div>
+              <label class="experimental-control"><input id="enableExperimentalGwen" type="checkbox" /><span><strong>Enable experimental Gwen</strong><br />Use her full +25% target Damage Taken tooltip in recommendations. Off by default because current PvP activation/uptime evidence is not strong enough for a production stack.</span></label>
             </div>
           </div>
         </div>
@@ -428,7 +431,7 @@
         <p>Friendly launch point = desired hit point - rally gathering duration - leader march time. Friendly launch points are sorted, then shown as LAUNCH FIRST and relative delays after the previous friendly launcher.</p>
         <p>Friendly State means: Ready = waiting for your declaration; Gathering = rally is already open and Remaining is fill time left; Marching = rally has launched and Remaining is march time left.</p>
         <p>Every enabled Alliance A leader becomes part of the capture wave; known roles guide the order and Castle holder stays last when available. Alliance B leaders targeted by later enemies are placed where needed, then every remaining enabled Alliance B rally lands after the final enemy counter, one second apart.</p>
-        <p>Hero joiner damage uses Attack x (1 + Attack bonuses) x Lethality x (1 + Lethality bonuses) / 100, then applies Damage Up and Attack Damage Up. Defense mirrors it with Defense and Health. Only the primary skill from the first four modeled joiners contributes.</p>
+        <p>Hero joiner damage uses Attack × (1 + Attack bonuses) × Lethality × (1 + Lethality bonuses) / 100. Exact Damage Dealt buckets add internally; all-troop, troop-specific, and target-side buckets multiply. Defense uses Defense × Health, then applies separate incoming-damage layers. Every local recommendation scores the complete Infantry/Lancer/Marksman formation, not only its dominant troop. Only the primary skill from the first four modeled joiners contributes.</p>
       </div>
     </details>
   </section>
@@ -483,9 +486,12 @@
   const enemyLabels = ['Castle Garrison','Enemy Counter','Enemy Final Counter','Enemy Attack','Custom'];
   const joinerGoalOptions = [
     { value:'auto', label:'Auto from role' },
-    { value:'damage', label:'Damage' },
-    { value:'balanced', label:'Balanced' },
-    { value:'survival', label:'Survival' }
+    { value:'KILL_INFANTRY', label:'Kill Infantry · Marksmen focus' },
+    { value:'KILL_LANCERS', label:'Kill Lancers · Infantry focus' },
+    { value:'KILL_MARKSMEN', label:'Kill Marksmen · Lancer focus' },
+    { value:'GARRISON_HOLD', label:'Garrison hold · maximum defense' },
+    { value:'GARRISON_BALANCED', label:'Garrison · balanced hold / damage' },
+    { value:'COUNTER_BREAK', label:'Break counter-rally · balanced offense' }
   ];
   const joinerTargetOptions = [
     { value:'', label:'Not observed' },
@@ -494,13 +500,19 @@
     { value:'marksman', label:'Marksman' }
   ];
   const joinerHeroes = [
-    { id:'reina', name:'Reina', effect:'attack_damage_up', value:0.30, scope:'all', label:'+30% attack damage' },
-    { id:'jeronimo', name:'Jeronimo', effect:'damage_up', value:0.25, scope:'all', label:'+25% damage' },
-    { id:'jessie', name:'Jessie', effect:'damage_up', value:0.25, scope:'all', label:'+25% damage' },
-    { id:'seo-yoon', name:'Seo-Yoon', effect:'damage_up', value:0.25, scope:'all', label:'+25% damage' },
-    { id:'jasser', name:'Jasser', effect:'damage_up', value:0.25, scope:'all', label:'+25% damage' },
-    { id:'flint', name:'Flint', effect:'damage_up', value:1.00, scope:'infantry', label:'+100% infantry damage' },
-    { id:'philly', name:'Philly', effect:'attack_up', value:0.15, scope:'all', label:'+15% attack' }
+    { id:'jessie', name:'Jessie', label:'+25% all-troop Damage Dealt', effects:[{ effect:'damage_up', value:0.25, scope:'all', stackKey:'friendly:all:damage_dealt', bucketLabel:'Damage Dealt' }] },
+    { id:'jasser', name:'Jasser', label:'+25% all-troop Damage Dealt', effects:[{ effect:'damage_up', value:0.25, scope:'all', stackKey:'friendly:all:damage_dealt', bucketLabel:'Damage Dealt' }] },
+    { id:'seo-yoon', name:'Seo-Yoon', label:'+25% all-troop Attack', effects:[{ effect:'attack_up', value:0.25, scope:'all', stackKey:'friendly:all:attack', bucketLabel:'Attack' }] },
+    { id:'lumak', name:'Lumak', label:'−20% enemy Damage Dealt', effects:[{ effect:'enemy_damage_dealt_down', value:0.20, scope:'all', stackKey:'enemy:all:damage_dealt', bucketLabel:'Enemy Damage Dealt', displaySign:-1 }] },
+    { id:'ling', name:'Ling', label:'−20% enemy Attack', effects:[{ effect:'enemy_attack_down', value:0.20, scope:'all', stackKey:'enemy:all:attack', bucketLabel:'Enemy Attack', displaySign:-1 }] },
+    { id:'patrick', name:'Patrick', label:'+25% all-troop Health', effects:[{ effect:'health_up', value:0.25, scope:'all', stackKey:'friendly:all:health', bucketLabel:'Health' }] },
+    { id:'sergey', name:'Sergey', label:'−20% troop Damage Taken', effects:[{ effect:'damage_taken_down', value:0.20, scope:'all', stackKey:'friendly:all:damage_taken', bucketLabel:'Damage Taken', displaySign:-1 }] },
+    { id:'gwen', name:'Gwen', label:'+25% target Damage Taken · experimental', experimental:true, effects:[{ effect:'enemy_damage_taken_up', value:0.25, scope:'all', stackKey:'enemy:all:damage_taken', bucketLabel:'Target Damage Taken' }] },
+    { id:'philly', name:'Philly', label:'+15% Attack · +10% Defense', effects:[
+      { effect:'attack_up', value:0.15, scope:'all', stackKey:'friendly:all:attack', bucketLabel:'Attack' },
+      { effect:'defense_up', value:0.10, scope:'all', stackKey:'friendly:all:defense', bucketLabel:'Defense' }
+    ] },
+    { id:'flint', name:'Flint', label:'+100% Infantry Damage Dealt', effects:[{ effect:'damage_up', value:1.00, scope:'infantry', stackKey:'friendly:infantry:damage_dealt', bucketLabel:'Infantry Damage Dealt' }] }
   ];
   let joinerRequestTimer = null;
   let joinerRequestSerial = 0;
@@ -516,6 +528,7 @@
       enemyLethality:null,
       enemyDefense:null,
       enemyHealth:null,
+      includeExperimentalGwen:false,
       heroCounts:Object.fromEntries(joinerHeroes.map(hero => [hero.id, 1]))
     };
   }
@@ -599,6 +612,13 @@
   }
 
   function ensureLeaderJoinerProfile(leader) {
+    const legacyTargetGoals = { infantry:'KILL_INFANTRY', lancer:'KILL_LANCERS', marksman:'KILL_MARKSMEN' };
+    const legacyGoals = {
+      damage:legacyTargetGoals[leader.enemyTroopType] || 'KILL_INFANTRY',
+      balanced:'GARRISON_BALANCED',
+      survival:'GARRISON_HOLD'
+    };
+    if (legacyGoals[leader.joinerGoal]) leader.joinerGoal = legacyGoals[leader.joinerGoal];
     const validGoal = joinerGoalOptions.some(option => option.value === leader.joinerGoal);
     leader.joinerGoal = validGoal ? leader.joinerGoal : 'auto';
     const current = leader.troopSplit || {};
@@ -626,9 +646,12 @@
   function resolvedJoinerGoal(leader) {
     ensureLeaderJoinerProfile(leader);
     if (leader.joinerGoal !== 'auto') return leader.joinerGoal;
-    if (['Post-wave reinforce','Garrison support','Reinforcement'].includes(leader.role)) return 'survival';
-    if (leader.role === 'Castle holder') return 'balanced';
-    return 'damage';
+    if (leader.role === 'Infantry killer') return 'KILL_INFANTRY';
+    if (['Post-wave reinforce','Garrison support','Reinforcement'].includes(leader.role)) return 'GARRISON_HOLD';
+    if (leader.role === 'Castle holder') return 'GARRISON_BALANCED';
+    if (/counter|final hit|retaker/i.test(leader.role)) return 'COUNTER_BREAK';
+    if (leader.enemyTroopType) return ({ infantry:'KILL_INFANTRY', lancer:'KILL_LANCERS', marksman:'KILL_MARKSMEN' })[leader.enemyTroopType];
+    return 'KILL_INFANTRY';
   }
 
   function joinerGoalLabel(goal) {
@@ -652,32 +675,65 @@
     return ['infantry','lancer','marksman'].sort((a,b) => split[b] - split[a] || a.localeCompare(b))[0];
   }
 
+  function targetTroopForGoal(goal) {
+    return ({ KILL_INFANTRY:'infantry', KILL_LANCERS:'lancer', KILL_MARKSMEN:'marksman' })[goal] || '';
+  }
+
+  function resolvedEnemyTroopType(leader, goal = resolvedJoinerGoal(leader)) {
+    return targetTroopForGoal(goal) || leader.enemyTroopType || '';
+  }
+
+  function counterTroopForTarget(target) {
+    return ({ infantry:'marksman', lancer:'infantry', marksman:'lancer' })[target] || '';
+  }
+
   function joinerObjective(goal) {
-    if (goal === 'survival') return 'MAX_DEFENSE';
-    if (goal === 'balanced') return 'BALANCED';
-    return 'MAX_DAMAGE';
+    return goal;
+  }
+
+  function heroEffectList(hero) {
+    if (Array.isArray(hero.effects)) return hero.effects;
+    return [{
+      effect:hero.effect,
+      value:Number(hero.value || 0),
+      scope:hero.scope || 'all',
+      stackKey:`friendly:${hero.scope || 'all'}:${hero.effect || 'unknown'}`,
+      bucketLabel:String(hero.effect || 'Skill').replaceAll('_', ' ')
+    }];
+  }
+
+  function configuredHeroCount(hero) {
+    if (hero.experimental && !state.joiners?.includeExperimentalGwen) return 0;
+    return Math.floor(boundedNumber(state.joiners?.heroCounts?.[hero.id], 0, 0, 20));
   }
 
   function emptyJoinerModifiers() {
     return Object.fromEntries(['infantry','lancer','marksman'].map(troop => [troop, {
       attack_up:0,
-      damage_up:0,
-      attack_damage_up:0,
+      damage_up_all:0,
+      damage_up_troop:0,
       lethality_up:0,
       defense_up:0,
       health_up:0,
-      damage_taken_down:0
+      damage_taken_down:0,
+      enemy_damage_taken_up:0,
+      enemy_attack_down:0,
+      enemy_damage_dealt_down:0
     }]));
   }
 
   function joinerModifiers(heroes) {
     const modifiers = emptyJoinerModifiers();
     heroes.slice(0, 4).forEach(hero => {
-      const targets = hero.scope === 'all' ? ['infantry','lancer','marksman'] : [hero.scope];
-      targets.forEach(troop => {
-        if (modifiers[troop] && Object.prototype.hasOwnProperty.call(modifiers[troop], hero.effect)) {
-          modifiers[troop][hero.effect] += hero.value;
-        }
+      heroEffectList(hero).forEach(effect => {
+        const targets = effect.scope === 'all' ? ['infantry','lancer','marksman'] : [effect.scope];
+        targets.forEach(troop => {
+          if (!modifiers[troop]) return;
+          const key = effect.effect === 'damage_up'
+            ? (effect.scope === 'all' ? 'damage_up_all' : 'damage_up_troop')
+            : effect.effect;
+          if (Object.prototype.hasOwnProperty.call(modifiers[troop], key)) modifiers[troop][key] += effect.value;
+        });
       });
     });
     return modifiers;
@@ -690,17 +746,32 @@
     const lethalityBonus = boundedNumber(state.joiners?.lethality, 100, 0, 10000) / 100;
     const defenseBonus = boundedNumber(state.joiners?.defense, 100, 0, 10000) / 100;
     const healthBonus = boundedNumber(state.joiners?.health, 100, 0, 10000) / 100;
+    const targetTroop = resolvedEnemyTroopType(leader);
+    const counters = { infantry:'lancer', lancer:'marksman', marksman:'infantry' };
     let damage = 0;
     let defense = 0;
+    const troopDamage = {};
+    const troopDefense = {};
     ['infantry','lancer','marksman'].forEach(troop => {
       const mod = modifiers[troop];
       const baseDamage = ((1 + attackBonus + mod.attack_up) * (1 + lethalityBonus + mod.lethality_up)) / 100;
-      const layeredDamage = baseDamage * (1 + mod.damage_up + mod.attack_damage_up);
+      const counterMultiplier = targetTroop && counters[troop] === targetTroop ? 1.10 : 1.00;
+      const layeredDamage = baseDamage
+        * (1 + mod.damage_up_all)
+        * (1 + mod.damage_up_troop)
+        * (1 + mod.enemy_damage_taken_up)
+        * counterMultiplier;
       const defensePower = ((1 + defenseBonus + mod.defense_up) * (1 + healthBonus + mod.health_up)) / 100;
+      const layeredDefense = defensePower
+        * (1 + mod.enemy_attack_down)
+        * (1 + mod.enemy_damage_dealt_down)
+        * (1 + mod.damage_taken_down);
+      troopDamage[troop] = layeredDamage;
+      troopDefense[troop] = layeredDefense;
       damage += split[troop] * layeredDamage;
-      defense += split[troop] * defensePower;
+      defense += split[troop] * layeredDefense;
     });
-    return { damage, defense };
+    return { damage, defense, troopDamage, troopDefense, targetTroop };
   }
 
   function percentGain(before, after) {
@@ -708,9 +779,10 @@
   }
 
   function joinerGoalWeights(goal) {
-    if (goal === 'survival') return { damage:0.25, defense:0.75 };
-    if (goal === 'balanced') return { damage:0.60, defense:0.40 };
-    return { damage:0.90, defense:0.10 };
+    if (goal === 'GARRISON_HOLD') return { damage:0, defense:1 };
+    if (goal === 'GARRISON_BALANCED') return { damage:0.50, defense:0.50 };
+    if (goal === 'COUNTER_BREAK') return { damage:0.75, defense:0.25 };
+    return { damage:1, defense:0 };
   }
 
   function joinerRolePriority(role) {
@@ -724,11 +796,17 @@
   function joinerUtility(leader, heroes) {
     const base = calculateRallyIndexes(leader, []);
     const result = calculateRallyIndexes(leader, heroes);
-    const weights = joinerGoalWeights(resolvedJoinerGoal(leader));
+    const goal = resolvedJoinerGoal(leader);
+    const weights = joinerGoalWeights(goal);
+    const targetCounter = counterTroopForTarget(resolvedEnemyTroopType(leader, goal));
+    const damageRatio = goal.startsWith('KILL_') && targetCounter
+      ? result.troopDamage[targetCounter] / base.troopDamage[targetCounter]
+      : (base.damage > 0 ? result.damage / base.damage : 1);
+    const defenseRatio = base.defense > 0 ? result.defense / base.defense : 1;
     return (
-      percentGain(base.damage, result.damage) * weights.damage +
-      percentGain(base.defense, result.defense) * weights.defense
-    ) * joinerRolePriority(leader.role);
+      Math.pow(Math.max(0, damageRatio), weights.damage) *
+      Math.pow(Math.max(0, defenseRatio), weights.defense) - 1
+    ) * 100 * joinerRolePriority(leader.role);
   }
 
   function plannedJoinerLeaders() {
@@ -749,7 +827,7 @@
     const assignments = new Map(leaders.map(leader => [leader.id, []]));
     const supply = [];
     joinerHeroes.forEach(hero => {
-      const count = Math.floor(boundedNumber(state.joiners?.heroCounts?.[hero.id], 0, 0, 20));
+      const count = configuredHeroCount(hero);
       for (let index = 0; index < count; index += 1) supply.push({ ...hero, instance:index });
     });
     while (supply.length && leaders.some(leader => assignments.get(leader.id).length < 4)) {
@@ -786,14 +864,15 @@
   }
 
   function availableJoinerLineups(remaining, joinerCount) {
+    const eligibleHeroes = joinerHeroes.filter(hero => !hero.experimental || state.joiners?.includeExperimentalGwen);
     const lineups = [];
     function visit(heroIndex, slotsLeft, selected) {
       if (slotsLeft === 0) {
         lineups.push(selected);
         return;
       }
-      if (heroIndex >= joinerHeroes.length) return;
-      const hero = joinerHeroes[heroIndex];
+      if (heroIndex >= eligibleHeroes.length) return;
+      const hero = eligibleHeroes[heroIndex];
       const limit = Math.min(slotsLeft, Math.max(0, remaining[hero.id] || 0), 4);
       for (let count = limit; count >= 0; count -= 1) {
         visit(heroIndex + 1, slotsLeft - count, selected.concat(Array(count).fill(hero)));
@@ -803,16 +882,11 @@
     return lineups;
   }
 
-  function localCounterMultiplier(leader) {
-    const counters = { infantry:'lancer', lancer:'marksman', marksman:'infantry' };
-    return counters[dominantTroopType(leader)] === leader.enemyTroopType ? 1.10 : 1.00;
-  }
-
   function calculateExhaustiveJoinerAssignments() {
     const leaders = plannedJoinerLeaders();
     const remaining = Object.fromEntries(joinerHeroes.map(hero => [
       hero.id,
-      Math.floor(boundedNumber(state.joiners?.heroCounts?.[hero.id], 0, 0, 20))
+      configuredHeroCount(hero)
     ]));
     const totalSupply = Math.min(leaders.length * 4, Object.values(remaining).reduce((sum, count) => sum + count, 0));
     const { ordered, quotas } = joinerPlanQuotas(leaders, totalSupply);
@@ -825,13 +899,14 @@
         const result = calculateRallyIndexes(leader, heroes);
         const damageGain = percentGain(base.damage, result.damage);
         const defenseGain = percentGain(base.defense, result.defense);
-        const damageRatio = base.damage > 0 ? result.damage / base.damage : 1;
+        const targetCounter = counterTroopForTarget(resolvedEnemyTroopType(leader, goal));
+        const damageRatio = goal.startsWith('KILL_') && targetCounter
+          ? result.troopDamage[targetCounter] / base.troopDamage[targetCounter]
+          : (base.damage > 0 ? result.damage / base.damage : 1);
         const defenseRatio = base.defense > 0 ? result.defense / base.defense : 1;
-        const objectiveValue = goal === 'survival'
-          ? result.defense
-          : goal === 'balanced'
-            ? Math.sqrt(Math.max(0, damageRatio * defenseRatio))
-            : result.damage;
+        const weights = joinerGoalWeights(goal);
+        const objectiveValue = Math.pow(Math.max(0, damageRatio), weights.damage)
+          * Math.pow(Math.max(0, defenseRatio), weights.defense);
         return {
           heroes, result, damageGain, defenseGain, objectiveValue,
           key:heroes.map(hero => hero.id).sort().join('|')
@@ -845,7 +920,7 @@
       const winner = ranked[0] || { heroes:[], result:base, damageGain:0, defenseGain:0 };
       winner.heroes.forEach(hero => { remaining[hero.id] = Math.max(0, remaining[hero.id] - 1); });
       const warnings = [];
-      if (goal === 'survival' && winner.defenseGain === 0) {
+      if (goal === 'GARRISON_HOLD' && winner.defenseGain === 0) {
         warnings.push('No configured level-5 primary joiner skill increases Defense, Health, or Damage Taken Reduction; the defense tie was resolved by damage and deterministic tie-breaks.');
       }
       planByLeader.set(leader.id, {
@@ -864,8 +939,8 @@
           alternatives:ranked.slice(1, 3).map(item => ({ joiners:item.heroes.map(hero => hero.name) })),
           explanations:[],
           warnings,
-          counterMultiplier:localCounterMultiplier(leader),
-          dominantTroop:dominantTroopType(leader),
+          targetTroop:resolvedEnemyTroopType(leader, goal),
+          formationWeighted:true,
           reportComparison:false
         }
       });
@@ -951,7 +1026,7 @@
     if (!leaders.length) return;
     const remaining = Object.fromEntries(joinerHeroes.map(hero => [
       hero.id,
-      Math.floor(boundedNumber(state.joiners?.heroCounts?.[hero.id], 0, 0, 20))
+      configuredHeroCount(hero)
     ]));
     const totalSupply = Math.min(leaders.length * 4, Object.values(remaining).reduce((sum, count) => sum + count, 0));
     const { ordered, quotas } = joinerPlanQuotas(leaders, totalSupply);
@@ -982,12 +1057,16 @@
           continue;
         }
         const availableHeroIds = Object.keys(remaining).filter(heroId => remaining[heroId] > 0);
+        const weights = joinerGoalWeights(goal);
+        const troopSplit = normalizedTroopSplit(leader);
+        const targetTroop = resolvedEnemyTroopType(leader, goal);
         const response = await requestJoinerRecommendation({
           objective:joinerObjective(goal),
           joinerCount,
           allowDuplicateHeroes:true,
-          troopType:dominantTroopType(leader),
-          enemyTroopType:leader.enemyTroopType || null,
+          troopType:counterTroopForTarget(targetTroop) || dominantTroopType(leader),
+          troopSplit,
+          enemyTroopType:targetTroop || null,
           baseStats:{ attack:1, defense:1, health:1, lethality:1 },
           currentBuffs:{
             attack:boundedNumber(state.joiners?.attack, 0, 0, 10000) / 100,
@@ -1000,35 +1079,37 @@
           enemyStats,
           availableHeroIds,
           availableHeroCounts:remaining,
-          excludedHeroIds:[],
+          excludedHeroIds:state.joiners?.includeExperimentalGwen ? [] : ['gwen'],
+          includeExperimentalSkills:!!state.joiners?.includeExperimentalGwen,
           minimumSkillLevel:5,
-          conditionalEvaluation:'EXCLUDED',
-          attackWeight:0.5,
-          defenseWeight:0.5,
+          conditionalEvaluation:state.joiners?.includeExperimentalGwen ? 'GUARANTEED' : 'EXCLUDED',
+          attackWeight:weights.damage,
+          defenseWeight:weights.defense,
           alternativeCount:2
         }, controller.signal);
         const heroes = response.recommendedJoiners.map(recommendationHero);
         response.recommendedJoiners.forEach(item => {
           remaining[item.heroId] = Math.max(0, (remaining[item.heroId] || 0) - 1);
         });
-        const scores = response.scores;
+        const localBase = calculateRallyIndexes(leader, []);
+        const localResult = calculateRallyIndexes(leader, heroes);
         planByLeader.set(leader.id, {
           leader,
           heroes,
           goal,
           split:normalizedTroopSplit(leader),
-          base:{ damage:scores.damageScoreBeforeJoiners, defense:scores.defenseScoreBeforeJoiners },
-          result:{ damage:scores.damageScoreAfterJoiners, defense:scores.defenseScoreAfterJoiners },
-          damageGain:scores.damageImprovementPercentage,
-          defenseGain:scores.defenseImprovementPercentage,
+          base:localBase,
+          result:localResult,
+          damageGain:percentGain(localBase.damage, localResult.damage),
+          defenseGain:percentGain(localBase.defense, localResult.defense),
           backend:{
             objective:response.objective,
             evaluated:response.evaluatedCombinations,
             alternatives:response.alternatives || [],
             explanations:response.stackingExplanation || [],
             warnings:response.warnings || [],
-            counterMultiplier:scores.counterMultiplier,
-            dominantTroop:dominantTroopType(leader),
+            targetTroop,
+            formationWeighted:true,
             reportComparison:!!enemyStats
           }
         });
@@ -1522,7 +1603,7 @@
     supply.innerHTML = joinerHeroes.map(hero => `
       <label class="hero-supply-row">
         <span class="hero-supply-name"><strong>${esc(hero.name)}</strong><span>${esc(hero.label)}</span></span>
-        <input type="number" min="0" max="20" step="1" value="${esc(state.joiners.heroCounts[hero.id])}" data-hero-id="${esc(hero.id)}" aria-label="Available ${esc(hero.name)} joiners" />
+        <input type="number" min="0" max="20" step="1" value="${esc(state.joiners.heroCounts[hero.id])}" data-hero-id="${esc(hero.id)}" ${hero.experimental && !state.joiners.includeExperimentalGwen ? 'disabled' : ''} aria-label="Available ${esc(hero.name)} joiners" />
       </label>`).join('');
     supply.querySelectorAll('[data-hero-id]').forEach(input => {
       input.addEventListener('input', event => {
@@ -1532,23 +1613,32 @@
         refreshJoinerOutcome();
       });
     });
+    const experimentalGwen = $('enableExperimentalGwen');
+    experimentalGwen.checked = !!state.joiners.includeExperimentalGwen;
+    experimentalGwen.onchange = event => {
+      state.joiners.includeExperimentalGwen = !!event.target.checked;
+      persistJoinerTactics();
+      renderJoinerTactics();
+    };
 
     const rows = $('joinerProfileRows');
     rows.innerHTML = '';
     state.leaders.filter(leader => leader.enabled).forEach(leader => {
       ensureLeaderJoinerProfile(leader);
+      const fixedTarget = targetTroopForGoal(leader.joinerGoal);
+      const displayedTarget = fixedTarget || leader.enemyTroopType;
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td><div class="rname">${esc(leader.name || 'Unnamed leader')}</div><div class="rmeta">Alliance ${esc(leader.alliance)} · ${esc(leader.role)}</div></td>
         <td><select class="joiner-goal">${joinerGoalOptions.map(option => `<option value="${esc(option.value)}" ${leader.joinerGoal === option.value ? 'selected' : ''}>${esc(option.label)}</option>`).join('')}</select></td>
-        <td><select class="enemy-troop-target">${joinerTargetOptions.map(option => `<option value="${esc(option.value)}" ${leader.enemyTroopType === option.value ? 'selected' : ''}>${esc(option.label)}</option>`).join('')}</select></td>
+        <td><select class="enemy-troop-target" ${fixedTarget ? 'disabled' : ''}>${joinerTargetOptions.map(option => `<option value="${esc(option.value)}" ${displayedTarget === option.value ? 'selected' : ''}>${esc(option.label)}</option>`).join('')}</select></td>
         <td><input class="troop-infantry" type="number" min="0" max="100" step="1" value="${esc(leader.troopSplit.infantry)}" /></td>
         <td><input class="troop-lancer" type="number" min="0" max="100" step="1" value="${esc(leader.troopSplit.lancer)}" /></td>
         <td><input class="troop-marksman" type="number" min="0" max="100" step="1" value="${esc(leader.troopSplit.marksman)}" /></td>`;
       tr.querySelector('.joiner-goal').addEventListener('change', event => {
         leader.joinerGoal = event.target.value;
         persistLibrary();
-        refreshJoinerOutcome();
+        renderJoinerTactics();
       });
       tr.querySelector('.enemy-troop-target').addEventListener('change', event => {
         leader.enemyTroopType = event.target.value;
@@ -1575,14 +1665,43 @@
     return [...counts.entries()].map(([name, count]) => count > 1 ? `${name} x${count}` : name);
   }
 
+  function joinerStackSummary(heroes) {
+    const buckets = new Map();
+    heroes.forEach(hero => heroEffectList(hero).forEach(effect => {
+      const key = effect.stackKey || `${effect.scope || 'all'}:${effect.effect}`;
+      const current = buckets.get(key) || { label:effect.bucketLabel || effect.effect, value:0, sign:effect.displaySign || 1, copies:0 };
+      current.value += Number(effect.value || 0);
+      current.copies += 1;
+      buckets.set(key, current);
+    }));
+    return [...buckets.values()].map(bucket => {
+      const sign = bucket.sign < 0 ? '−' : '+';
+      const additive = bucket.copies > 1 ? ' additive' : '';
+      return `${bucket.label} ${sign}${Math.round(bucket.value * 1000) / 10}%${additive}`;
+    }).join('; ');
+  }
+
+  function joinerGoalRationale(item) {
+    const target = resolvedEnemyTroopType(item.leader, item.goal);
+    const counter = counterTroopForTarget(target);
+    if (item.goal.startsWith('KILL_')) return `Targets ${target}; ${counter} receives the counter layer while all troop shares remain in the score.`;
+    if (item.goal === 'GARRISON_HOLD') return 'Maximizes Defense × Health and the independent enemy-Attack, enemy-Damage-Dealt, and Damage-Taken layers.';
+    if (item.goal === 'GARRISON_BALANCED') return 'Geometric 50/50 damage and durability score for holding while counter-killing.';
+    return `Weights counter-rally damage 75% and durability 25%${target ? ` against ${target}` : ''}.`;
+  }
+
   function joinerRationale(item) {
     if (!item.heroes.length) return 'No modeled joining hero is available for this rally.';
-    const parts = [];
+    const split = item.split || normalizedTroopSplit(item.leader);
+    const parts = [
+      joinerGoalRationale(item),
+      `Formation weighted ${Math.round(split.infantry * 100)}% Infantry / ${Math.round(split.lancer * 100)}% Lancer / ${Math.round(split.marksman * 100)}% Marksman.`,
+      `Stack buckets: ${joinerStackSummary(item.heroes)}. Distinct buckets multiply.`
+    ];
     if (item.backend) {
       const objective = String(item.backend.objective || '').replaceAll('_', ' ').toLowerCase();
       const count = item.backend.evaluated || 0;
-      parts.push(`Level 5 engine evaluated ${count} valid combination${count === 1 ? '' : 's'} for ${objective || 'this objective'} using ${item.backend.dominantTroop || dominantTroopType(item.leader)} as the dominant troop.`);
-      if (item.backend.counterMultiplier === 1.1) parts.push(`The 1.10 counter multiplier against ${item.leader.enemyTroopType} is included.`);
+      parts.push(`Level 5 engine evaluated ${count} valid combination${count === 1 ? '' : 's'} for ${objective || 'this objective'}.`);
       if (item.backend.reportComparison) parts.push('Enemy report penetration and incoming-pressure ratios are included.');
       const firstWarning = item.backend.warnings?.[0];
       if (firstWarning) parts.push(firstWarning);
@@ -1590,18 +1709,11 @@
       if (alternative?.joiners?.length) {
         parts.push(`Next best: ${joinerLineupLabels(alternative.joiners.map(name => ({ name }))).join(', ')}.`);
       }
-      return parts.join(' ');
-    }
-    if (item.goal === 'survival' && item.defenseGain === 0) {
-      parts.push('No verified Defense or Health primary buff is available; this assignment only raises outgoing damage.');
-    } else if (item.goal === 'balanced') {
-      parts.push('Balanced for the capture and hold phase using measurable primary-skill gains.');
-    } else {
-      parts.push('Prioritized for outgoing damage at this point in the hit chain.');
     }
     if (item.heroes.some(hero => hero.id === 'flint')) {
       parts.push(`Flint is weighted against this rally's ${Math.round(item.split.infantry * 100)}% Infantry share.`);
     }
+    if (item.heroes.some(hero => hero.id === 'gwen')) parts.push('Experimental Gwen is enabled at her full tooltip value; treat this lineup as a scenario, not a validated production stack.');
     return parts.join(' ');
   }
 
@@ -1641,7 +1753,7 @@
     const results = $('joinerResults');
     if (!plan.length) {
       results.innerHTML = '<div class="joiner-empty">Joiner outcomes will appear for enabled friendly rallies.</div>';
-      $('joinerModelStatus').textContent = 'Level 5 recommendation model';
+      $('joinerModelStatus').textContent = 'Evidence-based Level 5 model';
       return;
     }
     const assigned = plan.reduce((sum, item) => sum + item.heroes.length, 0);
@@ -1652,7 +1764,7 @@
     } else if (state.joinerBackend?.status === 'browser') {
       $('joinerModelStatus').textContent = `${assigned} level 5 joins · browser engine`;
     } else {
-      $('joinerModelStatus').textContent = `${assigned} joins assigned · checking level 5 engine`;
+      $('joinerModelStatus').textContent = `${assigned} joins assigned · formation-weighted model`;
     }
     results.innerHTML = plan.map(item => {
       const lineup = joinerLineupLabels(item.heroes);

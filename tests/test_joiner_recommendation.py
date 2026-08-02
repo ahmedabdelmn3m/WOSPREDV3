@@ -67,7 +67,7 @@ class JoinerRecommendationTests(unittest.TestCase):
         self.assertEqual(stacked.totals["defense_bonus"], 0)
         self.assertEqual(stacked.totals["health_bonus"], 0)
         score = calculate_defense_score(CombatStats(), CombatBuffs(), stacked.totals)
-        self.assertAlmostEqual(score["score"], 125.0)
+        self.assertAlmostEqual(score["score"], 120.0)
 
     def test_05_counter_advantage_is_ten_percent(self):
         self.assertEqual(calculate_counter_multiplier("infantry", "lancer"), 1.10)
@@ -183,11 +183,12 @@ class JoinerRecommendationTests(unittest.TestCase):
         )
         self.assertAlmostEqual(stacked.totals["attack_bonus"], 0.20)
 
-    def test_23_damage_reduction_at_one_hundred_percent_is_rejected(self):
-        with self.assertRaisesRegex(ValueError, "cannot reach or exceed 100%"):
-            calculate_defense_score(
-                CombatStats(), CombatBuffs(), {"damage_taken_reduction": 1.0}
-            )
+    def test_23_reciprocal_damage_reduction_can_stack_to_one_hundred_percent(self):
+        score = calculate_defense_score(
+            CombatStats(), CombatBuffs(), {"damage_taken_reduction": 1.0}
+        )
+        self.assertAlmostEqual(score["score"], 200.0)
+        self.assertAlmostEqual(score["incoming_damage_multiplier"], 0.5)
 
 
 def CounterIds(combination):

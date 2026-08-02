@@ -45,7 +45,17 @@ class CombatBuffsInput(JoinerAPIModel):
 
 
 class JoinerRecommendationRequest(JoinerAPIModel):
-    objective: Literal["MAX_DAMAGE", "MAX_DEFENSE", "BALANCED"] = "MAX_DAMAGE"
+    objective: Literal[
+        "MAX_DAMAGE",
+        "MAX_DEFENSE",
+        "BALANCED",
+        "KILL_INFANTRY",
+        "KILL_LANCERS",
+        "KILL_MARKSMEN",
+        "GARRISON_HOLD",
+        "GARRISON_BALANCED",
+        "COUNTER_BREAK",
+    ] = "MAX_DAMAGE"
     joiner_count: int = Field(default=4, ge=1, le=4)
     allow_duplicate_heroes: bool = True
     troop_type: Literal["infantry", "lancer", "marksman"] = "infantry"
@@ -59,9 +69,11 @@ class JoinerRecommendationRequest(JoinerAPIModel):
     minimum_skill_level: Optional[int] = Field(default=5, ge=1, le=5)
     conditional_evaluation: Literal["GUARANTEED", "EXPECTED_VALUE", "EXCLUDED"] = "EXCLUDED"
     activation_probabilities: dict[str, float] = Field(default_factory=dict)
-    attack_weight: float = Field(default=0.5, ge=0, le=1)
-    defense_weight: float = Field(default=0.5, ge=0, le=1)
+    attack_weight: Optional[float] = Field(default=None, ge=0, le=1)
+    defense_weight: Optional[float] = Field(default=None, ge=0, le=1)
     alternative_count: int = Field(default=3, ge=0, le=10)
+    troop_split: Optional[dict[str, float]] = None
+    include_experimental_skills: bool = False
 
     @field_validator("available_hero_counts")
     @classmethod
@@ -78,9 +90,25 @@ class JoinerRecommendationRequest(JoinerAPIModel):
             raise ValueError("Activation probabilities must be between 0 and 1.")
         return value
 
+    @field_validator("troop_split")
+    @classmethod
+    def troop_split_is_valid(cls, value: Optional[dict[str, float]]) -> Optional[dict[str, float]]:
+        if value is None:
+            return value
+        unknown = set(value) - {"infantry", "lancer", "marksman"}
+        if unknown:
+            raise ValueError("Troop split may contain only infantry, lancer, and marksman.")
+        if any(amount < 0 for amount in value.values()) or sum(value.values()) <= 0:
+            raise ValueError("Troop split values must be non-negative with a positive total.")
+        return value
+
     @model_validator(mode="after")
     def balanced_weights_sum_to_one(self) -> "JoinerRecommendationRequest":
-        if abs((self.attack_weight + self.defense_weight) - 1.0) > 1e-9:
+        if (
+            self.attack_weight is not None
+            and self.defense_weight is not None
+            and abs((self.attack_weight + self.defense_weight) - 1.0) > 1e-9
+        ):
             raise ValueError("Attack and defense weights must sum to 1.")
         return self
 
@@ -103,4 +131,6 @@ class JoinerRecommendationRequest(JoinerAPIModel):
             "attack_weight": self.attack_weight,
             "defense_weight": self.defense_weight,
             "alternative_count": self.alternative_count,
+            "troop_split": self.troop_split,
+            "include_experimental_skills": self.include_experimental_skills,
         }

@@ -22,16 +22,16 @@ def test_only_primary_skill_slot_is_applied_for_joiners():
     assert result["modifiers"]["infantry"]["damage_up"] == 0.25
 
 
-def test_seo_yoon_corrected_to_damage_up_all_troops():
+def test_seo_yoon_is_attack_up_all_troops():
     skill = HEROES_BY_ID["seo-yoon"].primary_skill()
-    assert skill.effect_type == "damage_up"
+    assert skill.effect_type == "attack_up"
     assert skill.value_pct == 25.0
     assert skill.target_scope == "all_troops"
     result = apply_joiner_primary_skills(["seo-yoon"])
-    assert result["modifiers"]["infantry"]["damage_up"] == 0.25
-    assert result["modifiers"]["lancer"]["damage_up"] == 0.25
-    assert result["modifiers"]["marksman"]["damage_up"] == 0.25
-    assert result["modifiers"]["infantry"]["attack_up"] == 0
+    assert result["modifiers"]["infantry"]["attack_up"] == 0.25
+    assert result["modifiers"]["lancer"]["attack_up"] == 0.25
+    assert result["modifiers"]["marksman"]["attack_up"] == 0.25
+    assert result["modifiers"]["infantry"]["damage_up"] == 0
 
 
 def test_flint_damage_up_is_infantry_only():
@@ -41,10 +41,11 @@ def test_flint_damage_up_is_infantry_only():
     assert result["modifiers"]["marksman"]["damage_up"] == 0
 
 
-def test_jessie_jasser_seo_yoon_damage_up_applies_to_all_troops():
+def test_jessie_jasser_damage_and_seo_yoon_attack_apply_to_all_troops():
     result = apply_joiner_primary_skills(["jessie", "jasser", "seo-yoon"])
     for troop in ("infantry", "lancer", "marksman"):
-        assert result["modifiers"][troop]["damage_up"] == 0.75
+        assert result["modifiers"][troop]["damage_up"] == 0.50
+        assert result["modifiers"][troop]["attack_up"] == 0.25
 
 
 def test_philly_attack_up_is_separate_from_damage_up():
