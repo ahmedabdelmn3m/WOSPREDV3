@@ -28,6 +28,19 @@ def sample_army(name="Army", troop_count=100000):
     }
 
 
+def sample_complete_rally():
+    return {
+        "objective": "KILL_INFANTRY",
+        "leaderHeroes": [
+            {"heroId": "hector", "widgetLevel": 6},
+            {"heroId": "norah", "widgetLevel": 6},
+            {"heroId": "gwen", "widgetLevel": 6},
+        ],
+        "joinerHeroIds": ["jessie", "jasser", "seo-yoon", "flint"],
+        "troopType": "marksman",
+    }
+
+
 def test_health_endpoint():
     response = client.get("/health")
     assert response.status_code == 200
@@ -89,8 +102,8 @@ def test_joiner_recommendation_endpoint_returns_level_5_ranked_result():
             "joinerCount": 4,
             "allowDuplicateHeroes": True,
             "troopType": "infantry",
-            "availableHeroIds": ["reina", "jeronimo", "jessie", "flint"],
-            "availableHeroCounts": {"reina": 1, "jeronimo": 1, "jessie": 1, "flint": 1},
+            "availableHeroIds": ["jessie", "jasser", "seo-yoon", "flint"],
+            "availableHeroCounts": {"jessie": 1, "jasser": 1, "seo-yoon": 1, "flint": 1},
         },
     )
     assert response.status_code == 200
@@ -110,3 +123,66 @@ def test_joiner_recommendation_endpoint_rejects_invalid_reduction():
         },
     )
     assert response.status_code == 422
+
+
+def test_complete_rally_evaluation_endpoint_returns_exact_nine_plus_four_contract():
+    response = client.post("/api/rallies/evaluate", json=sample_complete_rally())
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["contract"]["leaderSkillSlots"] == 9
+    assert body["contract"]["requiredLeaderSkillSlots"] == 9
+    assert body["contract"]["joinerContributionSlots"] == 4
+    assert body["contract"]["requiredJoinerContributionSlots"] == 4
+    assert body["contract"]["complete"] is True
+    assert len(body["leaderSkills"]) == 9
+    assert len(body["joinerSkills"]) == 4
+    assert body["modelCoverage"]["totalSkillSlots"] == 13
+    assert body["modelCoverage"]["contractCompleteDoesNotImplyExactCombatModel"] is True
+
+
+def test_complete_rally_evaluation_endpoint_rejects_fewer_than_four_joiners():
+    payload = sample_complete_rally()
+    payload["joinerHeroIds"] = payload["joinerHeroIds"][:3]
+
+    response = client.post("/api/rallies/evaluate", json=payload)
+
+    assert response.status_code == 422
+
+
+def test_complete_rally_plan_endpoint_selects_by_full_nine_plus_four_outcome():
+    response = client.post(
+        "/api/rallies/optimize-plan",
+        json={
+            "rallies": [{
+                "rallyId": "castle-holder",
+                "objective": "GARRISON_BALANCED",
+                "leaderHeroes": [
+                    {"heroId": "jeronimo", "widgetLevel": 0},
+                    {"heroId": "molly", "widgetLevel": 0},
+                    {"heroId": "zinman", "widgetLevel": 0},
+                ],
+                "troopType": "infantry",
+                "troopSplit": {"infantry": 0.4, "lancer": 0.3, "marksman": 0.3},
+            }],
+            "availableHeroIds": [
+                "jessie", "jasser", "seo-yoon", "lumak", "ling",
+                "patrick", "sergey", "gwen", "philly", "flint",
+            ],
+            "availableHeroCounts": {
+                "jessie": 1, "jasser": 1, "seo-yoon": 1, "lumak": 1, "ling": 1,
+                "patrick": 1, "sergey": 1, "gwen": 1, "philly": 1, "flint": 1,
+            },
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    rally = body["rallies"][0]
+    assert body["optimizationKind"] == "GLOBAL_INVENTORY_COMPLETE_9_PLUS_4_EXPECTED_GOAL_LIFT"
+    assert {item["heroId"] for item in rally["recommendedJoiners"]} == {
+        "flint", "lumak", "patrick", "philly",
+    }
+    assert rally["evaluation"]["contract"]["leaderSkillSlots"] == 9
+    assert rally["evaluation"]["contract"]["joinerContributionSlots"] == 4
+    assert rally["evaluation"]["contract"]["complete"] is True

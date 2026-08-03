@@ -10,6 +10,8 @@ POST /army-preview           Inspect effective stats without battling
 POST /reverse-optimize       Find minimum stat upgrades to reach a win target
 POST /formation/optimize     Rank all standard formations for a matchup
 POST /api/rallies/joiner-recommendations  Rank level-5 rally joiner combinations
+POST /api/rallies/evaluate   Evaluate a complete 9-skill leader + 4-skill joiner rally
+POST /api/rallies/optimize-plan  Globally allocate joiners using complete 9+4 evaluations
 GET  /presets                List saved presets
 POST /presets                Save a preset
 GET  /presets/{name}         Load a specific preset
@@ -42,7 +44,9 @@ from mechanics.v2_calibrated_model  import V2CalibratedModel
 from hero_data import HEROES_BY_ID as STRUCTURED_HEROES, hero_to_dict
 from troop_data import all_troop_stats, get_troop_base_stats, expected_skill_modifiers, TROOP_SKILL_RULES
 from api.joiner_models import JoinerRecommendationRequest
+from api.rally_models import RallyEvaluationRequest, RallyPlanOptimizationRequest
 from core_engine.joiner_recommendation import JoinerRecommendationService
+from core_engine.rally_evaluation import RallyEvaluationService
 
 # ── Singletons (one per process) ─────────────────────────────────────────────
 _combat_engine     = CombatEngine()
@@ -53,6 +57,7 @@ _preset_manager    = PresetManager()
 _v1                = V1RawModel()
 _v2                = V2CalibratedModel(_v1)
 _joiner_recommendations = JoinerRecommendationService()
+_rally_evaluation = RallyEvaluationService()
 _prediction_runs: list[dict[str, Any]] = []
 _battle_logs: list[dict[str, Any]] = []
 _scout_uploads: list[dict[str, Any]] = []
@@ -533,6 +538,8 @@ async def root():
             "DELETE /presets/{name}":   "Delete a preset",
             "GET  /troop-stats":         "T10 Apex and T11 Helios troop base stats and skill rules",
             "POST /api/rallies/joiner-recommendations": "Rank level-5 rally joiner combinations",
+            "POST /api/rallies/evaluate": "Evaluate 9 leader skills, 4 joiner skills, and leader widgets",
+            "POST /api/rallies/optimize-plan": "Globally optimize shared joiner inventory across complete 9+4 rallies",
         },
     }
 
@@ -567,11 +574,17 @@ async def rally_hero_definitions():
     return {
         "heroes": [hero_to_dict(hero) for hero in STRUCTURED_HEROES.values()],
         "mechanics_note": (
-            "Rally leaders apply all configured expedition skills from the 3-hero march. "
-            "Joiners and garrison helpers apply only the first/primary expedition skill "
-            "from up to 4 heroes, per the official Combat FAQ."
+            "A complete rally leader march applies exactly 9 Expedition skills: all 3 skills "
+            "from each of 3 heroes. Exactly 4 rally members contribute only their first/primary "
+            "Expedition skill, per the official Combat FAQ. Leader widgets are evaluated in their "
+            "rally or defender context; joiner widgets do not contribute."
         ),
-        "formula_note": "Damage Up and Attack Damage Up remain separate final damage multiplier layers from Attack Up.",
+        "formula_note": (
+            "Same verified operational buff keys add inside their category. Attack, Lethality, "
+            "Damage Dealt, target Damage Taken, distinct scope, and widget-special layers multiply. "
+            "Normal/extra-attack event contributions add inside one event channel, and proc chances "
+            "are never summed into certainty."
+        ),
     }
 
 
@@ -580,6 +593,24 @@ async def recommend_rally_joiners(req: JoinerRecommendationRequest):
     """Rank configured level-5 primary joiner skills for one rally objective."""
     try:
         return _round_api_numbers(_joiner_recommendations.recommend(**req.to_service_kwargs()))
+    except ValueError as exc:
+        raise HTTPException(422, str(exc))
+
+
+@app.post("/api/rallies/evaluate")
+async def evaluate_complete_rally(req: RallyEvaluationRequest):
+    """Evaluate one complete S1-S5 Mythic rally across floor/expected/ceiling scenarios."""
+    try:
+        return _round_api_numbers(_rally_evaluation.evaluate(**req.to_service_kwargs()))
+    except ValueError as exc:
+        raise HTTPException(422, str(exc))
+
+
+@app.post("/api/rallies/optimize-plan")
+async def optimize_complete_rally_plan(req: RallyPlanOptimizationRequest):
+    """Allocate shared inventory from complete 9+4 expected-scenario evaluations."""
+    try:
+        return _round_api_numbers(_rally_evaluation.optimize_plan(**req.to_service_kwargs()))
     except ValueError as exc:
         raise HTTPException(422, str(exc))
 

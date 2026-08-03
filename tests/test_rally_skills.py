@@ -57,10 +57,12 @@ def test_philly_attack_up_is_separate_from_damage_up():
 
 def test_leader_applies_all_skills_from_three_heroes():
     result = apply_leader_skills(["jeronimo", "flint", "reina"])
-    assert result["applied_count"] == 3
-    assert result["modifiers"]["infantry"]["damage_up"] == 1.25
-    assert result["modifiers"]["lancer"]["attack_damage_up"] == 0.30
-    assert result["modifiers"]["marksman"]["attack_damage_up"] == 0.30
+    assert result["applied_count"] == 9
+    assert result["modifiers"]["infantry"]["damage_up"] == 1.55
+    assert result["modifiers"]["lancer"]["damage_up"] == 0.55
+    assert result["modifiers"]["marksman"]["damage_up"] == 0.55
+    assert result["modifiers"]["infantry"]["attack_up"] == 0.50
+    assert result["modifiers"]["infantry"]["lethality_up"] == 0.25
 
 
 def test_garrison_uses_same_primary_skill_limit_as_joiners():
@@ -82,9 +84,10 @@ def test_combined_rally_modifiers_respect_target_scope():
         joiner_heroes=["flint", "philly"],
         widgets=[],
     )
-    assert result["modifiers"]["infantry"]["damage_up"] == 1.0
-    assert result["modifiers"]["lancer"]["damage_up"] == 0
-    assert result["modifiers"]["marksman"]["damage_up"] == 0
+    assert result["leader"]["applied_count"] == 9
+    assert result["modifiers"]["infantry"]["damage_up"] == 3.4
+    assert result["modifiers"]["lancer"]["damage_up"] == 0.25
+    assert result["modifiers"]["marksman"]["damage_up"] == 1.4
     assert result["modifiers"]["marksman"]["attack_up"] == 0.15
 
 

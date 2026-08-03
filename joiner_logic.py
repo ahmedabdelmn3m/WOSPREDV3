@@ -20,15 +20,7 @@ ModifierMap = Dict[str, Dict[str, float]]
 
 def empty_modifiers() -> ModifierMap:
     return {
-        troop: {
-            "attack_up": 0.0,
-            "damage_up": 0.0,
-            "attack_damage_up": 0.0,
-            "lethality_up": 0.0,
-            "defense_up": 0.0,
-            "health_up": 0.0,
-            "damage_taken_down": 0.0,
-        }
+        troop: {effect_type: 0.0 for effect_type in EFFECT_TYPES if effect_type != "unknown"}
         for troop in TROOP_TYPES
     }
 
@@ -165,12 +157,13 @@ def _apply_primary_support_skills(heroes_like: Iterable[Any], source_label: str)
 
 
 def _apply_skill(modifiers: ModifierMap, skill: ExpeditionSkill) -> None:
-    if skill.effect_type not in EFFECT_TYPES or skill.effect_type == "unknown":
-        return
-    targets = TROOP_TYPES if skill.target_scope == "all_troops" else (skill.target_scope,)
-    for troop in targets:
-        if troop in modifiers and skill.effect_type in modifiers[troop]:
-            modifiers[troop][skill.effect_type] += skill.value_decimal
+    for component in skill.resolved_components():
+        if component.effect_type not in EFFECT_TYPES or component.effect_type == "unknown":
+            continue
+        targets = TROOP_TYPES if component.target_scope == "all_troops" else (component.target_scope,)
+        for troop in targets:
+            if troop in modifiers and component.effect_type in modifiers[troop]:
+                modifiers[troop][component.effect_type] += component.value_decimal
 
 
 def _skill_breakdown(hero: Hero, skill: ExpeditionSkill, source_label: str) -> dict:
@@ -183,6 +176,17 @@ def _skill_breakdown(hero: Hero, skill: ExpeditionSkill, source_label: str) -> d
         "effect_type": skill.effect_type,
         "value_pct": skill.value_pct,
         "target_scope": skill.target_scope,
+        "components": [
+            {
+                "effect_type": component.effect_type,
+                "value_pct": component.value_pct,
+                "target_scope": component.target_scope,
+                "source_scope": component.source_scope,
+                "affected_side": component.affected_side,
+                "canonical_stack_key": component.canonical_stack_key,
+            }
+            for component in skill.resolved_components()
+        ],
         "data_source": skill.source,
         "confidence": skill.confidence,
         "notes": skill.notes,

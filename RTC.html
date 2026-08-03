@@ -114,7 +114,22 @@
     .hero-supply-row input { min-height:34px; padding:6px 8px; }
     .experimental-control { display:flex; gap:8px; align-items:flex-start; margin-top:10px; padding:8px 9px; border:1px solid rgba(255,180,70,.28); border-radius:8px; background:rgba(255,180,70,.07); color:var(--dim); font-size:10px; line-height:1.35; }
     .experimental-control input { margin-top:2px; }
-    .joiner-profile-table { min-width:920px; }
+    .joiner-profile-table { min-width:1080px; }
+    .leader-loadout-row td { padding:0 7px 10px; background:rgba(0,200,255,.025); }
+    .leader-loadout { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:7px; padding:8px; border:1px solid var(--border); border-radius:7px; background:var(--input); }
+    .leader-slot { display:grid; grid-template-columns:minmax(125px,1fr) 72px; gap:6px; align-items:end; min-width:0; }
+    .leader-slot .field span { white-space:nowrap; }
+    .leader-slot select,.leader-slot input { min-height:34px; padding:6px 7px; }
+    .contract-line { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:6px; }
+    .contract-badge { display:inline-flex; align-items:center; padding:3px 7px; border-radius:999px; border:1px solid rgba(46,204,113,.35); background:rgba(46,204,113,.09); color:var(--green); font-size:10px; font-weight:900; }
+    .contract-badge.incomplete { border-color:rgba(243,156,18,.42); background:rgba(243,156,18,.09); color:var(--warn); }
+    .leader-summary { margin-top:5px; color:var(--dim); font-size:10px; line-height:1.45; }
+    .scenario-metrics { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:5px; margin-top:6px; }
+    .scenario-metric { padding:6px 7px; border-left:2px solid var(--border-hi); background:var(--input); }
+    .scenario-metric strong,.scenario-metric span { display:block; }
+    .scenario-metric strong { color:var(--hi); font-size:11px; }
+    .scenario-metric span { color:var(--dim); font-size:9px; text-transform:uppercase; }
+    .rally-warning { margin-top:5px; color:var(--warn); font-size:10px; line-height:1.4; }
     .joiner-results { margin-top:11px; border-top:1px solid var(--border); }
     .joiner-result { display:grid; grid-template-columns:minmax(135px,.8fr) minmax(210px,1.2fr) minmax(190px,1fr); gap:10px; align-items:center; padding:10px 2px; border-bottom:1px solid var(--border); }
     .joiner-lineup { display:flex; flex-wrap:wrap; gap:5px; }
@@ -157,14 +172,14 @@
       .app-header,.card-head,.snapshot-bar { grid-template-columns:1fr; flex-direction:column; align-items:stretch; }
       .header-actions .btn,.toolbar .btn { flex:1 1 auto; }
       .mode-strip,.field-grid,.field-grid.three,.battle-intent,.intent-options,.joiner-layout { grid-template-columns:1fr; }
-      .joiner-fields,.hero-supply { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .joiner-fields,.hero-supply,.leader-loadout { grid-template-columns:repeat(2,minmax(0,1fr)); }
       .joiner-result { grid-template-columns:1fr; }
       .result { grid-template-columns:30px 1fr; }
       .instruction,.result .pill,.warning-text { grid-column:2; }
       .title { font-size:15px; }
     }
     @media (max-width:440px) {
-      .joiner-fields,.hero-supply,.joiner-metrics { grid-template-columns:1fr; }
+      .joiner-fields,.hero-supply,.joiner-metrics,.leader-loadout,.leader-slot,.scenario-metrics { grid-template-columns:1fr; }
     }
   </style>
 </head>
@@ -237,8 +252,8 @@
       <section class="card planning-extra" id="joinerSection">
         <div class="card-head">
           <div>
-            <div class="section-title">1B. Hero Joiner Tactics</div>
-            <div class="section-help">Primary expedition skill only, maximum four contributing joiners per rally. Same exact stat/scope buckets add; distinct buckets multiply in the damage and defense equations.</div>
+            <div class="section-title">1B. Full Rally Heroes &amp; Joiner Tactics</div>
+            <div class="section-help">Every structurally complete rally requires three S1-S5 Legendary (Mythic-tier) leader heroes (one per troop class), all nine leader Expedition skills, and exactly four contributing joiner first Expedition skills. Results are normalized skill-stack scenarios, not exact casualty or battle predictions.</div>
           </div>
           <div class="pill pill-a" id="joinerModelStatus">Evidence-based Level 5 model</div>
         </div>
@@ -267,7 +282,7 @@
             <div class="joiner-band">
               <div class="section-title">Available joining heroes</div>
               <div class="hero-supply" id="heroSupply"></div>
-              <label class="experimental-control"><input id="enableExperimentalGwen" type="checkbox" /><span><strong>Enable experimental Gwen</strong><br />Use her full +25% target Damage Taken tooltip in recommendations. Off by default because current PvP activation/uptime evidence is not strong enough for a production stack.</span></label>
+              <label class="experimental-control"><input id="enableExperimentalGwen" type="checkbox" /><span><strong>Allow experimental Gwen lineup</strong><br />Let the optimizer consider her +25% target Damage Taken tooltip as a ceiling scenario. Floor and expected outcomes still exclude it because current PvP activation/uptime evidence is not strong enough to claim certainty.</span></label>
             </div>
           </div>
         </div>
@@ -431,7 +446,7 @@
         <p>Friendly launch point = desired hit point - rally gathering duration - leader march time. Friendly launch points are sorted, then shown as LAUNCH FIRST and relative delays after the previous friendly launcher.</p>
         <p>Friendly State means: Ready = waiting for your declaration; Gathering = rally is already open and Remaining is fill time left; Marching = rally has launched and Remaining is march time left.</p>
         <p>Every enabled Alliance A leader becomes part of the capture wave; known roles guide the order and Castle holder stays last when available. Alliance B leaders targeted by later enemies are placed where needed, then every remaining enabled Alliance B rally lands after the final enemy counter, one second apart.</p>
-        <p>Hero joiner damage uses Attack × (1 + Attack bonuses) × Lethality × (1 + Lethality bonuses) / 100. Exact Damage Dealt buckets add internally; all-troop, troop-specific, and target-side buckets multiply. Defense uses Defense × Health, then applies separate incoming-damage layers. Every local recommendation scores the complete Infantry/Lancer/Marksman formation, not only its dominant troop. Only the primary skill from the first four modeled joiners contributes.</p>
+        <p>Full rally evaluation uses all three Expedition skills from each of the rally leader's three S1-S5 Legendary (Mythic-tier) heroes (nine skills), their context-valid leader widgets, and the first Expedition skill from exactly four joining captains. Exact operational buckets add; distinct stat, scope, and target-side layers multiply. Floor, expected proxy, and ceiling are normalized skill-stack indices; they do not predict exact casualties, and unknown proc uptime remains unpriced.</p>
       </div>
     </details>
   </section>
@@ -514,6 +529,27 @@
     ] },
     { id:'flint', name:'Flint', label:'+100% Infantry Damage Dealt', effects:[{ effect:'damage_up', value:1.00, scope:'infantry', stackKey:'friendly:infantry:damage_dealt', bucketLabel:'Infantry Damage Dealt' }] }
   ];
+  const leaderHeroCatalog = [
+    { id:'jeronimo', name:'Jeronimo', generation:1, type:'infantry', skills:['Battle Manifesto','Swordmentor','Expert Swordsmanship'], widget:{ name:'Dawnbreak', skill:'Discernment', effect:'attack_up', contexts:['pvp_attack'] } },
+    { id:'natalia', name:'Natalia', generation:1, type:'infantry', skills:['Feral Protection','Queen of the Wild','Call of the Wild'], widget:{ name:'Gale Force', skill:'Invincibles', effect:'lethality_up', contexts:['pvp_attack'] } },
+    { id:'molly', name:'Molly', generation:1, type:'lancer', skills:["Snow's Grace",'Ice Dominion','Youthful Rage'], widget:{ name:'Yeti Spirit', skill:'Snowy Blessing', effect:'lethality_up', contexts:['garrison'] } },
+    { id:'zinman', name:'Zinman', generation:1, type:'marksman', skills:['Implacable','Bastionist','Positional Battler'], widget:{ name:'Woodpecker', skill:'Defend to Attack', effect:'attack_up', contexts:['garrison'] } },
+    { id:'flint', name:'Flint', generation:2, type:'infantry', skills:['Pyromaniac','Burning Resolve','Immolation'], widget:{ name:'Dragonbane', skill:'Dragonbreath', effect:'attack_up', contexts:['garrison'] } },
+    { id:'philly', name:'Philly', generation:2, type:'lancer', skills:['Vigor Tactics','Dosage Boost','Energizing Shot'], widget:{ name:'Pharmacologica', skill:'First Aid Training', effect:'health_up', contexts:['garrison'] } },
+    { id:'alonso', name:'Alonso', generation:2, type:'marksman', skills:['Onslaught','Iron Strength','Poison Harpoon'], widget:{ name:'Captain Ahab', skill:'Harpoon Enhancement', effect:'lethality_up', contexts:['pvp_attack'] } },
+    { id:'logan', name:'Logan', generation:3, type:'infantry', skills:["Lion's Might",'Lion Intimidation','Leader Inspiration'], widget:{ name:'Fists of Steel', skill:'Strong Protection', effect:'defense_up', contexts:['garrison'] } },
+    { id:'mia', name:'Mia', generation:3, type:'lancer', skills:['Bad Luck Streak','Lucky Charm','Ritual Deciphering'], widget:{ name:'Fate Crystal', skill:'Rally of Fate', effect:'attack_up', contexts:['pvp_attack'] } },
+    { id:'greg', name:'Greg', generation:3, type:'marksman', skills:['Sword of Justice','Deterrence of Law','Law and Order'], widget:{ name:'State Edict', skill:'Trumpet of Justice', effect:'health_up', contexts:['pvp_attack'] } },
+    { id:'ahmose', name:'Ahmose', generation:4, type:'infantry', skills:['Viper Formation','Prayer of Flame','Blade of Light'], widget:{ name:"Guardian's Relic", skill:'Oath of Guardian', effect:'health_up', contexts:['garrison'] } },
+    { id:'reina', name:'Reina', generation:4, type:'lancer', skills:["Assassin's Instinct",'Swift Jive','Shadow Blade'], widget:{ name:'Ninjaken - Raikiri', skill:'Fiery Invasion', effect:'lethality_up', contexts:['pvp_attack'] } },
+    { id:'lynn', name:'Lynn', generation:4, type:'marksman', skills:['Song of Lion','Melancholic Ballad','Oonai Cadenza'], widget:{ name:"Ella's Tear", skill:"Iranon's Determination", effect:'lethality_up', contexts:['garrison'] } },
+    { id:'hector', name:'Hector', generation:5, type:'infantry', skills:['Survival Instincts','Rampant','Blitz'], widget:{ name:'Steel Fangs', skill:'Goliath', effect:'attack_up', contexts:['garrison'] } },
+    { id:'norah', name:'Norah', generation:5, type:'lancer', skills:['Combined Arms','Sneak Strike','Momentum'], widget:{ name:'Snow Cruiser', skill:'True Grit', effect:'defense_up', contexts:['garrison'] } },
+    { id:'gwen', name:'Gwen', generation:5, type:'marksman', skills:['Eagle Vision','Air Dominance','Blastmaster'], widget:{ name:'Wings of Hope', skill:'Marauder', effect:'lethality_up', contexts:['pvp_attack'] } }
+  ];
+  const leaderTypes = ['infantry','lancer','marksman'];
+  const defaultLeaderHeroIds = { infantry:'hector', lancer:'norah', marksman:'gwen' };
+  const widgetExpeditionLadder = { 0:0, 1:0, 2:5, 3:5, 4:7.5, 5:7.5, 6:10, 7:10, 8:12.5, 9:12.5, 10:15 };
   let joinerRequestTimer = null;
   let joinerRequestSerial = 0;
   let joinerAbortController = null;
@@ -630,7 +666,67 @@
     leader.enemyTroopType = joinerTargetOptions.some(option => option.value === leader.enemyTroopType)
       ? leader.enemyTroopType
       : '';
+    const savedLoadout = Array.isArray(leader.rallyLeaderHeroes) ? leader.rallyLeaderHeroes : [];
+    const normalizedLoadout = leaderTypes.map(type => {
+      const saved = savedLoadout.find(item => {
+        const hero = leaderHeroCatalog.find(candidate => candidate.id === item?.heroId);
+        return hero?.type === type;
+      });
+      const heroId = saved?.heroId || defaultLeaderHeroIds[type];
+      if (saved) {
+        saved.heroId = heroId;
+        saved.widgetLevel = Math.floor(boundedNumber(saved.widgetLevel, 0, 0, 10));
+        return saved;
+      }
+      return { heroId, widgetLevel:0 };
+    });
+    if (Array.isArray(leader.rallyLeaderHeroes)) {
+      leader.rallyLeaderHeroes.splice(0, leader.rallyLeaderHeroes.length, ...normalizedLoadout);
+    } else {
+      leader.rallyLeaderHeroes = normalizedLoadout;
+    }
     return leader;
+  }
+
+  function leaderHeroById(heroId) {
+    return leaderHeroCatalog.find(hero => hero.id === heroId) || null;
+  }
+
+  function leaderLoadout(leader) {
+    ensureLeaderJoinerProfile(leader);
+    return leader.rallyLeaderHeroes.map(selection => ({
+      ...selection,
+      hero:leaderHeroById(selection.heroId)
+    }));
+  }
+
+  function rallyBattleContext(goal) {
+    return ['MAX_DEFENSE','GARRISON_HOLD','GARRISON_BALANCED'].includes(goal) ? 'garrison' : 'pvp_attack';
+  }
+
+  function widgetValueAtLevel(level) {
+    return widgetExpeditionLadder[Math.floor(boundedNumber(level, 0, 0, 10))] || 0;
+  }
+
+  function leaderWidgetEffects(leader, goal = resolvedJoinerGoal(leader)) {
+    const context = rallyBattleContext(goal);
+    return leaderLoadout(leader).map(selection => {
+      const value = widgetValueAtLevel(selection.widgetLevel);
+      const active = !!selection.hero?.widget?.contexts?.includes(context) && value > 0;
+      return {
+        ...selection,
+        value,
+        context,
+        active,
+        effects:active ? [{
+          effect:selection.hero.widget.effect,
+          value:value / 100,
+          scope:'all',
+          stackKey:`widget:all:${selection.hero.widget.effect}`,
+          bucketLabel:`Widget ${String(selection.hero.widget.effect).replaceAll('_', ' ')}`
+        }] : []
+      };
+    });
   }
 
   function boundedNumber(value, fallback, min, max) {
@@ -722,9 +818,9 @@
     }]));
   }
 
-  function joinerModifiers(heroes) {
+  function joinerModifiers(heroes, contributionLimit = 4) {
     const modifiers = emptyJoinerModifiers();
-    heroes.slice(0, 4).forEach(hero => {
+    heroes.slice(0, contributionLimit).forEach(hero => {
       heroEffectList(hero).forEach(effect => {
         const targets = effect.scope === 'all' ? ['infantry','lancer','marksman'] : [effect.scope];
         targets.forEach(troop => {
@@ -739,9 +835,10 @@
     return modifiers;
   }
 
-  function calculateRallyIndexes(leader, heroes = []) {
+  function calculateRallyIndexes(leader, heroes = [], widgetEffects = []) {
     const split = normalizedTroopSplit(leader);
     const modifiers = joinerModifiers(heroes);
+    const widgets = joinerModifiers(widgetEffects, Number.MAX_SAFE_INTEGER);
     const attackBonus = boundedNumber(state.joiners?.attack, 100, 0, 10000) / 100;
     const lethalityBonus = boundedNumber(state.joiners?.lethality, 100, 0, 10000) / 100;
     const defenseBonus = boundedNumber(state.joiners?.defense, 100, 0, 10000) / 100;
@@ -754,14 +851,21 @@
     const troopDefense = {};
     ['infantry','lancer','marksman'].forEach(troop => {
       const mod = modifiers[troop];
-      const baseDamage = ((1 + attackBonus + mod.attack_up) * (1 + lethalityBonus + mod.lethality_up)) / 100;
+      const widget = widgets[troop];
+      const baseDamage = (
+        (1 + attackBonus + mod.attack_up) * (1 + widget.attack_up) *
+        (1 + lethalityBonus + mod.lethality_up) * (1 + widget.lethality_up)
+      ) / 100;
       const counterMultiplier = targetTroop && counters[troop] === targetTroop ? 1.10 : 1.00;
       const layeredDamage = baseDamage
         * (1 + mod.damage_up_all)
         * (1 + mod.damage_up_troop)
         * (1 + mod.enemy_damage_taken_up)
         * counterMultiplier;
-      const defensePower = ((1 + defenseBonus + mod.defense_up) * (1 + healthBonus + mod.health_up)) / 100;
+      const defensePower = (
+        (1 + defenseBonus + mod.defense_up) * (1 + widget.defense_up) *
+        (1 + healthBonus + mod.health_up) * (1 + widget.health_up)
+      ) / 100;
       const layeredDefense = defensePower
         * (1 + mod.enemy_attack_down)
         * (1 + mod.enemy_damage_dealt_down)
@@ -823,44 +927,7 @@
   }
 
   function calculateJoinerAssignments() {
-    const leaders = plannedJoinerLeaders();
-    const assignments = new Map(leaders.map(leader => [leader.id, []]));
-    const supply = [];
-    joinerHeroes.forEach(hero => {
-      const count = configuredHeroCount(hero);
-      for (let index = 0; index < count; index += 1) supply.push({ ...hero, instance:index });
-    });
-    while (supply.length && leaders.some(leader => assignments.get(leader.id).length < 4)) {
-      let best = null;
-      leaders.forEach(leader => {
-        const current = assignments.get(leader.id);
-        if (current.length >= 4) return;
-        supply.forEach((hero, supplyIndex) => {
-          const gain = joinerUtility(leader, current.concat(hero)) - joinerUtility(leader, current);
-          const coverage = current.length === 0 ? 1000 : 0;
-          const score = coverage + gain;
-          if (!best || score > best.score) best = { leader, hero, supplyIndex, score };
-        });
-      });
-      if (!best) break;
-      assignments.get(best.leader.id).push(best.hero);
-      supply.splice(best.supplyIndex, 1);
-    }
-    return leaders.map(leader => {
-      const heroes = assignments.get(leader.id);
-      const base = calculateRallyIndexes(leader, []);
-      const result = calculateRallyIndexes(leader, heroes);
-      return {
-        leader,
-        heroes,
-        goal:resolvedJoinerGoal(leader),
-        split:normalizedTroopSplit(leader),
-        base,
-        result,
-        damageGain:percentGain(base.damage, result.damage),
-        defenseGain:percentGain(base.defense, result.defense)
-      };
-    });
+    return calculateExhaustiveJoinerAssignments();
   }
 
   function availableJoinerLineups(remaining, joinerCount) {
@@ -888,8 +955,7 @@
       hero.id,
       configuredHeroCount(hero)
     ]));
-    const totalSupply = Math.min(leaders.length * 4, Object.values(remaining).reduce((sum, count) => sum + count, 0));
-    const { ordered, quotas } = joinerPlanQuotas(leaders, totalSupply);
+    const { ordered, quotas } = joinerPlanQuotas(leaders);
     const planByLeader = new Map();
     ordered.forEach(leader => {
       const goal = resolvedJoinerGoal(leader);
@@ -920,12 +986,16 @@
       const winner = ranked[0] || { heroes:[], result:base, damageGain:0, defenseGain:0 };
       winner.heroes.forEach(hero => { remaining[hero.id] = Math.max(0, remaining[hero.id] - 1); });
       const warnings = [];
+      if (winner.heroes.length !== 4) {
+        warnings.push('Incomplete rally: exactly four available joiner copies are required before this lineup can be evaluated.');
+      }
       if (goal === 'GARRISON_HOLD' && winner.defenseGain === 0) {
         warnings.push('No configured level-5 primary joiner skill increases Defense, Health, or Damage Taken Reduction; the defense tie was resolved by damage and deterministic tie-breaks.');
       }
-      planByLeader.set(leader.id, {
+      const planItem = {
         leader,
         heroes:winner.heroes,
+        complete:winner.heroes.length === 4,
         goal,
         split:normalizedTroopSplit(leader),
         base,
@@ -943,7 +1013,9 @@
           formationWeighted:true,
           reportComparison:false
         }
-      });
+      };
+      planItem.evaluation = offlineRallyEvaluation(planItem);
+      planByLeader.set(leader.id, planItem);
     });
     return leaders.map(leader => planByLeader.get(leader.id)).filter(Boolean);
   }
@@ -955,19 +1027,11 @@
     return calculateJoinerAssignments();
   }
 
-  function joinerPlanQuotas(leaders, totalSupply) {
+  function joinerPlanQuotas(leaders) {
     const ordered = leaders.map((leader, index) => ({ leader, index })).sort((a,b) =>
       joinerRolePriority(b.leader.role) - joinerRolePriority(a.leader.role) || a.index - b.index
     );
-    const quotas = new Map(leaders.map(leader => [leader.id, 0]));
-    let assigned = 0;
-    for (let slot = 0; slot < 4 && assigned < totalSupply; slot += 1) {
-      ordered.forEach(({ leader }) => {
-        if (assigned >= totalSupply) return;
-        quotas.set(leader.id, quotas.get(leader.id) + 1);
-        assigned += 1;
-      });
-    }
+    const quotas = new Map(leaders.map(leader => [leader.id, 4]));
     return { ordered:ordered.map(item => item.leader), quotas };
   }
 
@@ -994,15 +1058,15 @@
     };
   }
 
-  async function requestJoinerRecommendation(payload, signal) {
-    const response = await fetch(`${JOINER_API_URL}/api/rallies/joiner-recommendations`, {
+  async function requestRallyPlanOptimization(payload, signal) {
+    const response = await fetch(`${JOINER_API_URL}/api/rallies/optimize-plan`, {
       method:'POST',
       headers:{ 'Content-Type':'application/json' },
       body:JSON.stringify(payload),
       signal
     });
     if (!response.ok) {
-      let message = `Recommendation API returned ${response.status}`;
+      let message = `Full-stack optimizer API returned ${response.status}`;
       try {
         const body = await response.json();
         if (body?.detail) message = String(body.detail);
@@ -1010,6 +1074,116 @@
       throw new Error(message);
     }
     return response.json();
+  }
+
+  function rallyGoalLift(base, result, leader, goal) {
+    const targetCounter = counterTroopForTarget(resolvedEnemyTroopType(leader, goal));
+    const damageRatio = goal.startsWith('KILL_') && targetCounter
+      ? result.troopDamage[targetCounter] / Math.max(Number.EPSILON, base.troopDamage[targetCounter])
+      : result.damage / Math.max(Number.EPSILON, base.damage);
+    const defenseRatio = result.defense / Math.max(Number.EPSILON, base.defense);
+    const weights = joinerGoalWeights(goal);
+    return (Math.pow(Math.max(0, damageRatio), weights.damage) * Math.pow(Math.max(0, defenseRatio), weights.defense) - 1) * 100;
+  }
+
+  function offlineRallyEvaluation(item) {
+    const goal = item.goal || resolvedJoinerGoal(item.leader);
+    const loadout = leaderLoadout(item.leader);
+    const widgets = leaderWidgetEffects(item.leader, goal);
+    const widgetContributions = widgets.filter(widget => widget.active);
+    const contractComplete = loadout.length === 3 && loadout.every(selection => selection.hero?.skills?.length === 3) && item.heroes.length === 4;
+    const base = calculateRallyIndexes(item.leader, [], []);
+    const deterministicJoiners = item.heroes.filter(hero => hero.id !== 'gwen');
+    const floor = contractComplete ? calculateRallyIndexes(item.leader, deterministicJoiners, widgetContributions) : base;
+    const ceiling = contractComplete ? calculateRallyIndexes(item.leader, item.heroes, widgetContributions) : base;
+    const floorLift = contractComplete ? rallyGoalLift(base, floor, item.leader, goal) : null;
+    const ceilingLift = contractComplete ? rallyGoalLift(base, ceiling, item.leader, goal) : null;
+    const warnings = [];
+    if (!contractComplete) warnings.push('Incomplete contract: this rally requires all nine leader skill slots and exactly four contributing joiners.');
+    warnings.push('Offline scenario is deliberately partial: verified widget specials and four joiner first skills are scored, while all nine leader skill effects wait for the full evaluation API.');
+    if (item.heroes.some(hero => hero.id === 'gwen')) warnings.push('Gwen joiner activation is disputed: excluded from floor and expected, included only in the ceiling scenario.');
+    warnings.push('Offline expected does not guess proc uptime; it remains equal to the conservative floor.');
+    return {
+      source:'offline_partial',
+      calculationKind:'NORMALIZED_SKILL_STACK_INDEX',
+      battleContext:rallyBattleContext(goal),
+      contract:{
+        leaderHeroCount:loadout.length,
+        leaderSkillSlots:loadout.reduce((sum, selection) => sum + (selection.hero?.skills?.length || 0), 0),
+        requiredLeaderSkillSlots:9,
+        joinerContributionSlots:item.heroes.length,
+        requiredJoinerContributionSlots:4,
+        complete:contractComplete
+      },
+      leaderHeroes:loadout.map(selection => ({
+        heroId:selection.heroId,
+        heroName:selection.hero?.name || selection.heroId,
+        heroType:selection.hero?.type,
+        generation:selection.hero?.generation,
+        widgetLevel:selection.widgetLevel
+      })),
+      widgets:widgets.map(widget => ({
+        heroId:widget.heroId,
+        heroName:widget.hero?.name || widget.heroId,
+        widgetName:widget.hero?.widget?.name || 'Widget',
+        expeditionSkillName:widget.hero?.widget?.skill || '',
+        widgetLevel:widget.widgetLevel,
+        valuePct:widget.value,
+        effectType:widget.hero?.widget?.effect || '',
+        activeForContext:widget.active,
+        status:widget.active ? 'active' : (widget.value > 0 ? 'wrong_context' : 'below_expedition_unlock')
+      })),
+      modelCoverage:{
+        totalSkillSlots:13,
+        contextEligibleSkillSlots:item.heroes.length,
+        numericallyEligibleSkillSlots:deterministicJoiners.length,
+        expectedConditionalUnknownSlots:item.heroes.some(hero => hero.id === 'gwen') ? 1 : 0,
+        combatModelComplete:false,
+        contractCompleteDoesNotImplyExactCombatModel:true
+      },
+      goalAssessment:{
+        status:contractComplete && Number(floorLift) > 0 ? 'PARTIAL_DETERMINISTIC_SUPPORT' : (contractComplete ? 'PARTIAL_NO_MODELED_LIFT' : 'INCOMPLETE_CONTRACT'),
+        completeContract:contractComplete,
+        floorLiftPct:floorLift,
+        expectedLiftPct:floorLift,
+        ceilingLiftPct:ceilingLift,
+        partialModel:true
+      },
+      warnings
+    };
+  }
+
+  function fullRallyEvaluationPayload(leader, heroes, goal, enemyStats) {
+    const targetTroop = resolvedEnemyTroopType(leader, goal);
+    return {
+      objective:joinerObjective(goal),
+      leaderHeroes:leaderLoadout(leader).map(selection => ({ heroId:selection.heroId, widgetLevel:selection.widgetLevel })),
+      joinerHeroIds:heroes.map(hero => hero.id),
+      troopType:counterTroopForTarget(targetTroop) || dominantTroopType(leader),
+      enemyTroopType:targetTroop || null,
+      baseStats:{ attack:1, defense:1, health:1, lethality:1 },
+      currentBuffs:{
+        attack:boundedNumber(state.joiners?.attack, 0, 0, 10000) / 100,
+        lethality:boundedNumber(state.joiners?.lethality, 0, 0, 10000) / 100,
+        defense:boundedNumber(state.joiners?.defense, 0, 0, 10000) / 100,
+        health:boundedNumber(state.joiners?.health, 0, 0, 10000) / 100,
+        damageDealt:0,
+        damageTakenReduction:0
+      },
+      enemyStats,
+      troopSplit:normalizedTroopSplit(leader),
+      includeDisputedSkills:!!state.joiners?.includeExperimentalGwen
+    };
+  }
+
+  function fullRallyOptimizationItem(leader, goal, enemyStats) {
+    const payload = fullRallyEvaluationPayload(leader, [], goal, enemyStats);
+    delete payload.joinerHeroIds;
+    return {
+      rallyId:leader.id,
+      priorityWeight:joinerRolePriority(leader.role),
+      ...payload
+    };
   }
 
   function scheduleBackendJoinerRecommendations() {
@@ -1024,12 +1198,15 @@
     if (state.prefs.compact || serial !== joinerRequestSerial) return;
     const leaders = plannedJoinerLeaders();
     if (!leaders.length) return;
-    const remaining = Object.fromEntries(joinerHeroes.map(hero => [
+    const inventory = Object.fromEntries(joinerHeroes.map(hero => [
       hero.id,
       configuredHeroCount(hero)
     ]));
-    const totalSupply = Math.min(leaders.length * 4, Object.values(remaining).reduce((sum, count) => sum + count, 0));
-    const { ordered, quotas } = joinerPlanQuotas(leaders, totalSupply);
+    // Global optimization already receives an explicit priorityWeight for
+    // every rally. Preserve the user's rally order here; legacy greedy role
+    // sorting only harms exact-search performance and must not double-encode
+    // priority into the batch request.
+    const ordered = leaders;
     const enemyReportValues = {
       attack:optionalJoinerNumber(state.joiners?.enemyAttack),
       lethality:optionalJoinerNumber(state.joiners?.enemyLethality),
@@ -1042,60 +1219,48 @@
     renderJoinerResults(calculateJoinerAssignments());
     const controller = new AbortController();
     joinerAbortController = controller;
-    const timeout = setTimeout(() => controller.abort(), 12000);
+    const timeout = setTimeout(() => controller.abort(), 30000);
     try {
+      const response = await requestRallyPlanOptimization({
+        rallies:ordered.map(leader => {
+          const goal = resolvedJoinerGoal(leader);
+          return fullRallyOptimizationItem(leader, goal, enemyStats);
+        }),
+        availableHeroIds:joinerHeroes.map(hero => hero.id),
+        availableHeroCounts:inventory,
+        alternativeCount:2
+      }, controller.signal);
       for (const leader of ordered) {
-        const joinerCount = quotas.get(leader.id) || 0;
         const goal = resolvedJoinerGoal(leader);
-        if (!joinerCount) {
+        const optimized = (response.rallies || []).find(item => item.rallyId === leader.id);
+        if (!optimized?.complete) {
           const base = calculateRallyIndexes(leader, []);
-          planByLeader.set(leader.id, {
+          const incompleteItem = {
             leader, heroes:[], goal, split:normalizedTroopSplit(leader), base, result:base,
-            damageGain:0, defenseGain:0,
-            backend:{ objective:joinerObjective(goal), evaluated:0, alternatives:[], warnings:['No available joiner copy remained for this rally.'] }
-          });
+            complete:false, damageGain:0, defenseGain:0,
+            backend:{
+              objective:joinerObjective(goal),
+              evaluated:optimized?.evaluatedCombinations || 0,
+              alternatives:[],
+              explanations:[response.rankingPolicy],
+              warnings:optimized?.warnings || ['Incomplete rally: shared inventory cannot supply exactly four eligible joiners.'],
+              fullStackOptimization:true,
+              optimizationKind:response.optimizationKind
+            }
+          };
+          incompleteItem.evaluation = offlineRallyEvaluation(incompleteItem);
+          planByLeader.set(leader.id, incompleteItem);
           continue;
         }
-        const availableHeroIds = Object.keys(remaining).filter(heroId => remaining[heroId] > 0);
-        const weights = joinerGoalWeights(goal);
-        const troopSplit = normalizedTroopSplit(leader);
         const targetTroop = resolvedEnemyTroopType(leader, goal);
-        const response = await requestJoinerRecommendation({
-          objective:joinerObjective(goal),
-          joinerCount,
-          allowDuplicateHeroes:true,
-          troopType:counterTroopForTarget(targetTroop) || dominantTroopType(leader),
-          troopSplit,
-          enemyTroopType:targetTroop || null,
-          baseStats:{ attack:1, defense:1, health:1, lethality:1 },
-          currentBuffs:{
-            attack:boundedNumber(state.joiners?.attack, 0, 0, 10000) / 100,
-            lethality:boundedNumber(state.joiners?.lethality, 0, 0, 10000) / 100,
-            defense:boundedNumber(state.joiners?.defense, 0, 0, 10000) / 100,
-            health:boundedNumber(state.joiners?.health, 0, 0, 10000) / 100,
-            damageDealt:0,
-            damageTakenReduction:0
-          },
-          enemyStats,
-          availableHeroIds,
-          availableHeroCounts:remaining,
-          excludedHeroIds:state.joiners?.includeExperimentalGwen ? [] : ['gwen'],
-          includeExperimentalSkills:!!state.joiners?.includeExperimentalGwen,
-          minimumSkillLevel:5,
-          conditionalEvaluation:state.joiners?.includeExperimentalGwen ? 'GUARANTEED' : 'EXCLUDED',
-          attackWeight:weights.damage,
-          defenseWeight:weights.defense,
-          alternativeCount:2
-        }, controller.signal);
-        const heroes = response.recommendedJoiners.map(recommendationHero);
-        response.recommendedJoiners.forEach(item => {
-          remaining[item.heroId] = Math.max(0, (remaining[item.heroId] || 0) - 1);
-        });
+        const heroes = optimized.recommendedJoiners.map(recommendationHero);
+        if (heroes.length !== 4) throw new Error(`Full-stack optimizer returned ${heroes.length} joiners; exactly four are required.`);
         const localBase = calculateRallyIndexes(leader, []);
         const localResult = calculateRallyIndexes(leader, heroes);
-        planByLeader.set(leader.id, {
+        const planItem = {
           leader,
           heroes,
+          complete:true,
           goal,
           split:normalizedTroopSplit(leader),
           base:localBase,
@@ -1103,26 +1268,32 @@
           damageGain:percentGain(localBase.damage, localResult.damage),
           defenseGain:percentGain(localBase.defense, localResult.defense),
           backend:{
-            objective:response.objective,
-            evaluated:response.evaluatedCombinations,
-            alternatives:response.alternatives || [],
-            explanations:response.stackingExplanation || [],
-            warnings:response.warnings || [],
+            objective:joinerObjective(goal),
+            evaluated:optimized.evaluatedCombinations,
+            alternatives:optimized.alternatives || [],
+            explanations:[response.rankingPolicy],
+            warnings:optimized.warnings || [],
             targetTroop,
             formationWeighted:true,
-            reportComparison:!!enemyStats
+            reportComparison:!!enemyStats,
+            fullStackOptimization:true,
+            optimizationKind:response.optimizationKind,
+            globalCompletedRallies:response.completedRallies,
+            globalRequestedRallies:response.requestedRallies
           }
-        });
+        };
+        planItem.evaluation = optimized.evaluation;
+        planByLeader.set(leader.id, planItem);
       }
       if (state.prefs.compact || serial !== joinerRequestSerial) return;
       const plan = leaders.map(leader => planByLeader.get(leader.id)).filter(Boolean);
-      state.joinerBackend = { status:'ready', plan };
+      state.joinerBackend = { status:'ready', plan, optimization:response };
       renderJoinerResults(plan);
       syncJoinerPlanToOutput(plan);
     } catch (error) {
       if (serial !== joinerRequestSerial || state.prefs.compact) return;
       const fallback = calculateExhaustiveJoinerAssignments();
-      state.joinerBackend = { status:'browser', plan:fallback, message:error?.name === 'AbortError' ? 'Recommendation API timed out' : String(error?.message || error) };
+      state.joinerBackend = { status:'browser', plan:fallback, message:error?.name === 'AbortError' ? 'Full-stack optimizer API timed out' : String(error?.message || error) };
       renderJoinerResults(fallback);
       syncJoinerPlanToOutput(fallback);
     } finally {
@@ -1653,6 +1824,39 @@
         });
       });
       rows.appendChild(tr);
+      const loadoutRow = document.createElement('tr');
+      loadoutRow.className = 'leader-loadout-row';
+      loadoutRow.innerHTML = `<td colspan="6">
+        <div class="leader-loadout">
+          ${leaderTypes.map(type => {
+            const selection = leaderLoadout(leader).find(item => item.hero?.type === type);
+            const options = leaderHeroCatalog.filter(hero => hero.type === type).map(hero =>
+              `<option value="${esc(hero.id)}" ${selection?.heroId === hero.id ? 'selected' : ''}>S${hero.generation} ${esc(hero.name)}</option>`
+            ).join('');
+            return `<div class="leader-slot" data-leader-type="${esc(type)}">
+              <label class="field"><span>${esc(type)} input leader · 3 skills</span><select class="leader-hero-select" title="${esc(selection?.hero?.skills?.join(' · ') || '')}">${options}</select></label>
+              <label class="field"><span>Widget</span><input class="leader-widget-level" type="number" min="0" max="10" step="1" value="${esc(selection?.widgetLevel || 0)}" aria-label="${esc(type)} leader widget level" /></label>
+            </div>`;
+          }).join('')}
+        </div>
+        <div class="rmeta" style="margin-top:5px">User-selected leader contract: one S1-S5 Legendary (Mythic-tier) Infantry, Lancer, and Marksman hero · all three Expedition skills per hero · widget 0-10. The optimizer assigns joiners; it does not replace this leader loadout.</div>
+      </td>`;
+      loadoutRow.querySelectorAll('[data-leader-type]').forEach(slot => {
+        const type = slot.dataset.leaderType;
+        slot.querySelector('.leader-hero-select').addEventListener('change', event => {
+          const selection = ensureLeaderJoinerProfile(leader).rallyLeaderHeroes[leaderTypes.indexOf(type)];
+          selection.heroId = event.target.value;
+          persistLibrary();
+          refreshJoinerOutcome();
+        });
+        slot.querySelector('.leader-widget-level').addEventListener('input', event => {
+          const selection = ensureLeaderJoinerProfile(leader).rallyLeaderHeroes[leaderTypes.indexOf(type)];
+          selection.widgetLevel = Math.floor(boundedNumber(event.target.value, 0, 0, 10));
+          persistLibrary();
+          refreshJoinerOutcome();
+        });
+      });
+      rows.appendChild(loadoutRow);
     });
     if (!rows.children.length) rows.innerHTML = '<tr><td colspan="6"><div class="joiner-empty">Enable at least one friendly leader to build joiner assignments.</div></td></tr>';
     renderJoinerResults();
@@ -1701,7 +1905,11 @@
     if (item.backend) {
       const objective = String(item.backend.objective || '').replaceAll('_', ' ').toLowerCase();
       const count = item.backend.evaluated || 0;
-      parts.push(`Level 5 engine evaluated ${count} valid combination${count === 1 ? '' : 's'} for ${objective || 'this objective'}.`);
+      if (item.backend.fullStackOptimization) {
+        parts.push(`Complete 9+4 engine evaluated ${count} inventory-valid combination${count === 1 ? '' : 's'} for ${objective || 'this objective'} inside the global allocation.`);
+      } else {
+        parts.push(`Joiner-only fallback evaluated ${count} valid combination${count === 1 ? '' : 's'} for ${objective || 'this objective'}.`);
+      }
       if (item.backend.reportComparison) parts.push('Enemy report penetration and incoming-pressure ratios are included.');
       const firstWarning = item.backend.warnings?.[0];
       if (firstWarning) parts.push(firstWarning);
@@ -1713,7 +1921,7 @@
     if (item.heroes.some(hero => hero.id === 'flint')) {
       parts.push(`Flint is weighted against this rally's ${Math.round(item.split.infantry * 100)}% Infantry share.`);
     }
-    if (item.heroes.some(hero => hero.id === 'gwen')) parts.push('Experimental Gwen is enabled at her full tooltip value; treat this lineup as a scenario, not a validated production stack.');
+    if (item.heroes.some(hero => hero.id === 'gwen')) parts.push('Experimental Gwen is excluded from floor and expected scoring and contributes only to the ceiling scenario.');
     return parts.join(' ');
   }
 
@@ -1724,6 +1932,38 @@
   function formatGain(value) {
     const rounded = Math.round(Number(value || 0) * 10) / 10;
     return `${rounded >= 0 ? '+' : ''}${rounded}%`;
+  }
+
+  function formatScenarioLift(value) {
+    return Number.isFinite(Number(value)) && value !== null ? formatGain(value) : '—';
+  }
+
+  function effectLabel(effect) {
+    return ({ attack_up:'Attack', lethality_up:'Lethality', defense_up:'Defense', health_up:'Health' })[effect] || String(effect || 'special').replaceAll('_', ' ');
+  }
+
+  function fullRallySummary(item) {
+    const evaluation = item.evaluation || offlineRallyEvaluation(item);
+    const contract = evaluation.contract || {};
+    const leaderSkills = Number(contract.leaderSkillSlots || 0);
+    const joinerSkills = Number(contract.joinerContributionSlots || item.heroes.length || 0);
+    const complete = contract.complete === true;
+    const leaders = (evaluation.leaderHeroes || []).map(hero => `S${hero.generation} ${hero.heroName} W${hero.widgetLevel}`).join(' · ');
+    const widgets = (evaluation.widgets || []).map(widget => {
+      const active = widget.activeForContext === true;
+      const value = Number(widget.valuePct || 0);
+      const boost = value > 0 ? ` +${Math.round(value * 10) / 10}% ${effectLabel(widget.effectType)}` : ' no Expedition boost';
+      return `${widget.heroName}: ${widget.widgetName} W${widget.widgetLevel}${boost} (${active ? 'active' : String(widget.status || 'inactive').replaceAll('_', ' ')})`;
+    }).join('; ');
+    const coverage = evaluation.modelCoverage || {};
+    const coverageText = Number.isFinite(Number(coverage.totalSkillSlots))
+      ? `${Number(coverage.numericallyEligibleSkillSlots || 0)}/${Number(coverage.totalSkillSlots)} skill slots numerically eligible · ${coverage.combatModelComplete ? 'complete normalized coverage' : 'partial normalized coverage'}`
+      : '';
+    const coverageWarning = complete && coverage.combatModelComplete === false
+      ? ['Structural 9+4 completeness does not mean every combat event or proc can be priced by the normalized model.']
+      : [];
+    const warnings = [...new Set([...coverageWarning, ...(item.backend?.warnings || []), ...(evaluation.warnings || [])])];
+    return { evaluation, contract, leaderSkills, joinerSkills, complete, leaders, widgets, coverageText, warnings };
   }
 
   function refreshJoinerOutcome() {
@@ -1752,34 +1992,49 @@
   function renderJoinerResults(plan = activeJoinerPlan()) {
     const results = $('joinerResults');
     if (!plan.length) {
-      results.innerHTML = '<div class="joiner-empty">Joiner outcomes will appear for enabled friendly rallies.</div>';
-      $('joinerModelStatus').textContent = 'Evidence-based Level 5 model';
+      results.innerHTML = '<div class="joiner-empty">Full rally outcomes will appear for enabled friendly rallies.</div>';
+      $('joinerModelStatus').textContent = '9 leader skills + exactly 4 joiners';
       return;
     }
     const assigned = plan.reduce((sum, item) => sum + item.heroes.length, 0);
+    const completeRallies = plan.filter(item => fullRallySummary(item).complete).length;
     if (state.joinerBackend?.status === 'pending') {
-      $('joinerModelStatus').textContent = 'Calculating level 5 lineups...';
+      $('joinerModelStatus').textContent = 'Calculating complete rally scenarios...';
     } else if (state.joinerBackend?.status === 'ready') {
-      $('joinerModelStatus').textContent = `${assigned} level 5 joins · ${plan.length} rallies`;
+      $('joinerModelStatus').textContent = `${completeRallies}/${plan.length} complete · globally optimized 9+4 stacks · ${assigned} joins`;
     } else if (state.joinerBackend?.status === 'browser') {
-      $('joinerModelStatus').textContent = `${assigned} level 5 joins · browser engine`;
+      $('joinerModelStatus').textContent = `${completeRallies}/${plan.length} complete · offline scenarios`;
     } else {
-      $('joinerModelStatus').textContent = `${assigned} joins assigned · formation-weighted model`;
+      $('joinerModelStatus').textContent = `${completeRallies}/${plan.length} complete · ${assigned} joins`;
     }
     results.innerHTML = plan.map(item => {
       const lineup = joinerLineupLabels(item.heroes);
+      const summary = fullRallySummary(item);
+      const goal = summary.evaluation.goalAssessment || {};
+      const sourceLabel = summary.evaluation.source === 'offline_partial' ? 'offline partial stack model' : 'full researched stack model';
       return `<div class="joiner-result">
         <div>
           <div class="rname">${esc(item.leader.name || 'Unnamed leader')}</div>
           <div class="rmeta">${esc(item.leader.role)} · ${esc(joinerGoalLabel(item.goal))}</div>
+          <div class="contract-line"><span class="contract-badge ${summary.complete ? '' : 'incomplete'}">STRUCTURE ${summary.complete ? 'COMPLETE' : 'INCOMPLETE'} · ${summary.leaderSkills}/9 + ${summary.joinerSkills}/4</span></div>
+          <div class="leader-summary">${esc(summary.leaders || 'Leader loadout unavailable')}</div>
+          <div class="leader-summary">${esc(summary.widgets || 'Widgets unavailable')}</div>
+          ${summary.coverageText ? `<div class="leader-summary">${esc(summary.coverageText)}</div>` : ''}
         </div>
         <div>
-          <div class="joiner-lineup">${lineup.length ? lineup.map(name => `<span class="hero-chip">${esc(name)}</span>`).join('') : '<span class="rmeta">No joiner assigned</span>'}</div>
+          <div class="joiner-lineup">${lineup.length ? lineup.map(name => `<span class="hero-chip">${esc(name)}</span>`).join('') : '<span class="rmeta">No complete four-joiner lineup</span>'}</div>
           <div class="rmeta" style="margin-top:6px">${esc(joinerRationale(item))}</div>
+          <div class="scenario-metrics">
+            <div class="scenario-metric"><strong>${esc(formatScenarioLift(goal.floorLiftPct))}</strong><span>Stack floor</span></div>
+            <div class="scenario-metric"><strong>${esc(formatScenarioLift(goal.expectedLiftPct))}</strong><span>Expected proxy</span></div>
+            <div class="scenario-metric"><strong>${esc(formatScenarioLift(goal.ceilingLiftPct))}</strong><span>Stack ceiling</span></div>
+          </div>
+          <div class="leader-summary">${esc(sourceLabel)} · ${esc(String(goal.status || 'not evaluated').replaceAll('_', ' ').toLowerCase())}</div>
+          ${summary.warnings.length ? `<div class="rally-warning">⚠ ${esc(summary.warnings.slice(0, 3).join(' '))}</div>` : ''}
         </div>
         <div class="joiner-metrics">
-          <div class="metric ${item.damageGain > 0 ? 'good' : ''}"><strong>${esc(formatGain(item.damageGain))}</strong><span>Damage ${esc(formatIndex(item.base.damage))} → ${esc(formatIndex(item.result.damage))}</span></div>
-          <div class="metric ${item.defenseGain > 0 ? 'good' : ''}"><strong>${esc(formatGain(item.defenseGain))}</strong><span>Defense ${esc(formatIndex(item.base.defense))} → ${esc(formatIndex(item.result.defense))}</span></div>
+          <div class="metric ${item.damageGain > 0 ? 'good' : ''}"><strong>${esc(formatGain(item.damageGain))}</strong><span>Joiner-only damage</span></div>
+          <div class="metric ${item.defenseGain > 0 ? 'good' : ''}"><strong>${esc(formatGain(item.defenseGain))}</strong><span>Joiner-only defense</span></div>
         </div>
       </div>`;
     }).join('');
@@ -2440,10 +2695,12 @@
       else lines.push(`${row.hitOrder}. ${name} → +${secondsLabel(row.delta, true)}`);
     });
     if (joinerPlan.length) {
-      lines.push('', 'HERO JOINER ASSIGNMENTS:');
+      lines.push('', 'FULL RALLY HERO ASSIGNMENTS:');
       joinerPlan.forEach(item => {
+        const summary = fullRallySummary(item);
+        const goal = summary.evaluation.goalAssessment || {};
         const lineup = joinerLineupLabels(item.heroes).join(', ') || 'No joiner assigned';
-        lines.push(`[${item.leader.alliance}] ${item.leader.name} (${item.leader.role}) -> ${lineup} | Damage ${formatGain(item.damageGain)} | Defense ${formatGain(item.defenseGain)}`);
+        lines.push(`[${item.leader.alliance}] ${item.leader.name} (${item.leader.role}) -> Leaders: ${summary.leaders || 'missing'} | Joiners: ${lineup} | Structure ${summary.leaderSkills}/9 + ${summary.joinerSkills}/4 ${summary.complete ? 'COMPLETE' : 'INCOMPLETE'} | Stack F/E/C ${formatScenarioLift(goal.floorLiftPct)} / ${formatScenarioLift(goal.expectedLiftPct)} / ${formatScenarioLift(goal.ceilingLiftPct)}`);
       });
     }
     const warnings = launchRows.filter(r => !r.feasibility.ok);
